@@ -1,0 +1,10 @@
+{
+  "name": "dashboard-test-v1-react",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "python -m http.server 4180 --bind 127.0.0.1",
+    "check": "node --check src/main.js"
+  }
+}
