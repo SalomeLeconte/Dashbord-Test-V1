@@ -1,0 +1,51 @@
+name: Fix modele machine search
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-index:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch index.html modele machine search
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          old = 'item._searchMachines = normalizeText([item[COL.machines], item["datav2.Liste Machines"], item["datav3.Machines utiles NAF ou catégorie"], item["datav3.Famile machine NAF ou catégorie"]].filter(Boolean).join(" "));'
+          new = '''item._searchMachines = normalizeText([\n                        item[COL.machines],\n                        item["Liste machine"],\n                        item["Liste Machines"],\n                        item["Liste machines"],\n                        item["LISTE MACHINE"],\n                        item["LISTE MACHINES"],\n                        item["datav2.Liste Machines"],\n                        item["datav2.Liste machine"]\n                    ].filter(Boolean).join(" "));'''
+          if old in text:
+              text = text.replace(old, new, 1)
+              p.write_text(text, encoding='utf-8')
+              print('Correctif appliqué : Modèle machine cherche dans Liste Machines.')
+          elif 'item["datav3.Machines utiles NAF ou catégorie"]' in text or 'item["datav3.Famile machine NAF ou catégorie"]' in text:
+              text = text.replace('item["datav3.Machines utiles NAF ou catégorie"],', '')
+              text = text.replace('item["datav3.Famile machine NAF ou catégorie"]', '')
+              p.write_text(text, encoding='utf-8')
+              print('Correctif partiel appliqué : suppression des colonnes datav3 du filtre modèle.')
+          else:
+              print('Aucun correctif nécessaire : index.html semble déjà corrigé.')
+          PY
+
+      - name: Commit patch if needed
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "Aucune modification à committer."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Fix modele machine search"
+          git push
