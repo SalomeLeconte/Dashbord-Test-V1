@@ -1062,7 +1062,16 @@
                     item._deptNorm = normalizeDept(item[COL.dept]);
                     item._searchNom = normalizeText(item[COL.nom]);
                     item._searchVille = normalizeText(item[COL.ville]);
-                    item._searchMachines = normalizeText([item[COL.machines], item["datav2.Liste Machines"], item["datav3.Machines utiles NAF ou catégorie"], item["datav3.Famile machine NAF ou catégorie"]].filter(Boolean).join(" "));
+                    item._searchMachines = normalizeText([
+                        item[COL.machines],
+                        item["Liste machine"],
+                        item["Liste Machines"],
+                        item["Liste machines"],
+                        item["LISTE MACHINE"],
+                        item["LISTE MACHINES"],
+                        item["datav2.Liste Machines"],
+                        item["datav2.Liste machine"]
+                    ].filter(Boolean).join(" "));
                     item._searchSeries = normalizeText([item[COL.series], item["datav2.Liste Num serie Machines"]].filter(Boolean).join(" "));
                     item._searchNaf = normalizeText(item[COL.naf]);
                     item._machineRecentAgeMonths = getRecentMachineAgeMonths(item);
