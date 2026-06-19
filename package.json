@@ -1,10 +1,13 @@
 {
-  "name": "dashboard-test-v1-react",
+  "name": "dashbord-test-v1",
   "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "python -m http.server 4180 --bind 127.0.0.1",
-    "check": "node --check src/main.js"
-  }
+    "check": "node --check src/main.js",
+    "build": "node scripts/build-cloudflare.mjs",
+    "preview": "npm run build && python -m http.server 4180 --directory dist --bind 127.0.0.1"
+  },
+  "devDependencies": {}
 }
