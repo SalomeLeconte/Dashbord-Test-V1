@@ -620,15 +620,15 @@
                         <div class="grid grid-cols-1 gap-3">
                             <div>
                                 <label class="modern-label">Catégorie</label>
-                                <select id="f-categorie" onchange="runFilter()" class="modern-input">
-                                    <option value="">Toutes</option>
+                                <select id="f-categorie" multiple size="5" onchange="syncActivityFilters('categorie')" class="modern-input min-h-[104px]">
                                 </select>
+                                <p class="mt-1 text-[10px] text-gray-400 dark:text-slate-500">Sélection automatique des codes NAF / APE liés.</p>
                             </div>
                             <div>
-                                <label class="modern-label">NAF</label>
-                                <select id="f-naf" onchange="runFilter()" class="modern-input">
-                                    <option value="">Tous</option>
+                                <label class="modern-label">NAF / APE</label>
+                                <select id="f-naf" multiple size="6" onchange="syncActivityFilters('naf')" class="modern-input min-h-[126px]">
                                 </select>
+                                <p class="mt-1 text-[10px] text-gray-400 dark:text-slate-500">Ctrl/Cmd + clic pour sélectionner plusieurs codes.</p>
                             </div>
                         </div>
                     </div>
@@ -981,6 +981,9 @@
         let top200UseActiveFilters = false;
         let top200Limit = 200;
         let top200VisitFilter = "";
+        let activityCategoryToNafs = new Map();
+        let activityNafToCategories = new Map();
+        let activityFiltersSyncing = false;
         let geocodeRunId = 0;
         let geocodeCache = loadGeocodeCache();
         const GEOCODE_ENDPOINT = "https://data.geopf.fr/geocodage/search/";
@@ -1145,17 +1148,85 @@
             const priorites = uniqueValues(scopeData.map(item => item[COL.priorite])).sort((a, b) => a.localeCompare(b, "fr", { numeric: true }));
             const salaries = uniqueValues(scopeData.map(item => item[COL.salaries])).sort((a, b) => a.localeCompare(b, "fr", { numeric: true }));
 
+            buildActivityFilterMaps(scopeData);
             populateSelect("f-groupe", groupes);
             populateSelect("f-dept", depts);
             populateSelect("f-agence", agences);
-            populateSelect("f-categorie", categories);
-            populateSelect("f-naf", nafs);
+            populateMultiSelect("f-categorie", categories);
+            populateMultiSelect("f-naf", nafs);
             populatePriorityCheckboxes(priorites);
             populateSelect("f-salaries", salaries);
             populateSelect("f-position", positions, value => {
                 const labels = { CL: "Client (CL)", PR: "Prospect (PR)", SC: "Suspect / sans client actif (SC)", AV: "Ancien / à vérifier (AV)" };
                 return labels[value] || value;
             });
+        }
+
+        function buildActivityFilterMaps(data) {
+            activityCategoryToNafs = new Map();
+            activityNafToCategories = new Map();
+            data.forEach(item => {
+                const category = String(item?.[COL.categorie] || "").trim();
+                const naf = String(item?.[COL.naf] || "").trim();
+                if (!category || !naf) return;
+                if (!activityCategoryToNafs.has(category)) activityCategoryToNafs.set(category, new Set());
+                if (!activityNafToCategories.has(naf)) activityNafToCategories.set(naf, new Set());
+                activityCategoryToNafs.get(category).add(naf);
+                activityNafToCategories.get(naf).add(category);
+            });
+        }
+
+        function populateMultiSelect(id, values, labelFn = value => value) {
+            const select = document.getElementById(id);
+            if (!select) return;
+            const previous = getSelectedValues(id);
+            const validValues = new Set(values);
+            select.innerHTML = values.map(value => `
+                <option value="${escapeHtml(value)}">${escapeHtml(labelFn(value))}</option>
+            `).join("");
+            setSelectedValues(id, previous.filter(value => validValues.has(value)));
+        }
+
+        function getSelectedValues(id) {
+            const select = document.getElementById(id);
+            if (!select) return [];
+            return [...select.selectedOptions]
+                .map(option => String(option.value || "").trim())
+                .filter(Boolean);
+        }
+
+        function setSelectedValues(id, values) {
+            const select = document.getElementById(id);
+            if (!select) return;
+            const selected = new Set(values.map(value => String(value || "").trim()).filter(Boolean));
+            [...select.options].forEach(option => {
+                option.selected = selected.has(option.value);
+            });
+        }
+
+        function syncActivityFilters(source) {
+            if (activityFiltersSyncing) return;
+            activityFiltersSyncing = true;
+            try {
+                if (source === "categorie") {
+                    const selectedCategories = getSelectedValues("f-categorie");
+                    const nafSet = new Set();
+                    selectedCategories.forEach(category => {
+                        (activityCategoryToNafs.get(category) || new Set()).forEach(naf => nafSet.add(naf));
+                    });
+                    setSelectedValues("f-naf", [...nafSet].sort((a, b) => a.localeCompare(b, "fr", { numeric: true })));
+                } else if (source === "naf") {
+                    const selectedNafs = getSelectedValues("f-naf");
+                    const categorySet = new Set();
+                    selectedNafs.forEach(naf => {
+                        (activityNafToCategories.get(naf) || new Set()).forEach(category => categorySet.add(category));
+                    });
+                    setSelectedValues("f-categorie", [...categorySet].sort((a, b) => a.localeCompare(b, "fr", { numeric: true })));
+                }
+            } finally {
+                activityFiltersSyncing = false;
+            }
+            runFilter();
         }
 
         function populatePriorityCheckboxes(values) {
@@ -1239,6 +1310,8 @@
                 const el = document.getElementById(id);
                 if (el) el.value = value;
             });
+            setSelectedValues("f-categorie", []);
+            setSelectedValues("f-naf", []);
             setNewMachineFilterActive(false);
             setOldMachineFilterActive(false);
             setWarrantyFilterActive(false);
@@ -1304,8 +1377,8 @@
             const oldMachineOnly = isOldMachineFilterActive();
             const ageMachineAllSearch = normalizeText(document.getElementById("f-age-machine-all")?.value || "");
             const ageMachineFilter = document.getElementById("f-age-machine-min")?.value || "";
-            const searchCategorie = document.getElementById("f-categorie")?.value || "";
-            const searchNaf = document.getElementById("f-naf")?.value || "";
+            const selectedCategories = getSelectedValues("f-categorie").map(normalizeText);
+            const selectedNafs = getSelectedValues("f-naf").map(normalizeText);
             const selectedPriorites = getSelectedPriorites();
             const clientEligibleOnly = document.getElementById("f-client-eligible-only")?.checked || false;
             const warrantyEndOnly = isWarrantyFilterActive();
@@ -1334,8 +1407,8 @@
                 if (oldMachineOnly && !hasOldMachine(item)) return false;
                 if (ageMachineAllSearch && !item._ageMachineAllSearch.includes(ageMachineAllSearch)) return false;
                 if (ageMachineFilter && !matchesAgeMachineFilter(item, ageMachineFilter)) return false;
-                if (searchCategorie && normalizeText(item[COL.categorie] || "") !== normalizeText(searchCategorie)) return false;
-                if (searchNaf && normalizeText(item[COL.naf] || "") !== normalizeText(searchNaf)) return false;
+                if (selectedCategories.length && !selectedCategories.includes(normalizeText(item[COL.categorie] || ""))) return false;
+                if (selectedNafs.length && !selectedNafs.includes(normalizeText(item[COL.naf] || ""))) return false;
                 if (selectedPriorites.length && !selectedPriorites.includes(String(item[COL.priorite] || ""))) return false;
                 if (clientEligibleOnly && !isClientEligible(item)) return false;
                 if (warrantyEndOnly && !hasWarrantyEnding(item)) return false;
@@ -1817,8 +1890,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
                         ["Groupe", COL.groupe],
                         ["Agence", COL.agence],
                         ["PSSR", COL.pssr],
-                        ["Email", "datap2..Email"],
-                        ["Téléphone", "datap2.Téléphone"],
                         ["Adresse", COL.adresse],
                         ["Département", COL.dept],
                         ["Ville", COL.ville],
@@ -1830,8 +1901,8 @@ Adresse : ${item[COL.adresse] || "-"}`);
                     rows: rowsFrom([
                         ["CA Global", COL.caGlobal],
                         ["CA 2025", COL.ca2025],
-                        ["CA PDR cumulé", COL.pcsTotal],
-                        ["CA SERVICE cumulé", COL.savTotal],
+                        ["CA PDR (2024/25/26)", COL.pcsTotal],
+                        ["CA SERVICE (2024/25/26)", COL.savTotal],
                         ["Priorité client", COL.priorite],
                     ])
                 },
@@ -1854,9 +1925,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
                     title: "CRM et opportunités",
                     rows: rowsFrom([
                         ["Dernier contact - date", COL.crmDate],
-                        ["Dernier contact - vendeur", COL.crmVendeur],
-                        ["Dernier contact - sujet", COL.crmSujet],
-                        ["Dernier contact - note", COL.crmNote],
                         ["Dernière opportunité - vendeur", "CRM_DerniereOpp_Vendeur"],
                         ["Dernière opportunité - type matériel", "CRM_DerniereOpp_TypeMateriel"],
                         ["Dernière opportunité - date", "CRM_DerniereOppDate"],
@@ -1868,19 +1936,13 @@ Adresse : ${item[COL.adresse] || "-"}`);
                     title: "Secteur d’activité",
                     rows: rowsFrom([
                         ["Catégorie", COL.categorie],
-                        ["NAF", COL.naf],
+                        ["NAF / APE", COL.naf],
                         ["Description", COL.description]
                     ])
                 }
             ];
 
-            const displayed = new Set([...used, COL.nom, COL.siret, COL.clientNumero, COL.position, COL.groupe, COL.agence, COL.adresse, COL.dept, COL.ville, COL.salaries, COL.caGlobal, COL.ca2025, COL.pcsTotal, COL.savTotal, COL.priorite, COL.nbMachines, COL.machines, COL.series, COL.machinesRecentes, COL.newMachineFlag, COL.oldMachineFlag, COL.ageMachineAll, COL.finGarantie, COL.visits2026, COL.objectiveVisits, COL.top200, COL.crmDate, COL.crmVendeur, COL.crmSujet, COL.crmNote, COL.categorie, COL.naf, COL.description]);
-            const displayedNormalized = new Set([...displayed].map(header => normalizeText(header)));
-            const otherRows = (csvHeaders.length ? csvHeaders : Object.keys(item))
-                .filter(header => !header.startsWith("_") && !displayed.has(header) && !displayedNormalized.has(normalizeText(header)) && !isHiddenDetailField(header))
-                .map(header => [header, formatDetailValue(header, item[header])])
-                .filter(([, value]) => !isEmptyDetailValue(value));
-            if (otherRows.length) sections.push({ title: "Autres données disponibles", rows: otherRows });
+            // La section "Autres données disponibles" est volontairement désactivée.
 
             modal.innerHTML = `
                 <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onclick="closeDetails()"></div>
@@ -1934,7 +1996,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
             if (normalizedHeader.includes("telephone")) {
                 return cleanPhone(value);
             }
-            if (normalizedHeader.includes("montant") || normalizedHeader.includes("ca global") || normalizedHeader === "ca 2025" || normalizedHeader.startsWith("pcs ") || normalizedHeader.startsWith("sav ") || normalizedHeader.startsWith("pdr ") || normalizedHeader.startsWith("service ")) {
+            if (normalizedHeader.includes("montant") || normalizedHeader.includes("ca global") || normalizedHeader === "ca 2025" || normalizedHeader.includes("ca pdr") || normalizedHeader.includes("ca service") || normalizedHeader.startsWith("pcs ") || normalizedHeader.startsWith("sav ") || normalizedHeader.startsWith("pdr ") || normalizedHeader.startsWith("service ")) {
                 return formatMoney(value);
             }
             if (normalizedHeader.includes("rank") || normalizedHeader.includes("top 200") || normalizedHeader.includes("nb machines") || normalizedHeader.includes("nombre de machines")) {
