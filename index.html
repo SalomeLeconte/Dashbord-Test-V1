@@ -1787,11 +1787,12 @@ Adresse : ${item[COL.adresse] || "-"}`);
 
             ensureTop200RankCache();
             const used = new Set();
-            const rowsFrom = fields => fields.map(([label, keyOrValue, isValue = false]) => {
+            const detailRows = rows => (rows || []).filter(([, value]) => !isEmptyDetailValue(value));
+            const rowsFrom = fields => detailRows(fields.map(([label, keyOrValue, isValue = false]) => {
                 const value = isValue ? keyOrValue : item[keyOrValue];
                 if (!isValue) used.add(keyOrValue);
                 return [label, formatDetailValue(label, value)];
-            }).filter(([, value]) => !isEmptyDetailValue(value));
+            }));
 
             const topRank = getTop200Rank(item);
             const sections = [
@@ -1803,8 +1804,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
                         ["Visites obligatoires", getObjectiveVisits(item) ? formatNumber(getObjectiveVisits(item)) : "", true],
                         ["Visites effectuées 2026", item[COL.visits2026] !== undefined && item[COL.visits2026] !== "" ? formatNumber(getVisits2026(item)) : "", true],
                         ["Visites restantes", getRemainingVisits(item) > 0 ? formatNumber(getRemainingVisits(item)) : "", true],
-                        ["Nouvelle machine", hasNewMachine(item) ? `Oui${getRecentMachineAgeLabel(item) ? " — " + getRecentMachineAgeLabel(item) : ""}` : "", true],
-                        ["Machine 5 ans et +", hasOldMachine(item) ? "Oui" : "", true],
                         ["Client éligible", isGrandCompte(item) ? "Oui" : "", true],
                     ]
                 },
@@ -1858,11 +1857,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
                         ["Dernier contact - vendeur", COL.crmVendeur],
                         ["Dernier contact - sujet", COL.crmSujet],
                         ["Dernier contact - note", COL.crmNote],
-                        ["Email contact", "datap2..Email"],
-                        ["Téléphone contact", "datap2.Téléphone"],
-                        ["Dernier contact datap2 - vendeur", "datap2.CRM_Vendeur"],
-                        ["Dernier contact datap2 - sujet", "datap2.CRM_SujetDernierContact"],
-                        ["Dernier contact datap2 - note", "datap2.CRM_NoteDernierContact"],
                         ["Dernière opportunité - vendeur", "CRM_DerniereOpp_Vendeur"],
                         ["Dernière opportunité - type matériel", "CRM_DerniereOpp_TypeMateriel"],
                         ["Dernière opportunité - date", "CRM_DerniereOppDate"],
@@ -1880,9 +1874,10 @@ Adresse : ${item[COL.adresse] || "-"}`);
                 }
             ];
 
-            const displayed = new Set([...used, COL.nom, COL.siret, COL.clientNumero, COL.position, COL.groupe, COL.agence, COL.adresse, COL.dept, COL.ville, COL.salaries, COL.caGlobal, COL.ca2025, COL.pcsTotal, COL.savTotal, COL.priorite, COL.nbMachines, COL.machines, COL.series, COL.machinesRecentes, COL.newMachineFlag, COL.crmDate, COL.crmVendeur, COL.crmSujet, COL.crmNote, COL.categorie, COL.naf, COL.description]);
+            const displayed = new Set([...used, COL.nom, COL.siret, COL.clientNumero, COL.position, COL.groupe, COL.agence, COL.adresse, COL.dept, COL.ville, COL.salaries, COL.caGlobal, COL.ca2025, COL.pcsTotal, COL.savTotal, COL.priorite, COL.nbMachines, COL.machines, COL.series, COL.machinesRecentes, COL.newMachineFlag, COL.oldMachineFlag, COL.ageMachineAll, COL.finGarantie, COL.visits2026, COL.objectiveVisits, COL.top200, COL.crmDate, COL.crmVendeur, COL.crmSujet, COL.crmNote, COL.categorie, COL.naf, COL.description]);
+            const displayedNormalized = new Set([...displayed].map(header => normalizeText(header)));
             const otherRows = (csvHeaders.length ? csvHeaders : Object.keys(item))
-                .filter(header => !header.startsWith("_") && !displayed.has(header) && !isHiddenDetailField(header))
+                .filter(header => !header.startsWith("_") && !displayed.has(header) && !displayedNormalized.has(normalizeText(header)) && !isHiddenDetailField(header))
                 .map(header => [header, formatDetailValue(header, item[header])])
                 .filter(([, value]) => !isEmptyDetailValue(value));
             if (otherRows.length) sections.push({ title: "Autres données disponibles", rows: otherRows });
@@ -1918,12 +1913,17 @@ Adresse : ${item[COL.adresse] || "-"}`);
             const normalized = normalizeText(header || "");
             if (!normalized) return true;
             if (normalized.includes("client eligible source")) return true;
+            if (normalized.includes("priorite client corrigee")) return true;
+            if (normalized.includes("client eligible")) return true;
+            if (normalized.includes("somme de visite fy 2026") || normalized.includes("somme de visite 2026")) return true;
+            if (normalized.startsWith("datav2.")) return true;
             if (normalized.includes("datav2.liste machines") || normalized.includes("datav2.liste num serie")) return true;
             if (normalized.startsWith("datav3.")) return true;
             if (normalized.includes("total montant facture pdr fy 2024") || normalized.includes("total montant facture pdr fy 2025") || normalized.includes("total montant facture pdr fy 2026")) return true;
             if (normalized.includes("total montant facture service fy 2024") || normalized.includes("total montant facture service fy 2025") || normalized.includes("total montant facture service fy 2026")) return true;
-            if (normalized.includes("total montant facture pcs 2024") || normalized.includes("total montant facture pcs 2025") || normalized.includes("total montant facture pcs 2026")) return true;
+            if (normalized.includes("total montant facture pcs 2024") || normalized.includes("total montant facture pcs 2025") || normalized.includes("total montant facture pcs 2026") || normalized.includes("total montant facture pcs 24/5/6")) return true;
             if (normalized.includes("total montant facture sav 2024") || normalized.includes("total montant facture sav 2025") || normalized.includes("total montant facture sav 2026")) return true;
+            if (normalized === "ca 2025") return true;
             if (normalized === "client_irium.position client" || normalized === "description" || normalized === "categorie" || normalized === "naf") return true;
             return false;
         }
@@ -1979,10 +1979,12 @@ Adresse : ${item[COL.adresse] || "-"}`);
         }
 
         function detailSection(title, rows) {
+            const visibleRows = (rows || []).filter(([, value]) => !isEmptyDetailValue(value));
+            if (!visibleRows.length) return "";
             return `
                 <section class="rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
                     <div class="bg-gray-50 dark:bg-slate-900 px-4 py-2 border-b border-gray-200 dark:border-slate-800 text-[10px] uppercase tracking-widest font-black text-gray-500 dark:text-slate-400">${escapeHtml(title)}</div>
-                    <div class="divide-y divide-gray-100 dark:divide-slate-800">${rows.map(([label, value]) => detailRow(label, value)).join("")}</div>
+                    <div class="divide-y divide-gray-100 dark:divide-slate-800">${visibleRows.map(([label, value]) => detailRow(label, value)).join("")}</div>
                 </section>
             `;
         }
