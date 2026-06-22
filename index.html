@@ -613,22 +613,30 @@
 
                 <div>
                     <button onclick="toggleAccordion('acc-secteur-activite')" class="accordion-btn">
-                        <span class="text-[11px] font-display font-extrabold text-gray-700 dark:text-slate-200 uppercase tracking-wider">5. Secteur d'activité</span>
+                        <span class="text-[11px] font-display font-extrabold text-gray-700 dark:text-slate-200 uppercase tracking-wider">5. Secteur d’activité / NAF / APE</span>
                         <svg id="icon-acc-secteur-activite" class="w-4 h-4 text-gray-400 transition-transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
                     <div id="acc-secteur-activite" class="accordion-content block">
                         <div class="grid grid-cols-1 gap-3">
                             <div>
-                                <label class="modern-label">Catégorie</label>
-                                <select id="f-categorie" multiple size="5" onchange="syncActivityFilters('categorie')" class="modern-input min-h-[104px]">
-                                </select>
-                                <p class="mt-1 text-[10px] text-gray-400 dark:text-slate-500">Sélection automatique des codes NAF / APE liés.</p>
-                            </div>
-                            <div>
-                                <label class="modern-label">NAF / APE</label>
-                                <select id="f-naf" multiple size="6" onchange="syncActivityFilters('naf')" class="modern-input min-h-[126px]">
-                                </select>
-                                <p class="mt-1 text-[10px] text-gray-400 dark:text-slate-500">Ctrl/Cmd + clic pour sélectionner plusieurs codes.</p>
+                                <label class="modern-label">Secteur d’activité / NAF / APE</label>
+                                <div class="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
+                                    <div class="p-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 space-y-2">
+                                        <div id="activity-filter-summary" class="text-[11px] font-black uppercase tracking-wider text-gray-600 dark:text-slate-300">Aucun secteur sélectionné</div>
+                                        <div id="activity-filter-badges" class="hidden flex flex-wrap gap-1.5"></div>
+                                        <div class="flex flex-wrap gap-2 pt-1">
+                                            <button type="button" onclick="toggleAllActivityTree(true)" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-slate-400 hover:border-komatsu-500 transition">Tout déplier</button>
+                                            <button type="button" onclick="toggleAllActivityTree(false)" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-slate-400 hover:border-komatsu-500 transition">Tout replier</button>
+                                            <button type="button" onclick="clearActivityFilter()" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-slate-400 hover:border-red-400 hover:text-red-500 transition">Réinitialiser</button>
+                                        </div>
+                                    </div>
+                                    <div id="f-activity-tree" class="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-slate-800">
+                                        <div class="p-3 text-[11px] text-gray-400 dark:text-slate-500">Chargement des secteurs...</div>
+                                    </div>
+                                </div>
+                                <select id="f-categorie" multiple class="hidden" aria-hidden="true"></select>
+                                <select id="f-naf" multiple class="hidden" aria-hidden="true"></select>
+                                <p class="mt-1 text-[10px] text-gray-400 dark:text-slate-500">Cochez une catégorie pour sélectionner tous les codes NAF / APE associés, ou cochez uniquement certains codes.</p>
                             </div>
                         </div>
                     </div>
@@ -984,6 +992,7 @@
         let activityCategoryToNafs = new Map();
         let activityNafToCategories = new Map();
         let activityFiltersSyncing = false;
+        let activityExpandedCategories = new Set();
         let geocodeRunId = 0;
         let geocodeCache = loadGeocodeCache();
         const GEOCODE_ENDPOINT = "https://data.geopf.fr/geocodage/search/";
@@ -998,6 +1007,7 @@
         document.addEventListener("DOMContentLoaded", () => {
             updateDataTabLabel();
             renderCollaboratorGrid();
+            setupActivityTreeEvents();
             initMap();
             loadCSVData();
         });
@@ -1154,6 +1164,8 @@
             populateSelect("f-agence", agences);
             populateMultiSelect("f-categorie", categories);
             populateMultiSelect("f-naf", nafs);
+            syncActivityCategoriesFromNafs();
+            renderActivityTree();
             populatePriorityCheckboxes(priorites);
             populateSelect("f-salaries", salaries);
             populateSelect("f-position", positions, value => {
@@ -1204,28 +1216,197 @@
             });
         }
 
-        function syncActivityFilters(source) {
-            if (activityFiltersSyncing) return;
+        function sortActivityValues(values) {
+            return [...values].sort((a, b) => String(a).localeCompare(String(b), "fr", { numeric: true }));
+        }
+
+        function setupActivityTreeEvents() {
+            const container = document.getElementById("f-activity-tree");
+            if (!container || container.dataset.eventsReady === "true") return;
+            container.dataset.eventsReady = "true";
+
+            container.addEventListener("click", event => {
+                const toggle = event.target.closest("[data-activity-toggle]");
+                if (!toggle) return;
+                const category = String(toggle.dataset.category || "");
+                if (!category) return;
+                if (activityExpandedCategories.has(category)) {
+                    activityExpandedCategories.delete(category);
+                } else {
+                    activityExpandedCategories.add(category);
+                }
+                renderActivityTree();
+            });
+
+            container.addEventListener("change", event => {
+                const categoryInput = event.target.closest("input[data-activity-category]");
+                const nafInput = event.target.closest("input[data-activity-naf]");
+
+                if (categoryInput) {
+                    setActivityCategorySelection(categoryInput.dataset.category || "", categoryInput.checked);
+                    return;
+                }
+
+                if (nafInput) {
+                    setActivityNafSelection(nafInput.dataset.naf || "", nafInput.checked);
+                }
+            });
+        }
+
+        function renderActivityTree() {
+            const container = document.getElementById("f-activity-tree");
+            if (!container) return;
+            setupActivityTreeEvents();
+
+            const categories = sortActivityValues(activityCategoryToNafs.keys());
+            const selectedNafs = new Set(getSelectedValues("f-naf"));
+
+            if (!categories.length) {
+                container.innerHTML = `<div class="p-3 text-[11px] text-gray-400 dark:text-slate-500">Aucun secteur disponible.</div>`;
+                updateActivitySummary();
+                return;
+            }
+
+            container.innerHTML = categories.map(category => {
+                const nafs = sortActivityValues(activityCategoryToNafs.get(category) || []);
+                const selectedCount = nafs.filter(naf => selectedNafs.has(naf)).length;
+                const isExpanded = activityExpandedCategories.has(category) || selectedCount > 0;
+                const allSelected = nafs.length > 0 && selectedCount === nafs.length;
+                const partialText = selectedCount > 0 && selectedCount < nafs.length ? ` · ${selectedCount}/${nafs.length}` : ` · ${nafs.length}`;
+                const categoryId = `activity-cat-${hashString(category)}`;
+
+                return `
+                    <div class="activity-category bg-white dark:bg-slate-900">
+                        <div class="flex items-center gap-2 p-2.5 hover:bg-gray-50 dark:hover:bg-slate-950 transition">
+                            <button type="button" data-activity-toggle data-category="${escapeHtml(category)}" class="shrink-0 w-7 h-7 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 text-gray-400 dark:text-slate-500 hover:text-komatsu-600 dark:hover:text-komatsu-400 transition flex items-center justify-center" aria-label="Déplier ${escapeHtml(category)}">
+                                <svg class="w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                            </button>
+                            <label for="${categoryId}" class="flex-1 min-w-0 flex items-center gap-2 cursor-pointer select-none">
+                                <input id="${categoryId}" type="checkbox" data-activity-category data-category="${escapeHtml(category)}" ${allSelected ? "checked" : ""} class="accent-yellow-500 shrink-0">
+                                <span class="flex-1 min-w-0 text-[11px] font-black uppercase tracking-wider text-gray-700 dark:text-slate-200 truncate" title="${escapeHtml(category)}">${escapeHtml(category)}</span>
+                                <span class="shrink-0 text-[10px] font-bold text-gray-400 dark:text-slate-500">${escapeHtml(partialText)}</span>
+                            </label>
+                        </div>
+                        <div class="${isExpanded ? "block" : "hidden"} px-3 pb-3 pl-11 space-y-1.5">
+                            ${nafs.map(naf => `
+                                <label class="flex items-center gap-2 rounded-lg border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 px-2.5 py-1.5 cursor-pointer hover:border-komatsu-500 transition select-none">
+                                    <input type="checkbox" data-activity-naf data-naf="${escapeHtml(naf)}" ${selectedNafs.has(naf) ? "checked" : ""} class="accent-yellow-500 shrink-0">
+                                    <span class="text-[11px] font-bold text-gray-600 dark:text-slate-300 truncate" title="${escapeHtml(naf)}">${escapeHtml(naf)}</span>
+                                </label>
+                            `).join("")}
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            container.querySelectorAll("input[data-activity-category]").forEach(input => {
+                const category = input.dataset.category || "";
+                const nafs = sortActivityValues(activityCategoryToNafs.get(category) || []);
+                const selectedCount = nafs.filter(naf => selectedNafs.has(naf)).length;
+                input.indeterminate = selectedCount > 0 && selectedCount < nafs.length;
+            });
+
+            updateActivitySummary();
+        }
+
+        function setActivityCategorySelection(category, checked) {
+            if (!category || activityFiltersSyncing) return;
             activityFiltersSyncing = true;
             try {
-                if (source === "categorie") {
-                    const selectedCategories = getSelectedValues("f-categorie");
-                    const nafSet = new Set();
-                    selectedCategories.forEach(category => {
-                        (activityCategoryToNafs.get(category) || new Set()).forEach(naf => nafSet.add(naf));
-                    });
-                    setSelectedValues("f-naf", [...nafSet].sort((a, b) => a.localeCompare(b, "fr", { numeric: true })));
-                } else if (source === "naf") {
-                    const selectedNafs = getSelectedValues("f-naf");
-                    const categorySet = new Set();
-                    selectedNafs.forEach(naf => {
-                        (activityNafToCategories.get(naf) || new Set()).forEach(category => categorySet.add(category));
-                    });
-                    setSelectedValues("f-categorie", [...categorySet].sort((a, b) => a.localeCompare(b, "fr", { numeric: true })));
-                }
+                const currentNafs = new Set(getSelectedValues("f-naf"));
+                (activityCategoryToNafs.get(category) || new Set()).forEach(naf => {
+                    if (checked) currentNafs.add(naf);
+                    else currentNafs.delete(naf);
+                });
+                if (checked) activityExpandedCategories.add(category);
+                setSelectedValues("f-naf", sortActivityValues(currentNafs));
+                syncActivityCategoriesFromNafs();
             } finally {
                 activityFiltersSyncing = false;
             }
+            renderActivityTree();
+            runFilter();
+        }
+
+        function setActivityNafSelection(naf, checked) {
+            if (!naf || activityFiltersSyncing) return;
+            activityFiltersSyncing = true;
+            try {
+                const currentNafs = new Set(getSelectedValues("f-naf"));
+                if (checked) currentNafs.add(naf);
+                else currentNafs.delete(naf);
+                setSelectedValues("f-naf", sortActivityValues(currentNafs));
+                (activityNafToCategories.get(naf) || new Set()).forEach(category => activityExpandedCategories.add(category));
+                syncActivityCategoriesFromNafs();
+            } finally {
+                activityFiltersSyncing = false;
+            }
+            renderActivityTree();
+            runFilter();
+        }
+
+        function syncActivityCategoriesFromNafs() {
+            const selectedNafs = getSelectedValues("f-naf");
+            const categorySet = new Set();
+            selectedNafs.forEach(naf => {
+                (activityNafToCategories.get(naf) || new Set()).forEach(category => categorySet.add(category));
+            });
+            setSelectedValues("f-categorie", sortActivityValues(categorySet));
+        }
+
+        function updateActivitySummary() {
+            const summary = document.getElementById("activity-filter-summary");
+            const badges = document.getElementById("activity-filter-badges");
+            if (!summary || !badges) return;
+
+            const selectedNafs = getSelectedValues("f-naf");
+            const selectedCategories = getSelectedValues("f-categorie");
+            if (!selectedNafs.length && !selectedCategories.length) {
+                summary.textContent = "Aucun secteur sélectionné";
+                badges.classList.add("hidden");
+                badges.innerHTML = "";
+                return;
+            }
+
+            summary.textContent = `${selectedCategories.length} catégorie${selectedCategories.length > 1 ? "s" : ""} · ${selectedNafs.length} code${selectedNafs.length > 1 ? "s" : ""} NAF / APE`;
+            const badgeValues = [...selectedCategories.slice(0, 3), ...selectedNafs.slice(0, 8)];
+            const hiddenCount = Math.max(0, selectedCategories.length + selectedNafs.length - badgeValues.length);
+            badges.innerHTML = `
+                ${badgeValues.map(value => `<span class="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider max-w-full truncate">${escapeHtml(value)}</span>`).join("")}
+                ${hiddenCount ? `<span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">+${hiddenCount}</span>` : ""}
+            `;
+            badges.classList.remove("hidden");
+        }
+
+        function clearActivityFilter() {
+            setSelectedValues("f-categorie", []);
+            setSelectedValues("f-naf", []);
+            renderActivityTree();
+            runFilter();
+        }
+
+        function toggleAllActivityTree(expand) {
+            if (expand) {
+                activityExpandedCategories = new Set(activityCategoryToNafs.keys());
+            } else {
+                activityExpandedCategories = new Set();
+            }
+            renderActivityTree();
+        }
+
+        function hashString(value) {
+            let hash = 0;
+            const text = String(value || "");
+            for (let i = 0; i < text.length; i++) {
+                hash = ((hash << 5) - hash) + text.charCodeAt(i);
+                hash |= 0;
+            }
+            return Math.abs(hash);
+        }
+
+        function syncActivityFilters() {
+            syncActivityCategoriesFromNafs();
+            renderActivityTree();
             runFilter();
         }
 
@@ -1312,6 +1493,7 @@
             });
             setSelectedValues("f-categorie", []);
             setSelectedValues("f-naf", []);
+            renderActivityTree();
             setNewMachineFilterActive(false);
             setOldMachineFilterActive(false);
             setWarrantyFilterActive(false);
@@ -1407,8 +1589,11 @@
                 if (oldMachineOnly && !hasOldMachine(item)) return false;
                 if (ageMachineAllSearch && !item._ageMachineAllSearch.includes(ageMachineAllSearch)) return false;
                 if (ageMachineFilter && !matchesAgeMachineFilter(item, ageMachineFilter)) return false;
-                if (selectedCategories.length && !selectedCategories.includes(normalizeText(item[COL.categorie] || ""))) return false;
-                if (selectedNafs.length && !selectedNafs.includes(normalizeText(item[COL.naf] || ""))) return false;
+                if (selectedNafs.length) {
+                    if (!selectedNafs.includes(normalizeText(item[COL.naf] || ""))) return false;
+                } else if (selectedCategories.length && !selectedCategories.includes(normalizeText(item[COL.categorie] || ""))) {
+                    return false;
+                }
                 if (selectedPriorites.length && !selectedPriorites.includes(String(item[COL.priorite] || ""))) return false;
                 if (clientEligibleOnly && !isClientEligible(item)) return false;
                 if (warrantyEndOnly && !hasWarrantyEnding(item)) return false;
