@@ -94,8 +94,6 @@ Fonctionnalités prévues ou disponibles :
 
 ## Structure du projet
 
-Exemple de structure recommandée :
-
 ```txt
 Dashbord-Test-V1/
 │
