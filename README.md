@@ -51,7 +51,7 @@ Le Top 200 est calculé selon une logique de priorité :
 3. Clients avec machines récentes.
 4. Clients avec machines anciennes ou sans visite récente.
 
-L’objectif est de générer une liste exploitable pour les visites commerciales.
+L’objectif est de générer une liste exploitable pour les visites commerciales (export .xlsx/pdf in progress).
 
 ### Données machines
 
@@ -64,7 +64,7 @@ Le dashboard affiche notamment :
 - fin de garantie ;
 - machines récentes ;
 - machines anciennes ;
-- machines de plus d’un an sans visite en 2026.
+- machines de plus d’un an sans visite en 2026 (in progress)
 
 ### Données commerciales
 
@@ -76,7 +76,7 @@ Le dashboard permet de suivre :
 - dernières visites ;
 - prochaines visites ;
 - informations client ;
-- contact, téléphone, mobile et e-mail.
+- contact, téléphone et e-mail.
 
 ### Itinéraire
 
