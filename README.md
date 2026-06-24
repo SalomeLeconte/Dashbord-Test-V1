@@ -90,7 +90,24 @@ Fonctionnalités prévues ou disponibles :
 - possibilité d’utiliser sa position actuelle comme départ et arrivée ;
 - préparation d’une tournée commerciale.
 
----
+## En cours d'implémentation (juillet-Août)
+
+Ajout dans le pop-up détail:
+- Numéro de téléphone et du mail (raccourci copier)
+- Informations sur les derniers devis
+- Informations sur les contrats Shark (maintenance, fin de contrats dans les 6 mois)
+
+Modification du filtre extension garantie qui se base maintenant sur Shark
+
+
+Ajout d'un filtre (7) Undercarriage:
+-Vie moteur
+-TC dozer/excavatrice
+-Translation (en km et pourcentages)
+
+Changement du calcul des KPI dans l'onglet top 200 pour la lecture des visites
+
+Ajout du profil PSSR qui contient une scorecard (Août)
 
 ## Structure du projet
 
