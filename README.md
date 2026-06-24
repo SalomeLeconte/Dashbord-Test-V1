@@ -90,7 +90,7 @@ Fonctionnalités prévues ou disponibles :
 - possibilité d’utiliser sa position actuelle comme départ et arrivée ;
 - préparation d’une tournée commerciale.
 
-## En cours d'implémentation (juillet-Août)
+## En cours d'implémentation (Juillet-Août)
 
 Ajout dans le pop-up détail:
 - Numéro de téléphone et du mail (raccourci copier);
@@ -106,7 +106,7 @@ Ajout d'un filtre (7) Undercarriage:
 
 Changement du calcul des KPI dans l'onglet top 200 pour la lecture des visites
 
-Ajout du profil PSSR qui contient une scorecard (Août)
+Ajout du profil PSSR qui contient une scorecard
 
 ## Structure du projet
 
