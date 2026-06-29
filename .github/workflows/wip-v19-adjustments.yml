@@ -1,0 +1,109 @@
+name: WIP v19 adjustments
+
+on:
+  push:
+    branches: [WIP]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-index:
+    runs-on: ubuntu-latest
+    if: ${{ github.actor != 'github-actions[bot]' }}
+    steps:
+      - name: Checkout WIP
+        uses: actions/checkout@v4
+        with:
+          ref: WIP
+          fetch-depth: 0
+
+      - name: Apply WIP v19 adjustments
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          p = Path('index.html')
+          text = p.read_text(encoding='utf-8')
+          text = text.replace('const PATCH_ID = "v18-2026-06-29";', 'const PATCH_ID = "v19-WIP-2026-06-29";')
+          text = text.replace('/* v18 - ajustements demandés */', '/* v19 - ajustements WIP avant publication */')
+          text = text.replace('.v18-info-btn { width: 36px; height: 36px; border-radius: 999px; border:1px solid #d1d5db; background:#fff; color:#334155; font-weight:900; display:inline-flex; align-items:center; justify-content:center; }\n.dark .v18-info-btn { background:#0f172a; color:#e2e8f0; border-color:#334155; }', '.v18-info-btn { width: 36px; height: 36px; border-radius: 999px; border:1px solid #facc15; background:#fefce8; color:#92400e; font-weight:900; display:inline-flex; align-items:center; justify-content:center; font-size:17px; box-shadow:0 0 0 rgba(250,204,21,0.0); animation:v19-bulb-pulse 1.6s ease-in-out infinite; }\n.dark .v18-info-btn { background:#422006; color:#fde68a; border-color:#ca8a04; }\n@keyframes v19-bulb-pulse { 0%,100% { opacity:.75; transform:scale(1); box-shadow:0 0 0 rgba(250,204,21,0.0); } 50% { opacity:1; transform:scale(1.08); box-shadow:0 0 18px rgba(250,204,21,.55); } }')
+          old = 'item._searchVille = normalizeText(item[COL.ville]);\n                    item._searchMachines = normalizeText(['
+          new = 'item._searchVille = normalizeText(item[COL.ville]);\n                    item._searchCanton = normalizeText([item["Canton"], item["Canton (Nom)"], item["Client_Irium.Canton"], item["Client_Irium.Canton (Nom)"], item["canton"], item["canton_nom"]].filter(Boolean).join(" "));\n                    item._searchMachines = normalizeText(['
+          if old in text and '_searchCanton' not in text:
+              text = text.replace(old, new, 1)
+          text = text.replace('if (searchVille && !item._searchVille.includes(searchVille)) return false;', 'if (searchVille && ![item._searchVille, item._searchCanton].filter(Boolean).join(" " ).includes(searchVille)) return false;')
+          old_block = '''  function addCantonFilter(){
+    if (document.getElementById('f-canton-select')) return;
+    const ville = document.getElementById('f-ville');
+    const parent = ville?.closest('div');
+    if (!parent) return;
+    parent.insertAdjacentHTML('afterend', `
+      <div>
+        <label class="modern-label">Canton</label>
+        <select id="f-canton-select" onchange="runFilter()" class="modern-input"><option value="">Tous les cantons</option></select>
+        <input type="text" id="f-canton-text" oninput="runFilter()" placeholder="Ou écrire un canton" class="modern-input mt-2">
+      </div>`);
+  }
+'''
+          new_block = '''  function addCantonFilter(){
+    if (document.getElementById('f-canton-select')) return;
+    const ville = document.getElementById('f-ville');
+    const parent = ville?.closest('div');
+    if (!parent) return;
+    ville.setAttribute('placeholder', 'Ex: LYON, NANTES ou canton...');
+    parent.insertAdjacentHTML('beforeend', `
+      <div class="mt-2">
+        <label class="modern-label">Cantons disponibles</label>
+        <select id="f-canton-select" onchange="runFilter()" class="modern-input"><option value="">Tous les cantons</option></select>
+      </div>`);
+  }
+'''
+          text = text.replace(old_block, new_block)
+          text = text.replace("    const cantonText = safeNorm(document.getElementById('f-canton-text')?.value || '');\n", "")
+          text = text.replace("    if (cantonText) data = data.filter(item => safeNorm(getItemCanton(item)).includes(cantonText));\n", "")
+          text = text.replace("priorityBlock.insertAdjacentHTML('afterend', `\n      <div>\n        <button onclick=\"toggleAccordion('acc-undercarriage')\"", "priorityBlock.insertAdjacentHTML('afterend', `\n      <div class=\"mt-4\">\n        <button onclick=\"toggleAccordion('acc-undercarriage')\"")
+          start = text.find('  function updateNafOptionLabels(){')
+          if start != -1:
+              brace = text.find('{', start)
+              depth = 0
+              end = None
+              for i in range(brace, len(text)):
+                  if text[i] == '{': depth += 1
+                  elif text[i] == '}':
+                      depth -= 1
+                      if depth == 0:
+                          end = i + 1
+                          break
+              if end:
+                  text = text[:start] + "  function updateNafOptionLabels(){ /* secteur d'activité : affichage précédent conservé */ }" + text[end:]
+          text = text.replace('title="Nouveautés">i</button>', 'title="Nouveautés">💡</button>')
+          text = text.replace('              <ul class="list-disc pl-5 space-y-2">\n                <li>Filtre flotte détaillé de 1 à 5 machines.</li>', '              <ul class="list-disc pl-5 space-y-2">\n                <li>Ville/Canton dans une seule recherche avec liste déroulante de cantons.</li>\n                <li>Filtre secteur d’activité remis en affichage précédent.</li>\n                <li>Filtre flotte détaillé de 1 à 5 machines.</li>')
+          text = text.replace('Tutoriel nouveautés : 1) utilise N° client Irium dans les filtres, 2) ouvre Mon terrain pour la synthèse par département, 3) dans Cartographie, supprime une étape avec la poubelle, 4) ouvre Google Maps après calcul de l’itinéraire.', 'Tutoriel nouveautés : 1) utilise Ville/Canton dans la même recherche, 2) choisis un canton dans la liste limitée à ton terrain, 3) ouvre Mon terrain pour la synthèse par département, 4) dans Cartographie, supprime une étape avec la poubelle, 5) ouvre Google Maps après calcul de l’itinéraire.')
+          p.write_text(text, encoding='utf-8')
+          PY
+
+      - name: JavaScript syntax check
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          text = Path('index.html').read_text(encoding='utf-8')
+          scripts = re.findall(r'<script[^>]*>(.*?)</script>', text, flags=re.S)
+          Path('check.js').write_text('\n'.join(scripts), encoding='utf-8')
+          PY
+          node -c check.js
+          rm check.js
+
+      - name: Commit WIP changes
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "Aucune modification index.html."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "Apply WIP v19 dashboard adjustments"
+          git push origin WIP
