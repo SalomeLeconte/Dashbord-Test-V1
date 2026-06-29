@@ -4416,5 +4416,244 @@ Adresse : ${item[COL.adresse] || "-"}`);
 })();
 </script>
 
+
+<style id="wip-v22-adjustments-css">
+/* v22 WIP corrections */
+.v21-france-mini, .v21-terrain-france-wrap .v21-france-mini { display:none !important; }
+.v22-client-irium-line { margin-top:.22rem; font-size:10px; line-height:1.2; font-weight:800; color:#64748b; letter-spacing:.01em; }
+.dark .v22-client-irium-line { color:#94a3b8; }
+.v22-gmaps-toolbar-btn { display:inline-flex; align-items:center; gap:.35rem; background:#fff; border:1px solid #e5e7eb; color:#334155; font-size:10px; padding:.5rem .72rem; border-radius:.75rem; font-weight:1000; text-transform:uppercase; letter-spacing:.04em; box-shadow:0 10px 22px rgba(15,23,42,.11); transition:.16s ease; }
+.v22-gmaps-toolbar-btn:hover { border-color:#facc15; transform:translateY(-1px); }
+.dark .v22-gmaps-toolbar-btn { background:#0f172a; border-color:#334155; color:#e2e8f0; }
+.v22-google-pin { width:16px; height:16px; display:inline-block; flex:0 0 auto; }
+.v20-google-control { display:none !important; }
+.v22-map-badges { display:flex; flex-wrap:wrap; gap:3px; margin:.35rem 0; }
+.v22-map-badges .badge, .v22-map-badges span { font-size:9px !important; line-height:1.1 !important; padding:2px 5px !important; }
+</style>
+<script id="wip-v22-adjustments-js">
+(function(){
+  const PATCH_ID='v22-WIP-2026-06-29';
+  window.__WIP_VERSION__=PATCH_ID;
+  function esc(v){ try { return escapeHtml(v); } catch(e){ return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); } }
+  function getIrium(item){
+    const keys = [];
+    try { if (COL && COL.clientNumero) keys.push(COL.clientNumero); } catch(e){}
+    keys.push('Client_Irium.Client (Numéro)','Client_Irium.Client Numéro','Client_Irium.Client','Client (Numéro)','Numéro client','Numero client','N° client','Num client','Code Irium','Code client Irium','Client Irium');
+    for (const k of keys) { const v = item && item[k]; if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim(); }
+    return '';
+  }
+  function markerIconFallback(item){
+    try { if (typeof markerIconFor === 'function') return markerIconFor(item); } catch(e){}
+    return undefined;
+  }
+  function renderMapBadges(item){ try { return typeof renderBadges === 'function' ? renderBadges(item) : ''; } catch(e){ return ''; } }
+  function currentRouteExcludedSet(){ return window.__routeExcludedV18 || window.__routeExcludedV20 || new Set(); }
+
+  function forceCaYear2025(){
+    const year = document.getElementById('f-ca-annee');
+    if (!year) return;
+    if (year.value !== '2025') {
+      year.value = '2025';
+      try { setupCARange(); } catch(e){}
+    }
+  }
+
+  function patchResetDefault(){
+    if (window.__v22ResetPatched || typeof resetFilters !== 'function') return;
+    window.__v22ResetPatched = true;
+    const old = resetFilters;
+    resetFilters = function(){
+      old.apply(this, arguments);
+      setTimeout(() => { forceCaYear2025(); try { runFilter(); } catch(e){} }, 0);
+    };
+  }
+
+  function patchMonTerrainButton(){
+    const btn = document.getElementById('v18-terrain-button');
+    if (!btn) return;
+    btn.dataset.v21France = '';
+    if (btn.textContent.trim() !== 'Mon terrain') btn.textContent = 'Mon terrain';
+    btn.title = 'Afficher mon terrain par département';
+  }
+
+  function installConnectedActivityFilter(){
+    const cat = document.getElementById('f-categorie');
+    const naf = document.getElementById('f-naf');
+    if (!cat || !naf) return;
+    if (!cat.dataset.v22Connected) {
+      cat.dataset.v22Connected = '1';
+      cat.addEventListener('change', () => { populateConnectedNaf(); try { runFilter(); } catch(e){} });
+      naf.addEventListener('change', () => { try { runFilter(); } catch(e){} });
+    }
+    populateConnectedNaf();
+  }
+  function populateConnectedNaf(){
+    const cat = document.getElementById('f-categorie');
+    const naf = document.getElementById('f-naf');
+    if (!cat || !naf || !Array.isArray(globalData)) return;
+    const selectedCat = cat.value || '';
+    const old = naf.value || '';
+    const scope = globalData.filter(item => {
+      const pssrOk = (typeof itemBelongsToActivePssr !== 'function') || itemBelongsToActivePssr(item);
+      const catOk = !selectedCat || String(item?.[COL.categorie] || '') === selectedCat;
+      return pssrOk && catOk;
+    });
+    const values = [...new Set(scope.map(item => String(item?.[COL.naf] || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+    naf.innerHTML = '<option value="">Tous</option>' + values.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    if (values.includes(old)) naf.value = old;
+  }
+
+  function installDataTableRender(){
+    if (window.__v22RenderGridInstalled || typeof renderGrid !== 'function') return;
+    window.__v22RenderGridInstalled = true;
+    renderGrid = function(data){
+      try { if (typeof renderMobileGridCards === 'function') renderMobileGridCards(data); } catch(e){}
+      const tbody = document.getElementById('grid-tbody');
+      if (!tbody) return;
+      if (!data || !data.length) { tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-sm text-gray-400">Aucun résultat avec les filtres actuels.</td></tr>'; return; }
+      tbody.innerHTML = data.map(item => {
+        const amount = getTableFinancialAmount(item);
+        const machines = String(item?.[COL.machines] || '').trim();
+        const series = String(item?.[COL.series] || '').trim();
+        const groupe = String(item?.[COL.groupe] || '').trim();
+        const categorie = String(item?.[COL.categorie] || '').trim();
+        const position = String(item?.[COL.position] || '').trim();
+        const irium = getIrium(item);
+        return `<tr class="hover:bg-gray-50/80 dark:hover:bg-slate-800/40 transition align-top">
+          <td class="p-4 pl-6">
+            <div class="font-semibold text-gray-900 dark:text-white">${esc(item?.[COL.nom] || 'Inconnu')}</div>
+            <div class="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">${esc([position,groupe,categorie].filter(Boolean).join(' • '))}</div>
+            ${irium ? `<div class="v22-client-irium-line">N° client Irium : ${esc(irium)}</div>` : ''}
+            ${renderMapBadges(item)}
+          </td>
+          <td class="p-4 text-xs font-mono text-gray-500"><div>${esc(item?.[COL.siret] || '')}</div></td>
+          <td class="p-4 text-xs"><div>${esc(item?.[COL.ville] || '')} (${esc(item?._deptNorm || '')})</div><div class="text-[10px] text-gray-400 mt-1 truncate max-w-[260px]">${esc(item?.[COL.adresse] || '')}</div><div class="text-[10px] text-gray-400 mt-1">Agence : ${esc(item?.[COL.agence] || '-')}</div></td>
+          <td class="p-4 text-right"><div class="font-bold text-amber-600">${formatMoney(amount)}</div><div class="text-[10px] text-gray-400">CA Global 2025</div></td>
+          <td class="p-4 text-xs text-gray-500 dark:text-slate-400"><div class="font-bold text-gray-700 dark:text-slate-200">${formatNumber(parseNumber(item?.[COL.nbMachines]))} machine(s)</div><div class="truncate max-w-[260px] mt-1">${esc(machines || 'Aucune machine renseignée')}</div>${series ? `<div class="mt-1 text-[10px] text-gray-600 dark:text-slate-300 font-bold truncate max-w-[260px]">N° série : ${esc(series)}</div>` : ''}${typeof hasNewMachine==='function' && hasNewMachine(item) ? `<div class="mt-2 text-[10px] text-emerald-700 dark:text-emerald-300 font-bold truncate max-w-[260px]">Nouvelle : ${esc(item?.[COL.machinesRecentes] || item?.[COL.newMachineFlag] || 'NEW')}</div>` : ''}${typeof hasOldMachine==='function' && hasOldMachine(item) ? `<div class="mt-1 text-[10px] text-cyan-700 dark:text-cyan-300 font-bold truncate max-w-[260px]">5 ans+ : ${esc(getOldMachineDetails(item))}</div>` : ''}${typeof hasWarrantyEnding==='function' && hasWarrantyEnding(item) ? `<div class="mt-2 text-[10px] text-purple-700 dark:text-purple-300 font-bold truncate max-w-[260px]">Fin garantie imminente : ${esc(getWarrantyEndingDetails(item))}</div>` : ''}</td>
+          <td class="p-4 text-center pr-6">${eyeIconButton(item._rowIndex)}</td>
+        </tr>`;
+      }).join('');
+    };
+  }
+
+  function installMobileIriumLine(){
+    if (window.__v22MobilePatched || typeof renderMobileGridCards !== 'function') return;
+    window.__v22MobilePatched = true;
+    const old = renderMobileGridCards;
+    renderMobileGridCards = function(data){
+      old.apply(this, arguments);
+      const cards = document.querySelectorAll('#mobile-grid-cards article');
+      cards.forEach((card, i) => {
+        const item = data && data[i];
+        if (!item || card.dataset.v22Irium) return;
+        card.dataset.v22Irium = '1';
+        const title = card.querySelector('.mobile-card-title');
+        const irium = getIrium(item);
+        if (title && irium) title.insertAdjacentHTML('afterend', `<div class="v22-client-irium-line">N° client Irium : ${esc(irium)}</div>`);
+      });
+    };
+  }
+
+  function installRobustMapRender(){
+    if (window.__v22MapRenderInstalled || typeof renderMap !== 'function' || typeof renderKnownMarkers !== 'function') return;
+    window.__v22MapRenderInstalled = true;
+    renderKnownMarkers = function(data){
+      if (!map || !markersLayer) return { markers: 0, bounds: [] };
+      markersLayer.clearLayers();
+      const bounds = [];
+      let markers = 0;
+      const excludedSet = currentRouteExcludedSet();
+      (data || []).forEach(item => {
+        try {
+          if (!hasCoordinates(item)) return;
+          const lat = item._lat;
+          const lon = item._lon;
+          const excluded = excludedSet.has(item._rowIndex);
+          const actionText = excluded ? 'Rajouter à l’itinéraire' : 'Retirer de l’itinéraire';
+          const markerOptions = markerIconFallback(item) ? { icon: markerIconFallback(item) } : undefined;
+          const marker = L.marker([lat, lon], markerOptions).bindPopup(`
+            <div class="text-xs space-y-1 min-w-[220px]">
+              <div class="font-bold">${esc(item?.[COL.nom] || 'Entreprise')}</div>
+              <div>${esc(item?.[COL.ville] || '')} (${esc(item?._deptNorm || '')})</div>
+              <div>${esc(item?.[COL.adresse] || '')}</div>
+              <div class="v22-map-badges">${renderMapBadges(item)}</div>
+              <div class="font-bold text-amber-600">${esc(formatMoney(getTableFinancialAmount(item)))} <span class="text-[10px] text-gray-400">CA 2025</span></div>
+              ${excluded ? '<div class="text-[10px] font-black text-red-600">Retiré de l’itinéraire</div>' : ''}
+              <div class="flex items-center gap-1 mt-2"><button onclick="openDetails(${item._rowIndex})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button><button onclick="excludeRoutePoint(${item._rowIndex})" class="v20-route-toggle ${excluded ? 'is-add' : ''} text-[10px] font-black rounded px-2 py-1">${actionText}</button></div>
+            </div>`);
+          markersLayer.addLayer(marker);
+          bounds.push([lat, lon]);
+          markers++;
+        } catch(err) { console.warn('Marker error', err); }
+      });
+      if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 11 });
+      return { markers, bounds };
+    };
+    renderMap = function(data){
+      if (!map || !markersLayer) return;
+      geocodeRunId++;
+      const runId = geocodeRunId;
+      const rows = data || [];
+      const stats = renderKnownMarkers(rows);
+      if (!rows.length) {
+        showMapNotice(true, 'Aucune donnée', 'Aucune entreprise ne correspond aux filtres actuels.');
+        updateRouteStatus('Aucun point disponible pour calculer un itinéraire.', true);
+        return;
+      }
+      const missing = rows.filter(item => !hasCoordinates(item) && buildAddressQuery(item));
+      if (!missing.length) {
+        if (stats.markers > 0) {
+          showMapNotice(false);
+          updateRouteStatus(`${stats.markers} point(s) disponible(s) pour l’itinéraire.`, true);
+        } else {
+          showMapNotice(true, 'Carte non alimentée', 'Aucune coordonnée ou adresse exploitable pour les lignes filtrées.');
+          updateRouteStatus('Aucun point géolocalisable.', true);
+        }
+        return;
+      }
+      showMapNotice(true, 'Géocodage automatique', `${stats.markers} point(s) déjà affiché(s). Recherche des coordonnées pour ${missing.length} adresse(s)...`);
+      updateRouteStatus(`Géocodage en cours : ${missing.length} adresse(s) à traiter.`, true);
+      geocodeVisibleData(rows, missing, runId);
+    };
+  }
+
+  function moveGoogleMapsButton(){
+    const gpsBtn = [...document.querySelectorAll('button')].find(btn => (btn.textContent || '').trim().toLowerCase() === 'autoriser gps');
+    if (!gpsBtn) return;
+    document.querySelectorAll('.v20-google-control').forEach(el => el.style.display = 'none');
+    const oldBtn = document.getElementById('v18-google-maps-btn');
+    if (oldBtn) oldBtn.style.display = 'none';
+    if (document.getElementById('v22-gmaps-btn')) return;
+    const btn = document.createElement('button');
+    btn.id = 'v22-gmaps-btn';
+    btn.type = 'button';
+    btn.className = 'v22-gmaps-toolbar-btn';
+    btn.onclick = function(){ if (typeof openGoogleMapsRoute === 'function') openGoogleMapsRoute(); };
+    btn.innerHTML = `<svg class="v22-google-pin" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7z"/><path fill="#34A853" d="M12 22s7-7.75 7-13a7 7 0 0 0-.8-3.25L12 22z"/><path fill="#FBBC05" d="M5.8 5.75A7 7 0 0 0 5 9c0 5.25 7 13 7 13L5.8 5.75z"/><circle cx="12" cy="9" r="2.5" fill="#fff"/><path fill="#EA4335" d="M12 2a7 7 0 0 1 6.2 3.75L12 9V2z"/></svg><span>GMaps</span>`;
+    gpsBtn.insertAdjacentElement('beforebegin', btn);
+  }
+
+  function refreshVisible(){
+    try { if (Array.isArray(currentFilteredData) && typeof renderGrid === 'function') renderGrid(currentFilteredData); } catch(e){}
+    try { if (typeof isMapVisible === 'function' && isMapVisible()) renderMap(currentFilteredData || []); } catch(e){}
+  }
+
+  function init(){
+    patchResetDefault();
+    forceCaYear2025();
+    patchMonTerrainButton();
+    installConnectedActivityFilter();
+    installMobileIriumLine();
+    installDataTableRender();
+    installRobustMapRender();
+    moveGoogleMapsButton();
+    setTimeout(() => { forceCaYear2025(); patchMonTerrainButton(); moveGoogleMapsButton(); installConnectedActivityFilter(); refreshVisible(); }, 600);
+    setTimeout(() => { forceCaYear2025(); refreshVisible(); }, 1600);
+  }
+  document.addEventListener('DOMContentLoaded', () => setTimeout(init, 250));
+  setInterval(() => { try { forceCaYear2025(); patchMonTerrainButton(); moveGoogleMapsButton(); installConnectedActivityFilter(); installRobustMapRender(); } catch(e){} }, 2200);
+})();
+</script>
+
 </body>
 </html>
