@@ -4655,5 +4655,285 @@ Adresse : ${item[COL.adresse] || "-"}`);
 })();
 </script>
 
+
+<style id="wip-v23-adjustments-css">
+/* v23 WIP corrections */
+.v21-france-mini, .v21-terrain-france-wrap, .v21-terrain-france-wrap .v21-france-mini { display:none !important; }
+.v23-client-irium-line { margin-top:.25rem; font-size:10px; line-height:1.25; font-weight:600; color:#64748b; letter-spacing:.01em; }
+.dark .v23-client-irium-line { color:#94a3b8; }
+.v21-irium-under-siret, .v22-client-irium-line, .v21-irium-under-siret *, .v22-client-irium-line * { border:0 !important; background:transparent !important; box-shadow:none !important; padding:0 !important; border-radius:0 !important; }
+.v23-excluded-marker { width:24px; height:24px; border-radius:999px; background:#ef4444; border:3px solid rgba(255,255,255,.95); box-shadow:0 0 0 7px rgba(239,68,68,.12),0 8px 22px rgba(15,23,42,.25); animation:v23-excluded-soft 1.55s ease-in-out infinite; }
+@keyframes v23-excluded-soft { 0%,100% { opacity:.46; transform:scale(.96); } 50% { opacity:.95; transform:scale(1.10); } }
+.v23-route-trash { width:28px; height:28px; display:inline-flex; align-items:center; justify-content:center; border-radius:9px; border:1px solid #fecaca; background:#fef2f2; color:#991b1b; font-size:13px; font-weight:900; }
+.v23-route-trash:hover { background:#fee2e2; transform:translateY(-1px); }
+.dark .v23-route-trash { background:rgba(127,29,29,.28); border-color:#7f1d1d; color:#fecaca; }
+.v23-route-add { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:999px; background:#16a34a; color:#fff; font-weight:1000; font-size:15px; border:1px solid #15803d; box-shadow:0 8px 18px rgba(22,163,74,.25); }
+.v23-map-badges { display:flex; flex-wrap:wrap; gap:3px; margin:.35rem 0; }
+.v23-map-badges .badge, .v23-map-badges span { font-size:9px !important; line-height:1.1 !important; padding:2px 5px !important; }
+.v23-terrain-pie-card { border:1px solid #e5e7eb; border-radius:18px; padding:14px; background:#fff; box-shadow:0 12px 26px rgba(15,23,42,.07); }
+.dark .v23-terrain-pie-card { background:#020617; border-color:#334155; }
+.v23-terrain-pie { width:160px; height:160px; border-radius:999px; margin:0 auto; border:1px solid rgba(148,163,184,.35); box-shadow:inset 0 0 0 28px rgba(255,255,255,.72),0 12px 24px rgba(15,23,42,.12); }
+.dark .v23-terrain-pie { box-shadow:inset 0 0 0 28px rgba(2,6,23,.80),0 12px 24px rgba(0,0,0,.35); }
+.v23-terrain-legend { max-height:220px; overflow:auto; padding-right:4px; }
+.v23-terrain-dot { width:9px; height:9px; border-radius:999px; display:inline-block; flex:0 0 auto; }
+.v23-release-shortcuts { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:.5rem; margin-top:.8rem; }
+.v23-release-shortcuts button { border:1px solid #e5e7eb; background:#fff; color:#334155; border-radius:12px; padding:.55rem .7rem; text-align:left; font-size:11px; font-weight:900; }
+.v23-release-shortcuts button:hover { border-color:#ef4444; color:#b91c1c; }
+.dark .v23-release-shortcuts button { background:#0f172a; border-color:#334155; color:#e2e8f0; }
+.v23-highlight-target { outline:3px solid #ef4444 !important; outline-offset:4px !important; animation:v23-highlight-pulse 1s ease-in-out infinite !important; position:relative; z-index:10030 !important; }
+@keyframes v23-highlight-pulse { 0%,100% { box-shadow:0 0 0 0 rgba(239,68,68,.15); } 50% { box-shadow:0 0 0 12px rgba(239,68,68,.30); } }
+.v23-gmaps-toolbar-btn { display:inline-flex; align-items:center; gap:.35rem; }
+</style>
+<script id="wip-v23-adjustments-js">
+(function(){
+  const PATCH_ID='v23-WIP-2026-06-29';
+  window.__WIP_VERSION__=PATCH_ID;
+  const sectorState = {cat:'', naf:''};
+  function esc(v){ try { return escapeHtml(v); } catch(e){ return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); } }
+  function norm(v){ try { return normalizeText(v || ''); } catch(e){ return String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); } }
+  function fmtNum(v){ try { return formatNumber(v); } catch(e){ return String(v ?? ''); } }
+  function getIriumV23(item){
+    const keys=[];
+    try { if (COL && COL.clientNumero) keys.push(COL.clientNumero); } catch(e){}
+    keys.push('Client_Irium.Client (Numéro)','Client_Irium.Client Numéro','Client_Irium.Client','Client (Numéro)','Numéro client','Numero client','N° client','Num client','Code Irium','Code client Irium','Client Irium');
+    for (const k of keys) { const v=item && item[k]; if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim(); }
+    return '';
+  }
+  window.getIriumV23=getIriumV23;
+  function renderItemBadges(item){ try { return typeof renderBadges==='function' ? renderBadges(item) : ''; } catch(e){ return ''; } }
+  function getRouteSet(){ return window.__routeExcludedV18 || window.__routeExcludedV20 || new Set(); }
+  function iconForV23(item){
+    const excluded = getRouteSet().has(item?._rowIndex);
+    if (excluded && typeof L !== 'undefined') return L.divIcon({className:'', html:'<div class="v23-excluded-marker"></div>', iconSize:[30,30], iconAnchor:[15,15], popupAnchor:[0,-14]});
+    try { if (typeof markerIconFor==='function') return markerIconFor(item); } catch(e){}
+    return undefined;
+  }
+  function getPointPopupV23(item){
+    const excluded = getRouteSet().has(item?._rowIndex);
+    return `<div class="text-xs space-y-1 min-w-[220px]">
+      <div class="font-bold">${esc(item?.[COL.nom] || 'Entreprise')}</div>
+      <div>${esc(item?.[COL.ville] || '')} (${esc(item?._deptNorm || '')})</div>
+      <div>${esc(item?.[COL.adresse] || '')}</div>
+      <div class="v23-map-badges">${renderItemBadges(item)}</div>
+      <div class="font-bold text-amber-600">${esc(formatMoney(getTableFinancialAmount(item)))} <span class="text-[10px] text-gray-400">CA 2025</span></div>
+      ${excluded ? '<div class="text-[10px] font-black text-red-600">Retiré de l’itinéraire</div>' : ''}
+      <div class="flex items-center gap-1 mt-2"><button onclick="openDetails(${item._rowIndex})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button>${excluded ? `<button onclick="excludeRoutePoint(${item._rowIndex})" class="v23-route-add" title="Rajouter à l’itinéraire">+</button>` : ''}</div>
+    </div>`;
+  }
+  function installMapV23(){
+    if (typeof renderKnownMarkers === 'function') {
+      renderKnownMarkers = function(data){
+        if (!map || !markersLayer) return {markers:0,bounds:[]};
+        markersLayer.clearLayers();
+        const bounds=[]; let markers=0;
+        (data || []).forEach(item => {
+          try {
+            if (!hasCoordinates(item)) return;
+            const options = iconForV23(item) ? {icon: iconForV23(item)} : undefined;
+            const marker = L.marker([item._lat,item._lon], options).bindPopup(getPointPopupV23(item));
+            markersLayer.addLayer(marker); bounds.push([item._lat,item._lon]); markers++;
+          } catch(err){ console.warn('Marker v23 error', err); }
+        });
+        if (bounds.length) map.fitBounds(bounds,{padding:[30,30],maxZoom:11});
+        return {markers,bounds};
+      };
+    }
+    if (typeof renderMap === 'function') {
+      renderMap = function(data){
+        if (!map || !markersLayer) return;
+        geocodeRunId++;
+        const runId=geocodeRunId;
+        const rows=data || [];
+        const stats=renderKnownMarkers(rows);
+        if (!rows.length) { showMapNotice(true,'Aucune donnée','Aucune entreprise ne correspond aux filtres actuels.'); updateRouteStatus('Aucun point disponible pour calculer un itinéraire.',true); return; }
+        const missing=rows.filter(item => !hasCoordinates(item) && buildAddressQuery(item));
+        if (!missing.length) {
+          if (stats.markers>0) { showMapNotice(false); updateRouteStatus(`${stats.markers} point(s) disponible(s) pour l’itinéraire.`,true); }
+          else { showMapNotice(true,'Carte non alimentée','Aucune coordonnée ou adresse exploitable pour les lignes filtrées.'); updateRouteStatus('Aucun point géolocalisable.',true); }
+          return;
+        }
+        showMapNotice(true,'Géocodage automatique',`${stats.markers} point(s) déjà affiché(s). Recherche des coordonnées pour ${missing.length} adresse(s)...`);
+        updateRouteStatus(`Géocodage en cours : ${missing.length} adresse(s) à traiter.`,true);
+        geocodeVisibleData(rows, missing, runId);
+      };
+    }
+  }
+  function installRouteButtonsV23(){
+    window.excludeRoutePoint = function(rowIndex){
+      const set=getRouteSet();
+      if (set.has(rowIndex)) set.delete(rowIndex); else set.add(rowIndex);
+      if (Array.isArray(manualRouteOrder) && set.has(rowIndex)) manualRouteOrder = manualRouteOrder.filter(idx => idx !== rowIndex);
+      if (typeof isMapVisible==='function' && isMapVisible()) renderMap(currentFilteredData || []);
+      if (window.__lastRoutePointsV18?.length) calculateRouteFromVisiblePoints(true);
+    };
+    if (!window.__v23ClearRouteWrapped && typeof clearRoute === 'function') {
+      window.__v23ClearRouteWrapped=true;
+      const oldClear=clearRoute;
+      clearRoute=function(){ const set=getRouteSet(); if(set && typeof set.clear==='function') set.clear(); oldClear.apply(this,arguments); if(typeof isMapVisible==='function' && isMapVisible()) renderMap(currentFilteredData || []); };
+    }
+    if (!window.__v23RouteStepsWrapped && typeof renderRouteSteps === 'function') {
+      window.__v23RouteStepsWrapped=true;
+      const oldSteps=renderRouteSteps;
+      renderRouteSteps=function(args){ window.__lastRoutePointsV18=args?.points || []; oldSteps.apply(this,arguments); setTimeout(()=>decorateRouteStepsV23(args?.points || []),0); };
+    }
+    decorateRouteStepsV23(window.__lastRoutePointsV18 || []);
+  }
+  function decorateRouteStepsV23(points){
+    const panel=document.getElementById('route-steps');
+    if(!panel || !points?.length) return;
+    const cards=[...panel.querySelectorAll('.rounded-xl.border')];
+    cards.forEach((card,i)=>{
+      const item=points[i];
+      if(!item || item._isUserLocation) return;
+      card.querySelectorAll('.v18-route-trash,.v20-route-toggle,.v23-route-trash').forEach(b=>b.remove());
+      const wrapper=card.querySelector('.flex.items-start.gap-2') || card;
+      wrapper.insertAdjacentHTML('beforeend', `<button class="v23-route-trash" onclick="excludeRoutePoint(${item._rowIndex})" title="Retirer de l’itinéraire">🗑</button>`);
+    });
+  }
+  function installRenderGridV23(){
+    if (typeof renderGrid === 'function') {
+      renderGrid = function(data){
+        try { if (typeof renderMobileGridCards==='function') renderMobileGridCards(data); } catch(e){}
+        const tbody=document.getElementById('grid-tbody'); if(!tbody) return;
+        if(!data || !data.length){ tbody.innerHTML='<tr><td colspan="6" class="p-8 text-center text-sm text-gray-400">Aucun résultat avec les filtres actuels.</td></tr>'; return; }
+        tbody.innerHTML=data.map(item=>{
+          const amount=getTableFinancialAmount(item);
+          const machines=String(item?.[COL.machines] || '').trim();
+          const series=String(item?.[COL.series] || '').trim();
+          const position=String(item?.[COL.position] || '').trim();
+          const groupe=String(item?.[COL.groupe] || '').trim();
+          const categorie=String(item?.[COL.categorie] || '').trim();
+          const irium=getIriumV23(item);
+          return `<tr class="hover:bg-gray-50/80 dark:hover:bg-slate-800/40 transition align-top">
+            <td class="p-4 pl-6"><div class="font-semibold text-gray-900 dark:text-white">${esc(item?.[COL.nom] || 'Inconnu')}</div><div class="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">${esc([position,groupe,categorie].filter(Boolean).join(' • '))}</div>${irium ? `<div class="v23-client-irium-line">N° client Irium : ${esc(irium)}</div>` : ''}${renderItemBadges(item)}</td>
+            <td class="p-4 text-xs font-mono text-gray-500"><div>${esc(item?.[COL.siret] || '')}</div></td>
+            <td class="p-4 text-xs"><div>${esc(item?.[COL.ville] || '')} (${esc(item?._deptNorm || '')})</div><div class="text-[10px] text-gray-400 mt-1 truncate max-w-[260px]">${esc(item?.[COL.adresse] || '')}</div><div class="text-[10px] text-gray-400 mt-1">Agence : ${esc(item?.[COL.agence] || '-')}</div></td>
+            <td class="p-4 text-right"><div class="font-bold text-amber-600">${formatMoney(amount)}</div><div class="text-[10px] text-gray-400">CA Global 2025</div></td>
+            <td class="p-4 text-xs text-gray-500 dark:text-slate-400"><div class="font-bold text-gray-700 dark:text-slate-200">${formatNumber(parseNumber(item?.[COL.nbMachines]))} machine(s)</div><div class="truncate max-w-[260px] mt-1">${esc(machines || 'Aucune machine renseignée')}</div>${series ? `<div class="mt-1 text-[10px] text-gray-600 dark:text-slate-300 font-bold truncate max-w-[260px]">N° série : ${esc(series)}</div>` : ''}${typeof hasNewMachine==='function' && hasNewMachine(item) ? `<div class="mt-2 text-[10px] text-emerald-700 dark:text-emerald-300 font-bold truncate max-w-[260px]">Nouvelle : ${esc(item?.[COL.machinesRecentes] || item?.[COL.newMachineFlag] || 'NEW')}</div>` : ''}${typeof hasOldMachine==='function' && hasOldMachine(item) ? `<div class="mt-1 text-[10px] text-cyan-700 dark:text-cyan-300 font-bold truncate max-w-[260px]">5 ans+ : ${esc(getOldMachineDetails(item))}</div>` : ''}${typeof hasWarrantyEnding==='function' && hasWarrantyEnding(item) ? `<div class="mt-2 text-[10px] text-purple-700 dark:text-purple-300 font-bold truncate max-w-[260px]">Fin garantie imminente : ${esc(getWarrantyEndingDetails(item))}</div>` : ''}</td>
+            <td class="p-4 text-center pr-6">${eyeIconButton(item._rowIndex)}</td>
+          </tr>`;
+        }).join('');
+      };
+    }
+    if (typeof renderMobileGridCards === 'function') {
+      renderMobileGridCards = function(data){
+        const container=document.getElementById('mobile-grid-cards'); if(!container) return;
+        if(!data || !data.length){ container.innerHTML='<div class="mobile-card text-center text-sm text-gray-400">Aucun résultat avec les filtres actuels.</div>'; return; }
+        container.innerHTML=data.map(item=>{ const amount=getTableFinancialAmount(item); const machines=String(item?.[COL.machines] || '').trim(); const series=String(item?.[COL.series] || '').trim(); const irium=getIriumV23(item); return `<article class="mobile-card"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><div class="mobile-card-title">${esc(item?.[COL.nom] || 'Inconnu')}</div><div class="mobile-card-subtitle">${esc([item?.[COL.position], item?.[COL.groupe], item?.[COL.categorie]].filter(Boolean).join(' • '))}</div>${irium ? `<div class="v23-client-irium-line">N° client Irium : ${esc(irium)}</div>` : ''}</div>${eyeIconButton(item._rowIndex)}</div><div class="mt-2">${renderItemBadges(item)}</div><div class="mobile-card-grid">${mobileField('CA Global 2025', formatMoney(amount))}${mobileField('Ville', `${item?.[COL.ville] || '-'} (${item?._deptNorm || '-'})`)}${mobileField('Agence', item?.[COL.agence] || '-')}${mobileField('Machines', `${formatNumber(parseNumber(item?.[COL.nbMachines]))} machine(s)`)}${mobileField('SIRET', item?.[COL.siret] || '-')}</div><div class="mt-3 text-xs text-gray-500 dark:text-slate-400 truncate">${esc(item?.[COL.adresse] || 'Adresse non renseignée')}</div><div class="mt-2 text-xs text-gray-500 dark:text-slate-400 line-clamp-2">${esc(machines || 'Aucune machine renseignée')}</div>${series ? `<div class="mt-1 text-[11px] font-bold text-gray-600 dark:text-slate-300 line-clamp-2">N° série : ${esc(series)}</div>` : ''}</article>`; }).join('');
+      };
+    }
+  }
+  function installDetailsV23(){
+    openDetails = function(rowIndex){
+      const item=(globalData || []).find(row => row._rowIndex === rowIndex); if(!item) return;
+      const modal=ensureDetailsModal(); if(!modal){ alert(`${item[COL.nom] || 'Entreprise'}\nSIRET : ${item[COL.siret] || '-'}\nAdresse : ${item[COL.adresse] || '-'}`); return; }
+      ensureTop200RankCache();
+      const rowsFrom = fields => fields.map(([label,keyOrValue,isValue=false]) => { const value=isValue ? keyOrValue : item[keyOrValue]; return [label, formatDetailValue(label,value)]; }).filter(([,value]) => !isEmptyDetailValue(value));
+      const topRank=getTop200Rank(item);
+      const sections=[
+        {title:'Synthèse visite', rows:[["Rang TOP 200 PSSR", Number.isFinite(topRank) ? formatNumber(topRank) : '', true],["Badge TOP", getTopBandLabel(item), true],["Visites obligatoires", getObjectiveVisits(item) ? formatNumber(getObjectiveVisits(item)) : '', true],["Visites effectuées 2026", item[COL.visits2026] !== undefined && item[COL.visits2026] !== '' ? formatNumber(getVisits2026(item)) : '', true],["Visites restantes", getRemainingVisits(item) > 0 ? formatNumber(getRemainingVisits(item)) : '', true],["Nouvelle machine", hasNewMachine(item) ? `Oui${getRecentMachineAgeLabel(item) ? ' — ' + getRecentMachineAgeLabel(item) : ''}` : '', true],["Machine 5 ans et +", hasOldMachine(item) ? 'Oui' : '', true],["Client éligible", isGrandCompte(item) ? 'Oui' : '', true]].filter(([,value])=>!isEmptyDetailValue(value))},
+        {title:'Identité et localisation', rows: rowsFrom([["Entreprise", COL.nom],["SIRET", COL.siret],["Client Irium", COL.clientNumero],["Statut client", COL.position],["Groupe", COL.groupe],["Agence", COL.agence],["PSSR", COL.pssr],["Adresse", COL.adresse],["Département", COL.dept],["Ville", COL.ville],["Nombre de salariés", COL.salaries]])},
+        {title:'Potentiel commercial', rows: rowsFrom([["CA Global", COL.caGlobal],["CA 2025", COL.ca2025],["CA PDR cumulé", COL.pcsTotal],["CA SERVICE cumulé", COL.savTotal]])},
+        {title:'Parc machines', rows: rowsFrom([["Nombre de machines", COL.nbMachines],["Liste machines", COL.machines],["N° série", COL.series],["Machines récentes", COL.machinesRecentes],["Flag machine récente", COL.newMachineFlag],["Machines 5 ans et +", COL.oldMachineFlag],["Âge machine", COL.ageMachineAll],["Machines fin garantie", 'Machines fin garantie par client'],["Nb machines source", 'Somme de .Nb Machines/clients']])},
+        {title:'CRM et opportunités', rows: rowsFrom([["Dernier contact - date", COL.crmDate],["Dernier contact - vendeur", COL.crmVendeur],["Dernier contact - sujet", COL.crmSujet],["Dernier contact - note", COL.crmNote],["Dernière opportunité - vendeur", 'CRM_DerniereOpp_Vendeur'],["Dernière opportunité - type matériel", 'CRM_DerniereOpp_TypeMateriel'],["Dernière opportunité - date", 'CRM_DerniereOppDate'],["Dernière opportunité - statut", 'CRM_DerniereOpp_Status'],["Dernière opportunité - nature matériel", 'CRM_DerniereOpp_NatureMateriel']])},
+        {title:'Secteur d’activité', rows: rowsFrom([["Catégorie", COL.categorie],["NAF", COL.naf],["Description", COL.description]])}
+      ];
+      modal.innerHTML = `<div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onclick="closeDetails()"></div><div class="relative bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-2xl w-[min(1040px,96vw)] max-h-[90vh] overflow-hidden shadow-2xl"><div class="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between gap-4 items-start"><div><div class="text-[10px] uppercase tracking-widest font-black text-komatsu-600 dark:text-komatsu-400">Détails entreprise</div><h3 class="font-display font-black text-lg text-gray-900 dark:text-white mt-1">${esc(item[COL.nom] || 'Entreprise')}</h3><p class="text-xs text-gray-500 dark:text-slate-400 mt-1">${esc(item[COL.adresse] || 'Adresse non renseignée')}</p>${renderItemBadges(item)}</div><button onclick="closeDetails()" class="shrink-0 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl px-3 py-2 text-xs font-black text-gray-600 dark:text-slate-200">Fermer</button></div><div class="p-5 overflow-y-auto max-h-[74vh] space-y-5">${caMiniChartsSection(item)}${sections.filter(s=>s.rows.length).map(s=>detailSection(s.title,s.rows)).join('')}</div></div>`;
+      modal.classList.remove('hidden'); modal.style.display='flex';
+    };
+  }
+  function restoreMainSectorFilterV23(){
+    const cat=document.getElementById('f-categorie'); const naf=document.getElementById('f-naf');
+    if(!cat || !naf || !Array.isArray(globalData)) return;
+    sectorState.cat = cat.value || sectorState.cat || '';
+    sectorState.naf = naf.value || sectorState.naf || '';
+    const scope = (typeof getFilterScopeData==='function' ? getFilterScopeData() : globalData) || [];
+    const categories=[...new Set(scope.map(i=>String(i?.[COL.categorie] || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+    const nafs=[...new Set(scope.map(i=>String(i?.[COL.naf] || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+    const catHtml='<option value="">Toutes</option>' + categories.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    const nafHtml='<option value="">Tous</option>' + nafs.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+    if(cat.innerHTML !== catHtml) cat.innerHTML = catHtml;
+    if(naf.innerHTML !== nafHtml) naf.innerHTML = nafHtml;
+    if(categories.includes(sectorState.cat)) cat.value=sectorState.cat; else { cat.value=''; sectorState.cat=''; }
+    if(nafs.includes(sectorState.naf)) naf.value=sectorState.naf; else { naf.value=''; sectorState.naf=''; }
+    cat.onchange=function(){ sectorState.cat=this.value || ''; try{ runFilter(); }catch(e){} setTimeout(restoreMainSectorFilterV23,40); };
+    naf.onchange=function(){ sectorState.naf=this.value || ''; try{ runFilter(); }catch(e){} setTimeout(restoreMainSectorFilterV23,40); };
+  }
+  function forceCaYear2025V23(){ const year=document.getElementById('f-ca-annee'); if(year && year.value !== '2025'){ year.value='2025'; try{ setupCARange(); }catch(e){} } }
+  function moveGmapsLeftOfGpsV23(){
+    const gpsBtn=[...document.querySelectorAll('button')].find(btn => (btn.textContent || '').trim().toLowerCase() === 'autoriser gps'); if(!gpsBtn) return;
+    document.querySelectorAll('.v20-google-control').forEach(el=>el.style.display='none');
+    const old=document.getElementById('v18-google-maps-btn'); if(old) old.style.display='none';
+    let btn=document.getElementById('v22-gmaps-btn') || document.getElementById('v23-gmaps-btn');
+    if(!btn){ btn=document.createElement('button'); btn.id='v23-gmaps-btn'; btn.type='button'; btn.className='v22-gmaps-toolbar-btn v23-gmaps-toolbar-btn'; btn.onclick=function(){ if(typeof openGoogleMapsRoute==='function') openGoogleMapsRoute(); }; btn.innerHTML='<span style="font-weight:1000;color:#4285F4">G</span><span style="font-weight:1000;color:#DB4437;margin-left:-.25rem">M</span><span>aps</span>'; }
+    gpsBtn.insertAdjacentElement('beforebegin', btn);
+  }
+  function buildTerrainPieHtmlV23(stats){
+    const total = stats.reduce((a,s)=>a+s.clients+s.prospects,0);
+    if(!total) return '';
+    let cursor=0; const stops=[]; const legend=[];
+    stats.forEach((s,idx)=>{
+      const hue=(idx*47+205)%360;
+      const clientColor=`hsl(${hue} 78% 43%)`;
+      const prospectColor=`hsl(${hue} 78% 73%)`;
+      const parts=[['Clients',s.clients,clientColor],['Prospects',s.prospects,prospectColor]];
+      parts.forEach(([label,val,color])=>{ if(val<=0) return; const start=cursor/total*100; cursor+=val; const end=cursor/total*100; stops.push(`${color} ${start.toFixed(2)}% ${end.toFixed(2)}%`); });
+      legend.push(`<div class="flex items-center justify-between gap-2 text-[11px]"><span class="flex items-center gap-1 min-w-0"><span class="v23-terrain-dot" style="background:${clientColor}"></span><span class="truncate">${esc(s.dept)} clients</span></span><b>${fmtNum(s.clients)}</b></div><div class="flex items-center justify-between gap-2 text-[11px]"><span class="flex items-center gap-1 min-w-0"><span class="v23-terrain-dot" style="background:${prospectColor}"></span><span class="truncate">${esc(s.dept)} prospects</span></span><b>${fmtNum(s.prospects)}</b></div>`);
+    });
+    return `<div class="v23-terrain-pie-card"><div class="text-[10px] uppercase tracking-widest font-black text-komatsu-600 dark:text-komatsu-400 mb-3">Répartition clients / prospects par département</div><div class="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-3 items-center"><div class="v23-terrain-pie" style="background:conic-gradient(${stops.join(',')})"></div><div class="v23-terrain-legend space-y-1">${legend.join('')}</div></div></div>`;
+  }
+  function patchTerrainStatsV23(){
+    const statsBox=document.getElementById('v18-terrain-stats'); if(!statsBox || typeof deptStats !== 'function') return;
+    const stats=deptStats();
+    const cards=stats.map(s=>{ const doneRaw=s.objective>0 ? (s.visits/s.objective)*100 : 0; const donePct=s.objective>0 ? Math.min(100, Math.round(doneRaw)) : 0; const remainingPct=s.objective>0 ? Math.max(0, 100-donePct) : 0; const over=s.objective>0 && s.visits>s.objective; return `<div class="v18-soft-card"><div class="flex justify-between"><b>Dépt ${esc(s.dept)}</b><span>${fmtNum(s.total)} lignes</span></div><div class="mt-2 grid grid-cols-2 gap-2 text-xs"><div>Clients : <b>${fmtNum(s.clients)}</b></div><div>Prospects : <b>${fmtNum(s.prospects)}</b></div><div>Visites faites : <b>${fmtNum(s.visits)}</b></div><div>Objectif : <b>${fmtNum(s.objective)}</b></div><div>% fait : <b>${donePct}%</b></div><div>% reste : <b>${remainingPct}%</b></div>${over ? '<div class="col-span-2 text-[10px] font-bold text-emerald-600">Objectif dépassé : le reste est plafonné à 0%.</div>' : ''}</div></div>`; }).join('');
+    statsBox.innerHTML=buildTerrainPieHtmlV23(stats)+cards;
+  }
+  function installTerrainPatchV23(){
+    if(!window.__v23TerrainWrapped && typeof renderMonTerrainMap === 'function'){
+      window.__v23TerrainWrapped=true;
+      const old=renderMonTerrainMap;
+      renderMonTerrainMap=async function(){ await old.apply(this,arguments); setTimeout(patchTerrainStatsV23,80); };
+    }
+  }
+  function installReleaseShortcutsV23(){
+    const modal=document.getElementById('v18-release-modal'); if(!modal) return;
+    const body=modal.querySelector('.p-5.overflow-y-auto'); if(!body || body.querySelector('.v23-release-shortcuts')) return;
+    body.insertAdjacentHTML('beforeend', `<div class="v23-release-shortcuts"><button onclick="focusReleaseTargetV23('table')">Tableau Données — N° client</button><button onclick="focusReleaseTargetV23('sector')">Filtre secteur d’activité</button><button onclick="focusReleaseTargetV23('map')">Carte / GPS / GMaps</button><button onclick="focusReleaseTargetV23('terrain')">Mon terrain</button><button onclick="focusReleaseTargetV23('details')">Détails entreprise</button></div>`);
+  }
+  window.focusReleaseTargetV23=function(target){
+    try { closeReleaseNotes(); } catch(e){}
+    let el=null;
+    if(target==='table'){ try{ setTab('table'); }catch(e){} el=document.getElementById('data-grid') || document.getElementById('grid-tbody'); }
+    if(target==='sector'){ el=document.getElementById('acc-secteur-activite') || document.getElementById('f-categorie'); }
+    if(target==='map'){ try{ setTab('map'); }catch(e){} el=document.getElementById('map-toolbar') || document.getElementById('map'); }
+    if(target==='terrain'){ el=document.getElementById('v18-terrain-button'); }
+    if(target==='details'){ try{ setTab('table'); }catch(e){} el=document.querySelector('[onclick^="openDetails"]') || document.getElementById('grid-tbody'); }
+    if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.classList.add('v23-highlight-target'); setTimeout(()=>el.classList.remove('v23-highlight-target'),20000); }
+  };
+  function patchReleaseOpenV23(){
+    if(window.__v23ReleaseWrapped) return; window.__v23ReleaseWrapped=true;
+    const oldOpen=window.openReleaseNotes;
+    window.openReleaseNotes=function(){ if(oldOpen) oldOpen(); setTimeout(installReleaseShortcutsV23,50); };
+  }
+  function initV23(){
+    try{ document.querySelectorAll('.v21-france-mini').forEach(el=>el.remove()); const btn=document.getElementById('v18-terrain-button'); if(btn) btn.textContent='Mon terrain'; }catch(e){}
+    forceCaYear2025V23();
+    restoreMainSectorFilterV23();
+    installRenderGridV23();
+    installDetailsV23();
+    installMapV23();
+    installRouteButtonsV23();
+    moveGmapsLeftOfGpsV23();
+    installTerrainPatchV23();
+    patchTerrainStatsV23();
+    patchReleaseOpenV23();
+    try { if (Array.isArray(currentFilteredData) && typeof renderGrid==='function') renderGrid(currentFilteredData); } catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(initV23,500));
+  setTimeout(initV23,1500);
+  setInterval(()=>{ try{ forceCaYear2025V23(); restoreMainSectorFilterV23(); installMapV23(); installRouteButtonsV23(); moveGmapsLeftOfGpsV23(); installReleaseShortcutsV23(); }catch(e){} },1100);
+})();
+</script>
+
 </body>
 </html>
