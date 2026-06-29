@@ -558,9 +558,12 @@
                                 <label class="modern-label">Volume de flotte (Nb machines)</label>
                                 <select id="f-nb-machines" onchange="runFilter()" class="modern-input">
                                     <option value="">Tous les volumes</option>
-                                    <option value="0-5">0 à 5 machines</option>
-                                    <option value="5-10">5 à 10 machines</option>
-                                    <option value="10+">10+ machines</option>
+                                    <option value="1">1 machine</option>
+                                    <option value="2">2 machines</option>
+                                    <option value="3">3 machines</option>
+                                    <option value="4">4 machines</option>
+                                    <option value="5">5 machines</option>
+                                    <option value="6+">6 machines et +</option>
                                 </select>
                             </div>
                             <div>
@@ -613,30 +616,22 @@
 
                 <div>
                     <button onclick="toggleAccordion('acc-secteur-activite')" class="accordion-btn">
-                        <span class="text-[11px] font-display font-extrabold text-gray-700 dark:text-slate-200 uppercase tracking-wider">5. Secteur d’activité</span>
+                        <span class="text-[11px] font-display font-extrabold text-gray-700 dark:text-slate-200 uppercase tracking-wider">5. Secteur d'activité</span>
                         <svg id="icon-acc-secteur-activite" class="w-4 h-4 text-gray-400 transition-transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                     </button>
                     <div id="acc-secteur-activite" class="accordion-content block">
                         <div class="grid grid-cols-1 gap-3">
                             <div>
-                                <label class="modern-label">Secteur d’activité</label>
-                                <div class="rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden">
-                                    <div class="p-3 border-b border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 space-y-2">
-                                        <div id="activity-filter-summary" class="text-[11px] font-black uppercase tracking-wider text-gray-600 dark:text-slate-300">Aucun secteur sélectionné</div>
-                                        <div id="activity-filter-badges" class="hidden flex flex-wrap gap-1.5"></div>
-                                        <div class="flex flex-wrap gap-2 pt-1">
-                                            <button type="button" onclick="toggleAllActivityTree(true)" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-slate-400 hover:border-komatsu-500 transition">Tout déplier</button>
-                                            <button type="button" onclick="toggleAllActivityTree(false)" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-slate-400 hover:border-komatsu-500 transition">Tout replier</button>
-                                            <button type="button" onclick="clearActivityFilter()" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-500 dark:text-slate-400 hover:border-red-400 hover:text-red-500 transition">Réinitialiser</button>
-                                        </div>
-                                    </div>
-                                    <div id="f-activity-tree" class="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-slate-800">
-                                        <div class="p-3 text-[11px] text-gray-400 dark:text-slate-500">Chargement des secteurs...</div>
-                                    </div>
-                                </div>
-                                <select id="f-categorie" multiple class="hidden" aria-hidden="true"></select>
-                                <select id="f-naf" multiple class="hidden" aria-hidden="true"></select>
-                                <p class="mt-1 text-[10px] text-gray-400 dark:text-slate-500">Cochez une catégorie pour sélectionner tous les codes NAF / APE associés, ou cochez uniquement certains codes.</p>
+                                <label class="modern-label">Catégorie</label>
+                                <select id="f-categorie" onchange="runFilter()" class="modern-input">
+                                    <option value="">Toutes</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="modern-label">NAF</label>
+                                <select id="f-naf" onchange="runFilter()" class="modern-input">
+                                    <option value="">Tous</option>
+                                </select>
                             </div>
                         </div>
                     </div>
@@ -747,15 +742,15 @@
                     <div class="p-4 md:p-5 space-y-4">
                         <div class="grid grid-cols-1 lg:grid-cols-4 gap-3">
                             <div class="rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 p-4">
-                                <div class="text-[10px] uppercase tracking-widest font-black text-gray-400 dark:text-slate-500">Visites obligatoires 2026</div>
+                                <div class="text-[10px] uppercase tracking-widest font-black text-gray-400 dark:text-slate-500">Objectif annuel 2026</div>
                                 <div id="top-visits-done" class="mt-2 font-display font-black text-3xl text-gray-900 dark:text-white">0</div>
                             </div>
                             <div class="rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 p-4">
-                                <div class="text-[10px] uppercase tracking-widest font-black text-gray-400 dark:text-slate-500">Visites restantes 2026</div>
+                                <div class="text-[10px] uppercase tracking-widest font-black text-gray-400 dark:text-slate-500">Reste à faire 2026</div>
                                 <div id="top-visits-remaining" class="mt-2 font-display font-black text-3xl text-gray-900 dark:text-white">0</div>
                             </div>
                             <div class="rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 p-4">
-                                <div class="text-[10px] uppercase tracking-widest font-black text-gray-400 dark:text-slate-500">Top 200 réalisé</div>
+                                <div class="text-[10px] uppercase tracking-widest font-black text-gray-400 dark:text-slate-500">Déjà fait / Objectif</div>
                                 <div id="top-visits-percent" class="mt-2 font-display font-black text-3xl text-gray-900 dark:text-white">0%</div>
                             </div>
                             <div class="rounded-2xl border border-gray-200 dark:border-slate-800 bg-gray-50 dark:bg-slate-900 p-4">
@@ -824,7 +819,7 @@
             { nom: "RENAULT", prenom: "DENIS", machine: "hauler", depts: ["01", "07", "26", "42", "69"] },
             { nom: "POIROT", prenom: "JULIEN", machine: "miniExcavator", depts: ["38", "73", "74"] },
             { nom: "GRAC", prenom: "LUDOVIC", machine: "forklift", depts: ["04", "05", "13", "84"] },
-            { nom: "CHEDOTAL", prenom: "JEREMY", machine: "roadGrader", depts: ["09", "12", "31", "32", "46", "81", "82", "11", "30", "34", "66"] },
+            { nom: "CHEDOTAL", prenom: "JEREMY", machine: "roadGrader", depts: ["09", "12", "31", "32", "46", "81", "82", "11", "66"] },
             { nom: "VALE", prenom: "LIONEL", machine: "compactLoader", depts: ["03", "15", "43", "48", "58", "63"] },
             { nom: "DEMEYERE", prenom: "MELODY", machine: "demolitionExcavator", depts: ["19", "23", "87"] }
         ];
@@ -989,10 +984,6 @@
         let top200UseActiveFilters = false;
         let top200Limit = 200;
         let top200VisitFilter = "";
-        let activityCategoryToNafs = new Map();
-        let activityNafToCategories = new Map();
-        let activityFiltersSyncing = false;
-        let activityExpandedCategories = new Set();
         let geocodeRunId = 0;
         let geocodeCache = loadGeocodeCache();
         const GEOCODE_ENDPOINT = "https://data.geopf.fr/geocodage/search/";
@@ -1007,7 +998,6 @@
         document.addEventListener("DOMContentLoaded", () => {
             updateDataTabLabel();
             renderCollaboratorGrid();
-            setupActivityTreeEvents();
             initMap();
             loadCSVData();
         });
@@ -1075,6 +1065,7 @@
                     item._deptNorm = normalizeDept(item[COL.dept]);
                     item._searchNom = normalizeText(item[COL.nom]);
                     item._searchVille = normalizeText(item[COL.ville]);
+                    item._searchCanton = normalizeText([item["Canton"], item["Canton (Nom)"], item["Client_Irium.Canton"], item["Client_Irium.Canton (Nom)"], item["canton"], item["canton_nom"]].filter(Boolean).join(" "));
                     item._searchMachines = normalizeText([
                         item[COL.machines],
                         item["Liste machine"],
@@ -1158,256 +1149,17 @@
             const priorites = uniqueValues(scopeData.map(item => item[COL.priorite])).sort((a, b) => a.localeCompare(b, "fr", { numeric: true }));
             const salaries = uniqueValues(scopeData.map(item => item[COL.salaries])).sort((a, b) => a.localeCompare(b, "fr", { numeric: true }));
 
-            buildActivityFilterMaps(scopeData);
             populateSelect("f-groupe", groupes);
             populateSelect("f-dept", depts);
             populateSelect("f-agence", agences);
-            populateMultiSelect("f-categorie", categories);
-            populateMultiSelect("f-naf", nafs);
-            syncActivityCategoriesFromNafs();
-            renderActivityTree();
+            populateSelect("f-categorie", categories);
+            populateSelect("f-naf", nafs);
             populatePriorityCheckboxes(priorites);
             populateSelect("f-salaries", salaries);
             populateSelect("f-position", positions, value => {
                 const labels = { CL: "Client (CL)", PR: "Prospect (PR)", SC: "Suspect / sans client actif (SC)", AV: "Ancien / à vérifier (AV)" };
                 return labels[value] || value;
             });
-        }
-
-        function buildActivityFilterMaps(data) {
-            activityCategoryToNafs = new Map();
-            activityNafToCategories = new Map();
-            data.forEach(item => {
-                const category = String(item?.[COL.categorie] || "").trim();
-                const naf = String(item?.[COL.naf] || "").trim();
-                if (!category || !naf) return;
-                if (!activityCategoryToNafs.has(category)) activityCategoryToNafs.set(category, new Set());
-                if (!activityNafToCategories.has(naf)) activityNafToCategories.set(naf, new Set());
-                activityCategoryToNafs.get(category).add(naf);
-                activityNafToCategories.get(naf).add(category);
-            });
-        }
-
-        function populateMultiSelect(id, values, labelFn = value => value) {
-            const select = document.getElementById(id);
-            if (!select) return;
-            const previous = getSelectedValues(id);
-            const validValues = new Set(values);
-            select.innerHTML = values.map(value => `
-                <option value="${escapeHtml(value)}">${escapeHtml(labelFn(value))}</option>
-            `).join("");
-            setSelectedValues(id, previous.filter(value => validValues.has(value)));
-        }
-
-        function getSelectedValues(id) {
-            const select = document.getElementById(id);
-            if (!select) return [];
-            return [...select.selectedOptions]
-                .map(option => String(option.value || "").trim())
-                .filter(Boolean);
-        }
-
-        function setSelectedValues(id, values) {
-            const select = document.getElementById(id);
-            if (!select) return;
-            const selected = new Set(values.map(value => String(value || "").trim()).filter(Boolean));
-            [...select.options].forEach(option => {
-                option.selected = selected.has(option.value);
-            });
-        }
-
-        function sortActivityValues(values) {
-            return [...values].sort((a, b) => String(a).localeCompare(String(b), "fr", { numeric: true }));
-        }
-
-        function setupActivityTreeEvents() {
-            const container = document.getElementById("f-activity-tree");
-            if (!container || container.dataset.eventsReady === "true") return;
-            container.dataset.eventsReady = "true";
-
-            container.addEventListener("click", event => {
-                const toggle = event.target.closest("[data-activity-toggle]");
-                if (!toggle) return;
-                const category = String(toggle.dataset.category || "");
-                if (!category) return;
-                if (activityExpandedCategories.has(category)) {
-                    activityExpandedCategories.delete(category);
-                } else {
-                    activityExpandedCategories.add(category);
-                }
-                renderActivityTree();
-            });
-
-            container.addEventListener("change", event => {
-                const categoryInput = event.target.closest("input[data-activity-category]");
-                const nafInput = event.target.closest("input[data-activity-naf]");
-
-                if (categoryInput) {
-                    setActivityCategorySelection(categoryInput.dataset.category || "", categoryInput.checked);
-                    return;
-                }
-
-                if (nafInput) {
-                    setActivityNafSelection(nafInput.dataset.naf || "", nafInput.checked);
-                }
-            });
-        }
-
-        function renderActivityTree() {
-            const container = document.getElementById("f-activity-tree");
-            if (!container) return;
-            setupActivityTreeEvents();
-
-            const categories = sortActivityValues(activityCategoryToNafs.keys());
-            const selectedNafs = new Set(getSelectedValues("f-naf"));
-
-            if (!categories.length) {
-                container.innerHTML = `<div class="p-3 text-[11px] text-gray-400 dark:text-slate-500">Aucun secteur disponible.</div>`;
-                updateActivitySummary();
-                return;
-            }
-
-            container.innerHTML = categories.map(category => {
-                const nafs = sortActivityValues(activityCategoryToNafs.get(category) || []);
-                const selectedCount = nafs.filter(naf => selectedNafs.has(naf)).length;
-                const isExpanded = activityExpandedCategories.has(category) || selectedCount > 0;
-                const allSelected = nafs.length > 0 && selectedCount === nafs.length;
-                const partialText = selectedCount > 0 && selectedCount < nafs.length ? ` · ${selectedCount}/${nafs.length}` : ` · ${nafs.length}`;
-                const categoryId = `activity-cat-${hashString(category)}`;
-
-                return `
-                    <div class="activity-category bg-white dark:bg-slate-900">
-                        <div class="flex items-center gap-2 p-2.5 hover:bg-gray-50 dark:hover:bg-slate-950 transition">
-                            <button type="button" data-activity-toggle data-category="${escapeHtml(category)}" class="shrink-0 w-7 h-7 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 text-gray-400 dark:text-slate-500 hover:text-komatsu-600 dark:hover:text-komatsu-400 transition flex items-center justify-center" aria-label="Déplier ${escapeHtml(category)}">
-                                <svg class="w-3.5 h-3.5 transition-transform ${isExpanded ? "rotate-90" : ""}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                            </button>
-                            <label for="${categoryId}" class="flex-1 min-w-0 flex items-center gap-2 cursor-pointer select-none">
-                                <input id="${categoryId}" type="checkbox" data-activity-category data-category="${escapeHtml(category)}" ${allSelected ? "checked" : ""} class="accent-yellow-500 shrink-0">
-                                <span class="flex-1 min-w-0 text-[11px] font-black uppercase tracking-wider text-gray-700 dark:text-slate-200 truncate" title="${escapeHtml(category)}">${escapeHtml(category)}</span>
-                                <span class="shrink-0 text-[10px] font-bold text-gray-400 dark:text-slate-500">${escapeHtml(partialText)}</span>
-                            </label>
-                        </div>
-                        <div class="${isExpanded ? "block" : "hidden"} px-3 pb-3 pl-11 space-y-1.5">
-                            ${nafs.map(naf => `
-                                <label class="flex items-center gap-2 rounded-lg border border-gray-100 dark:border-slate-800 bg-gray-50 dark:bg-slate-950 px-2.5 py-1.5 cursor-pointer hover:border-komatsu-500 transition select-none">
-                                    <input type="checkbox" data-activity-naf data-naf="${escapeHtml(naf)}" ${selectedNafs.has(naf) ? "checked" : ""} class="accent-yellow-500 shrink-0">
-                                    <span class="text-[11px] font-bold text-gray-600 dark:text-slate-300 truncate" title="${escapeHtml(naf)}">${escapeHtml(naf)}</span>
-                                </label>
-                            `).join("")}
-                        </div>
-                    </div>
-                `;
-            }).join("");
-
-            container.querySelectorAll("input[data-activity-category]").forEach(input => {
-                const category = input.dataset.category || "";
-                const nafs = sortActivityValues(activityCategoryToNafs.get(category) || []);
-                const selectedCount = nafs.filter(naf => selectedNafs.has(naf)).length;
-                input.indeterminate = selectedCount > 0 && selectedCount < nafs.length;
-            });
-
-            updateActivitySummary();
-        }
-
-        function setActivityCategorySelection(category, checked) {
-            if (!category || activityFiltersSyncing) return;
-            activityFiltersSyncing = true;
-            try {
-                const currentNafs = new Set(getSelectedValues("f-naf"));
-                (activityCategoryToNafs.get(category) || new Set()).forEach(naf => {
-                    if (checked) currentNafs.add(naf);
-                    else currentNafs.delete(naf);
-                });
-                if (checked) activityExpandedCategories.add(category);
-                setSelectedValues("f-naf", sortActivityValues(currentNafs));
-                syncActivityCategoriesFromNafs();
-            } finally {
-                activityFiltersSyncing = false;
-            }
-            renderActivityTree();
-            runFilter();
-        }
-
-        function setActivityNafSelection(naf, checked) {
-            if (!naf || activityFiltersSyncing) return;
-            activityFiltersSyncing = true;
-            try {
-                const currentNafs = new Set(getSelectedValues("f-naf"));
-                if (checked) currentNafs.add(naf);
-                else currentNafs.delete(naf);
-                setSelectedValues("f-naf", sortActivityValues(currentNafs));
-                (activityNafToCategories.get(naf) || new Set()).forEach(category => activityExpandedCategories.add(category));
-                syncActivityCategoriesFromNafs();
-            } finally {
-                activityFiltersSyncing = false;
-            }
-            renderActivityTree();
-            runFilter();
-        }
-
-        function syncActivityCategoriesFromNafs() {
-            const selectedNafs = getSelectedValues("f-naf");
-            const categorySet = new Set();
-            selectedNafs.forEach(naf => {
-                (activityNafToCategories.get(naf) || new Set()).forEach(category => categorySet.add(category));
-            });
-            setSelectedValues("f-categorie", sortActivityValues(categorySet));
-        }
-
-        function updateActivitySummary() {
-            const summary = document.getElementById("activity-filter-summary");
-            const badges = document.getElementById("activity-filter-badges");
-            if (!summary || !badges) return;
-
-            const selectedNafs = getSelectedValues("f-naf");
-            const selectedCategories = getSelectedValues("f-categorie");
-            if (!selectedNafs.length && !selectedCategories.length) {
-                summary.textContent = "Aucun secteur sélectionné";
-                badges.classList.add("hidden");
-                badges.innerHTML = "";
-                return;
-            }
-
-            summary.textContent = `${selectedCategories.length} catégorie${selectedCategories.length > 1 ? "s" : ""} · ${selectedNafs.length} code${selectedNafs.length > 1 ? "s" : ""} NAF / APE`;
-            const badgeValues = [...selectedCategories.slice(0, 3), ...selectedNafs.slice(0, 8)];
-            const hiddenCount = Math.max(0, selectedCategories.length + selectedNafs.length - badgeValues.length);
-            badges.innerHTML = `
-                ${badgeValues.map(value => `<span class="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider max-w-full truncate">${escapeHtml(value)}</span>`).join("")}
-                ${hiddenCount ? `<span class="inline-flex items-center rounded-full bg-gray-100 dark:bg-slate-800 text-gray-500 dark:text-slate-400 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider">+${hiddenCount}</span>` : ""}
-            `;
-            badges.classList.remove("hidden");
-        }
-
-        function clearActivityFilter() {
-            setSelectedValues("f-categorie", []);
-            setSelectedValues("f-naf", []);
-            renderActivityTree();
-            runFilter();
-        }
-
-        function toggleAllActivityTree(expand) {
-            if (expand) {
-                activityExpandedCategories = new Set(activityCategoryToNafs.keys());
-            } else {
-                activityExpandedCategories = new Set();
-            }
-            renderActivityTree();
-        }
-
-        function hashString(value) {
-            let hash = 0;
-            const text = String(value || "");
-            for (let i = 0; i < text.length; i++) {
-                hash = ((hash << 5) - hash) + text.charCodeAt(i);
-                hash |= 0;
-            }
-            return Math.abs(hash);
-        }
-
-        function syncActivityFilters() {
-            syncActivityCategoriesFromNafs();
-            renderActivityTree();
-            runFilter();
         }
 
         function populatePriorityCheckboxes(values) {
@@ -1491,9 +1243,6 @@
                 const el = document.getElementById(id);
                 if (el) el.value = value;
             });
-            setSelectedValues("f-categorie", []);
-            setSelectedValues("f-naf", []);
-            renderActivityTree();
             setNewMachineFilterActive(false);
             setOldMachineFilterActive(false);
             setWarrantyFilterActive(false);
@@ -1559,8 +1308,8 @@
             const oldMachineOnly = isOldMachineFilterActive();
             const ageMachineAllSearch = normalizeText(document.getElementById("f-age-machine-all")?.value || "");
             const ageMachineFilter = document.getElementById("f-age-machine-min")?.value || "";
-            const selectedCategories = getSelectedValues("f-categorie").map(normalizeText);
-            const selectedNafs = getSelectedValues("f-naf").map(normalizeText);
+            const searchCategorie = document.getElementById("f-categorie")?.value || "";
+            const searchNaf = document.getElementById("f-naf")?.value || "";
             const selectedPriorites = getSelectedPriorites();
             const clientEligibleOnly = document.getElementById("f-client-eligible-only")?.checked || false;
             const warrantyEndOnly = isWarrantyFilterActive();
@@ -1580,7 +1329,7 @@
                 if (searchGroupe && String(item[COL.groupe] || "") !== searchGroupe) return false;
                 if (searchDeptSidebar && item._deptNorm !== searchDeptSidebar) return false;
                 if (searchAgence && String(item[COL.agence] || "") !== searchAgence) return false;
-                if (searchVille && !item._searchVille.includes(searchVille)) return false;
+                if (searchVille && ![item._searchVille, item._searchCanton].filter(Boolean).join(" " ).includes(searchVille)) return false;
                 if (searchModele && !item._searchMachines.includes(searchModele)) return false;
                 if (searchSerieMachine && !item._searchSeries.includes(searchSerieMachine)) return false;
                 if (nbMachinesFilter && !matchesMachineVolume(item, nbMachinesFilter)) return false;
@@ -1589,11 +1338,8 @@
                 if (oldMachineOnly && !hasOldMachine(item)) return false;
                 if (ageMachineAllSearch && !item._ageMachineAllSearch.includes(ageMachineAllSearch)) return false;
                 if (ageMachineFilter && !matchesAgeMachineFilter(item, ageMachineFilter)) return false;
-                if (selectedNafs.length) {
-                    if (!selectedNafs.includes(normalizeText(item[COL.naf] || ""))) return false;
-                } else if (selectedCategories.length && !selectedCategories.includes(normalizeText(item[COL.categorie] || ""))) {
-                    return false;
-                }
+                if (searchCategorie && normalizeText(item[COL.categorie] || "") !== normalizeText(searchCategorie)) return false;
+                if (searchNaf && normalizeText(item[COL.naf] || "") !== normalizeText(searchNaf)) return false;
                 if (selectedPriorites.length && !selectedPriorites.includes(String(item[COL.priorite] || ""))) return false;
                 if (clientEligibleOnly && !isClientEligible(item)) return false;
                 if (warrantyEndOnly && !hasWarrantyEnding(item)) return false;
@@ -1615,6 +1361,9 @@
 
         function matchesMachineVolume(item, filter) {
             const nb = parseNumber(item[COL.nbMachines]);
+            if (!filter) return true;
+            if (["1", "2", "3", "4", "5"].includes(String(filter))) return nb === parseNumber(filter);
+            if (filter === "6+") return nb >= 6;
             if (filter === "0-5") return nb >= 0 && nb <= 5;
             if (filter === "5-10") return nb >= 5 && nb <= 10;
             if (filter === "10+") return nb > 10;
@@ -2045,12 +1794,11 @@ Adresse : ${item[COL.adresse] || "-"}`);
 
             ensureTop200RankCache();
             const used = new Set();
-            const detailRows = rows => (rows || []).filter(([, value]) => !isEmptyDetailValue(value));
-            const rowsFrom = fields => detailRows(fields.map(([label, keyOrValue, isValue = false]) => {
+            const rowsFrom = fields => fields.map(([label, keyOrValue, isValue = false]) => {
                 const value = isValue ? keyOrValue : item[keyOrValue];
                 if (!isValue) used.add(keyOrValue);
                 return [label, formatDetailValue(label, value)];
-            }));
+            }).filter(([, value]) => !isEmptyDetailValue(value));
 
             const topRank = getTop200Rank(item);
             const sections = [
@@ -2062,6 +1810,8 @@ Adresse : ${item[COL.adresse] || "-"}`);
                         ["Visites obligatoires", getObjectiveVisits(item) ? formatNumber(getObjectiveVisits(item)) : "", true],
                         ["Visites effectuées 2026", item[COL.visits2026] !== undefined && item[COL.visits2026] !== "" ? formatNumber(getVisits2026(item)) : "", true],
                         ["Visites restantes", getRemainingVisits(item) > 0 ? formatNumber(getRemainingVisits(item)) : "", true],
+                        ["Nouvelle machine", hasNewMachine(item) ? `Oui${getRecentMachineAgeLabel(item) ? " — " + getRecentMachineAgeLabel(item) : ""}` : "", true],
+                        ["Machine 5 ans et +", hasOldMachine(item) ? "Oui" : "", true],
                         ["Client éligible", isGrandCompte(item) ? "Oui" : "", true],
                     ]
                 },
@@ -2075,6 +1825,8 @@ Adresse : ${item[COL.adresse] || "-"}`);
                         ["Groupe", COL.groupe],
                         ["Agence", COL.agence],
                         ["PSSR", COL.pssr],
+                        ["Email", "datap2..Email"],
+                        ["Téléphone", "datap2.Téléphone"],
                         ["Adresse", COL.adresse],
                         ["Département", COL.dept],
                         ["Ville", COL.ville],
@@ -2086,8 +1838,8 @@ Adresse : ${item[COL.adresse] || "-"}`);
                     rows: rowsFrom([
                         ["CA Global", COL.caGlobal],
                         ["CA 2025", COL.ca2025],
-                        ["CA PDR (2024/25/26)", COL.pcsTotal],
-                        ["CA SERVICE (2024/25/26)", COL.savTotal],
+                        ["CA PDR cumulé", COL.pcsTotal],
+                        ["CA SERVICE cumulé", COL.savTotal],
                         ["Priorité client", COL.priorite],
                     ])
                 },
@@ -2110,6 +1862,14 @@ Adresse : ${item[COL.adresse] || "-"}`);
                     title: "CRM et opportunités",
                     rows: rowsFrom([
                         ["Dernier contact - date", COL.crmDate],
+                        ["Dernier contact - vendeur", COL.crmVendeur],
+                        ["Dernier contact - sujet", COL.crmSujet],
+                        ["Dernier contact - note", COL.crmNote],
+                        ["Email contact", "datap2..Email"],
+                        ["Téléphone contact", "datap2.Téléphone"],
+                        ["Dernier contact datap2 - vendeur", "datap2.CRM_Vendeur"],
+                        ["Dernier contact datap2 - sujet", "datap2.CRM_SujetDernierContact"],
+                        ["Dernier contact datap2 - note", "datap2.CRM_NoteDernierContact"],
                         ["Dernière opportunité - vendeur", "CRM_DerniereOpp_Vendeur"],
                         ["Dernière opportunité - type matériel", "CRM_DerniereOpp_TypeMateriel"],
                         ["Dernière opportunité - date", "CRM_DerniereOppDate"],
@@ -2121,13 +1881,18 @@ Adresse : ${item[COL.adresse] || "-"}`);
                     title: "Secteur d’activité",
                     rows: rowsFrom([
                         ["Catégorie", COL.categorie],
-                        ["NAF / APE", COL.naf],
+                        ["NAF", COL.naf],
                         ["Description", COL.description]
                     ])
                 }
             ];
 
-            // La section "Autres données disponibles" est volontairement désactivée.
+            const displayed = new Set([...used, COL.nom, COL.siret, COL.clientNumero, COL.position, COL.groupe, COL.agence, COL.adresse, COL.dept, COL.ville, COL.salaries, COL.caGlobal, COL.ca2025, COL.pcsTotal, COL.savTotal, COL.priorite, COL.nbMachines, COL.machines, COL.series, COL.machinesRecentes, COL.newMachineFlag, COL.crmDate, COL.crmVendeur, COL.crmSujet, COL.crmNote, COL.categorie, COL.naf, COL.description]);
+            const otherRows = (csvHeaders.length ? csvHeaders : Object.keys(item))
+                .filter(header => !header.startsWith("_") && !displayed.has(header) && !isHiddenDetailField(header))
+                .map(header => [header, formatDetailValue(header, item[header])])
+                .filter(([, value]) => !isEmptyDetailValue(value));
+            if (otherRows.length) sections.push({ title: "Autres données disponibles", rows: otherRows });
 
             modal.innerHTML = `
                 <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onclick="closeDetails()"></div>
@@ -2160,17 +1925,12 @@ Adresse : ${item[COL.adresse] || "-"}`);
             const normalized = normalizeText(header || "");
             if (!normalized) return true;
             if (normalized.includes("client eligible source")) return true;
-            if (normalized.includes("priorite client corrigee")) return true;
-            if (normalized.includes("client eligible")) return true;
-            if (normalized.includes("somme de visite fy 2026") || normalized.includes("somme de visite 2026")) return true;
-            if (normalized.startsWith("datav2.")) return true;
             if (normalized.includes("datav2.liste machines") || normalized.includes("datav2.liste num serie")) return true;
             if (normalized.startsWith("datav3.")) return true;
             if (normalized.includes("total montant facture pdr fy 2024") || normalized.includes("total montant facture pdr fy 2025") || normalized.includes("total montant facture pdr fy 2026")) return true;
             if (normalized.includes("total montant facture service fy 2024") || normalized.includes("total montant facture service fy 2025") || normalized.includes("total montant facture service fy 2026")) return true;
-            if (normalized.includes("total montant facture pcs 2024") || normalized.includes("total montant facture pcs 2025") || normalized.includes("total montant facture pcs 2026") || normalized.includes("total montant facture pcs 24/5/6")) return true;
+            if (normalized.includes("total montant facture pcs 2024") || normalized.includes("total montant facture pcs 2025") || normalized.includes("total montant facture pcs 2026")) return true;
             if (normalized.includes("total montant facture sav 2024") || normalized.includes("total montant facture sav 2025") || normalized.includes("total montant facture sav 2026")) return true;
-            if (normalized === "ca 2025") return true;
             if (normalized === "client_irium.position client" || normalized === "description" || normalized === "categorie" || normalized === "naf") return true;
             return false;
         }
@@ -2181,7 +1941,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
             if (normalizedHeader.includes("telephone")) {
                 return cleanPhone(value);
             }
-            if (normalizedHeader.includes("montant") || normalizedHeader.includes("ca global") || normalizedHeader === "ca 2025" || normalizedHeader.includes("ca pdr") || normalizedHeader.includes("ca service") || normalizedHeader.startsWith("pcs ") || normalizedHeader.startsWith("sav ") || normalizedHeader.startsWith("pdr ") || normalizedHeader.startsWith("service ")) {
+            if (normalizedHeader.includes("montant") || normalizedHeader.includes("ca global") || normalizedHeader === "ca 2025" || normalizedHeader.startsWith("pcs ") || normalizedHeader.startsWith("sav ") || normalizedHeader.startsWith("pdr ") || normalizedHeader.startsWith("service ")) {
                 return formatMoney(value);
             }
             if (normalizedHeader.includes("rank") || normalizedHeader.includes("top 200") || normalizedHeader.includes("nb machines") || normalizedHeader.includes("nombre de machines")) {
@@ -2226,12 +1986,10 @@ Adresse : ${item[COL.adresse] || "-"}`);
         }
 
         function detailSection(title, rows) {
-            const visibleRows = (rows || []).filter(([, value]) => !isEmptyDetailValue(value));
-            if (!visibleRows.length) return "";
             return `
                 <section class="rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden">
                     <div class="bg-gray-50 dark:bg-slate-900 px-4 py-2 border-b border-gray-200 dark:border-slate-800 text-[10px] uppercase tracking-widest font-black text-gray-500 dark:text-slate-400">${escapeHtml(title)}</div>
-                    <div class="divide-y divide-gray-100 dark:divide-slate-800">${visibleRows.map(([label, value]) => detailRow(label, value)).join("")}</div>
+                    <div class="divide-y divide-gray-100 dark:divide-slate-800">${rows.map(([label, value]) => detailRow(label, value)).join("")}</div>
                 </section>
             `;
         }
@@ -3583,6 +3341,464 @@ Adresse : ${item[COL.adresse] || "-"}`);
                 .replace(/'/g, "&#039;");
         }
     </script>
+
+
+<style id="stable-v18-adjustments-css">
+/* v19 - ajustements WIP avant publication */
+.v18-soft-card { border: 1px solid #e5e7eb; background: #fff; border-radius: 1rem; padding: .85rem; box-shadow: 0 8px 20px rgba(15,23,42,.04); }
+.dark .v18-soft-card { border-color: #1e293b; background: #020617; }
+.v18-info-btn { width: 36px; height: 36px; border-radius: 999px; border:1px solid #facc15; background:#fefce8; color:#92400e; font-weight:900; display:inline-flex; align-items:center; justify-content:center; font-size:17px; box-shadow:0 0 0 rgba(250,204,21,0.0); animation:v19-bulb-pulse 1.6s ease-in-out infinite; }
+.dark .v18-info-btn { background:#422006; color:#fde68a; border-color:#ca8a04; }
+@keyframes v19-bulb-pulse { 0%,100% { opacity:.75; transform:scale(1); box-shadow:0 0 0 rgba(250,204,21,0.0); } 50% { opacity:1; transform:scale(1.08); box-shadow:0 0 18px rgba(250,204,21,.55); } }
+.v18-mini-btn { font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; border-radius:.75rem; padding:.45rem .7rem; border:1px solid #d1d5db; background:#fff; color:#334155; }
+.dark .v18-mini-btn { background:#0f172a; color:#e2e8f0; border-color:#334155; }
+.v18-mini-btn-warning { background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+.dark .v18-mini-btn-warning { background:rgba(127,29,29,.28); border-color:#7f1d1d; color:#fecaca; }
+.v18-excluded-marker { width: 26px; height: 26px; border-radius:999px; background:#fff; border:3px dashed #dc2626; box-shadow:0 8px 18px rgba(220,38,38,.25); }
+.v18-standard-marker { width: 22px; height: 22px; border-radius:999px; background:#eab308; border:3px solid #fff; box-shadow:0 6px 18px rgba(15,23,42,.25); }
+.v18-gc-text { font-weight:900; color:#92400e; }
+.dark .v18-gc-text { color:#facc15; }
+#v18-terrain-modal, #v18-release-modal { position:fixed; inset:0; z-index:10050; background:rgba(2,6,23,.62); backdrop-filter:blur(4px); display:none; align-items:center; justify-content:center; padding:1rem; }
+#v18-terrain-modal.open, #v18-release-modal.open { display:flex; }
+#v18-terrain-map { height: min(66vh, 640px); width: 100%; border-radius: 1rem; overflow:hidden; border:1px solid #e5e7eb; background:#f8fafc; }
+.dark #v18-terrain-map { border-color:#334155; background:#0f172a; }
+.v18-terrain-tooltip { font-size:11px; font-weight:700; }
+.v18-help-note { font-size: 11px; line-height: 1.35; color:#475569; background:#f8fafc; border:1px solid #e5e7eb; border-radius:.85rem; padding:.65rem .8rem; }
+.dark .v18-help-note { color:#cbd5e1; background:#0f172a; border-color:#334155; }
+.v18-copy-chip { display:inline-flex; align-items:center; gap:.35rem; }
+@media (min-width: 768px) and (max-width: 1180px) {
+  body { font-size: 14px; }
+  #filters-panel { width: 320px !important; }
+  main { padding: .85rem !important; gap: .75rem !important; }
+  .desktop-data-table { min-width: 980px !important; }
+  #map-toolbar { max-width: 52vw; }
+  #tab-table, #tab-map, #tab-top200 { padding:.55rem .85rem !important; font-size:.68rem !important; }
+  .modern-input { min-height: 40px; }
+  .accordion-content { padding:.75rem !important; }
+}
+@media (min-width: 820px) and (max-width: 1180px) and (orientation: portrait) {
+  #filters-panel { width: 300px !important; }
+  .brand-logo { max-width: 190px; }
+  #active-user-indicator { max-width: 42vw; }
+  #active-user-name { display:inline-block; max-width: 18vw; overflow:hidden; text-overflow:ellipsis; vertical-align:bottom; }
+}
+</style>
+
+<script id="stable-v18-adjustments-js">
+(function(){
+  const PATCH_ID = "v19-WIP-2026-06-29";
+  const routeExcluded = new Set();
+  window.__routeExcludedV18 = routeExcluded;
+  window.__lastRoutePointsV18 = [];
+
+  function safeNorm(v){
+    try { return normalizeText(v || ""); }
+    catch(e){ return String(v || "").toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+  }
+  function getField(item, keys){
+    for (const key of keys) {
+      const value = item && item[key];
+      if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+    }
+    return "";
+  }
+  function getItemCanton(item){
+    return getField(item, ["Canton", "Canton (Nom)", "Client_Irium.Canton", "Client_Irium.Canton (Nom)", "canton", "canton_nom"]);
+  }
+  function getVisitNotes(item){
+    const values = [];
+    const keys = ["Notes de visites", "Note de visite", "Notes visite", "Commentaires visite", "datav2.CRM_NoteDernierContact", "datap2.CRM_NoteDernierContact", "CRM_NoteDernierContact"];
+    keys.forEach(key => { const v = item?.[key]; if(v && String(v).trim()) values.push(String(v).trim()); });
+    Object.keys(item || {}).filter(k => /note/i.test(k) && /visite|crm|contact/i.test(k)).forEach(k => {
+      const v = item[k]; if(v && String(v).trim()) values.push(String(v).trim());
+    });
+    return [...new Set(values)].join("\n\n");
+  }
+  function getContactEmail(item){ return getField(item, ["datap2..Email", "datav2..Email", "Email", "email", "Mail", "E-mail"]); }
+  function getContactPhone(item){ return getField(item, ["datap2.Téléphone", "datav2.Téléphone", "Téléphone", "Telephone", "Tel", "Mobile"]); }
+  function getClientNumber(item){ return getField(item, [COL?.clientNumero, "Client_Irium.Client (Numéro)", "Client (Numéro)", "Numero client", "Numéro client", "N° client", "Num client"]); }
+  function selectedDepts(){ return Array.isArray(selectedSectorDepts) && selectedSectorDepts.length ? selectedSectorDepts : [...new Set((currentFilteredData||globalData||[]).map(i => i._deptNorm).filter(Boolean))]; }
+
+  function patchClientEligibleText(){
+    document.querySelectorAll('span,button,div,th,td,label').forEach(el => {
+      if (!el.childElementCount && /Client éligible/i.test(el.textContent || "")) {
+        el.textContent = el.textContent.replace(/Client éligible/g, "Client Grands Comptes");
+      }
+    });
+  }
+
+  function patchFleetOptions(){
+    const select = document.getElementById('f-nb-machines');
+    if (!select || select.dataset.v18Fleet === '1') return;
+    select.dataset.v18Fleet = '1';
+    const current = select.value;
+    select.innerHTML = `
+      <option value="">Tous les volumes</option>
+      <option value="1">1 machine</option>
+      <option value="2">2 machines</option>
+      <option value="3">3 machines</option>
+      <option value="4">4 machines</option>
+      <option value="5">5 machines</option>
+      <option value="6+">6 machines et +</option>`;
+    if ([...select.options].some(o => o.value === current)) select.value = current;
+  }
+
+  function addClientNumberFilter(){
+    if (document.getElementById('f-client-numero')) return;
+    const siret = document.getElementById('f-siret');
+    const parent = siret?.closest('div');
+    if (!parent) return;
+    parent.insertAdjacentHTML('afterend', `
+      <div>
+        <label class="modern-label">N° client Irium</label>
+        <input type="text" id="f-client-numero" oninput="runFilter()" placeholder="Ex: 12345" class="modern-input">
+      </div>`);
+  }
+
+  function addCantonFilter(){
+    if (document.getElementById('f-canton-select')) return;
+    const ville = document.getElementById('f-ville');
+    const parent = ville?.closest('div');
+    if (!parent) return;
+    ville.setAttribute('placeholder', 'Ex: LYON, NANTES ou canton...');
+    parent.insertAdjacentHTML('beforeend', `
+      <div class="mt-2">
+        <label class="modern-label">Cantons disponibles</label>
+        <select id="f-canton-select" onchange="runFilter()" class="modern-input"><option value="">Tous les cantons</option></select>
+      </div>`);
+  }
+
+  function populateCantonOptions(){
+    const select = document.getElementById('f-canton-select');
+    if (!select) return;
+    const old = select.value;
+    const deptSelected = document.getElementById('f-dept')?.value || '';
+    const scope = (globalData || []).filter(item => {
+      if (!itemBelongsToActivePssr(item)) return false;
+      if (deptSelected && item._deptNorm !== deptSelected) return false;
+      return true;
+    });
+    const values = [...new Set(scope.map(getItemCanton).filter(Boolean).map(v => String(v).trim()))].sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+    select.innerHTML = `<option value="">Tous les cantons</option>` + values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+    if (values.includes(old)) select.value = old;
+  }
+
+  function addUndercarriageBox(){
+    if (document.getElementById('acc-undercarriage')) return;
+    const priorityBlock = document.getElementById('acc-priorite-client')?.closest('div');
+    if (!priorityBlock) return;
+    priorityBlock.insertAdjacentHTML('afterend', `
+      <div class="mt-4">
+        <button onclick="toggleAccordion('acc-undercarriage')" class="accordion-btn">
+          <span class="text-[11px] font-display font-extrabold text-gray-700 dark:text-slate-200 uppercase tracking-wider">7. Undercarriage</span>
+          <svg id="icon-acc-undercarriage" class="w-4 h-4 text-gray-400 transition-transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+        </button>
+        <div id="acc-undercarriage" class="accordion-content block">
+          <div class="rounded-xl border border-dashed border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 p-4 text-center">
+            <div class="text-[10px] uppercase tracking-widest font-black text-gray-400 dark:text-slate-500">Filtre à venir</div>
+            <div class="mt-1 font-display font-black text-gray-800 dark:text-white">In Progress</div>
+          </div>
+        </div>
+      </div>`);
+  }
+
+  function addTopRankFilter(){
+    if (document.getElementById('f-top-rank')) return;
+    const container = document.getElementById('f-priorite-options');
+    if (!container) return;
+    container.closest('div').insertAdjacentHTML('afterend', `
+      <div>
+        <label class="modern-label">Rang TOP PSSR</label>
+        <select id="f-top-rank" onchange="runFilter()" class="modern-input">
+          <option value="">Tous</option>
+          <option value="10">Top 10</option><option value="20">Top 20</option><option value="30">Top 30</option><option value="40">Top 40</option><option value="50">Top 50</option><option value="100">Top 100</option><option value="150">Top 150</option><option value="200">Top 200</option>
+        </select>
+      </div>`);
+  }
+
+  function updateNafOptionLabels(){ /* secteur d'activité : affichage précédent conservé */ }
+
+  function addVisitsHelp(){
+    const view = document.getElementById('view-top200');
+    if (!view || document.getElementById('v18-visits-help')) return;
+    const grid = view.querySelector('.grid.grid-cols-1');
+    if (!grid) return;
+    grid.insertAdjacentHTML('afterend', `
+      <div id="v18-visits-help" class="v18-help-note">
+        <b>Lecture des visites :</b> Objectif annuel = nombre de visites attendues en 2026 selon les règles PSSR. Déjà fait = visites 2026 enregistrées. Reste à faire = objectif - déjà fait. Quand tu filtres “Déjà visité”, les KPI restent calculés sur les lignes visibles.
+      </div>`);
+  }
+
+  function addInfoButton(){
+    if (document.getElementById('v18-info-button')) return;
+    const themeButton = document.querySelector('button[onclick="toggleTheme()"]');
+    if (!themeButton) return;
+    themeButton.insertAdjacentHTML('beforebegin', `<button id="v18-info-button" class="v18-info-btn" onclick="openReleaseNotes()" title="Nouveautés">💡</button>`);
+    if (!document.getElementById('v18-release-modal')) {
+      document.body.insertAdjacentHTML('beforeend', `
+        <div id="v18-release-modal">
+          <div class="bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-2xl w-[min(720px,96vw)] max-h-[86vh] overflow-hidden shadow-2xl">
+            <div class="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between gap-3">
+              <div><div class="text-[10px] uppercase tracking-widest font-black text-komatsu-600 dark:text-komatsu-400">Nouveautés</div><h3 class="font-display font-black text-lg text-gray-900 dark:text-white">Version du ${new Date().toLocaleDateString('fr-FR')}</h3></div>
+              <button onclick="closeReleaseNotes()" class="v18-mini-btn">Fermer</button>
+            </div>
+            <div class="p-5 overflow-y-auto max-h-[70vh] space-y-4 text-sm text-gray-700 dark:text-slate-200">
+              <ul class="list-disc pl-5 space-y-2">
+                <li>Ville/Canton dans une seule recherche avec liste déroulante de cantons.</li>
+                <li>Filtre secteur d’activité remis en affichage précédent.</li>
+                <li>Filtre flotte détaillé de 1 à 5 machines.</li>
+                <li>Recherche par numéro client Irium.</li>
+                <li>Contact email/téléphone copiable dans les détails.</li>
+                <li>Filtre Canton avec liste dynamique + saisie libre.</li>
+                <li>Mon terrain : synthèse par département du PSSR.</li>
+                <li>Poubelle sur les points d’itinéraire + export Google Maps.</li>
+              </ul>
+              <button onclick="startReleaseTutorial()" class="bg-slate-900 dark:bg-slate-700 text-white rounded-xl px-4 py-2 text-xs font-black uppercase tracking-wider">En savoir plus</button>
+            </div>
+          </div>
+        </div>`);
+    }
+  }
+  window.openReleaseNotes = () => document.getElementById('v18-release-modal')?.classList.add('open');
+  window.closeReleaseNotes = () => document.getElementById('v18-release-modal')?.classList.remove('open');
+  window.startReleaseTutorial = () => alert('Tutoriel nouveautés : 1) utilise Ville/Canton dans la même recherche, 2) choisis un canton dans la liste limitée à ton terrain, 3) ouvre Mon terrain pour la synthèse par département, 4) dans Cartographie, supprime une étape avec la poubelle, 5) ouvre Google Maps après calcul de l’itinéraire.');
+
+  function addMonTerrainButton(){
+    if (document.getElementById('v18-terrain-button')) return;
+    const indicator = document.getElementById('active-user-indicator');
+    if (indicator) {
+      indicator.insertAdjacentHTML('afterend', `<button id="v18-terrain-button" onclick="openMonTerrain()" class="v18-mini-btn hidden">Mon terrain</button>`);
+    }
+    if (!document.getElementById('v18-terrain-modal')) {
+      document.body.insertAdjacentHTML('beforeend', `
+        <div id="v18-terrain-modal">
+          <div class="bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-2xl w-[min(1120px,96vw)] max-h-[92vh] overflow-hidden shadow-2xl">
+            <div class="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between gap-3 items-start">
+              <div><div class="text-[10px] uppercase tracking-widest font-black text-komatsu-600 dark:text-komatsu-400">Mon terrain</div><h3 id="v18-terrain-title" class="font-display font-black text-lg text-gray-900 dark:text-white">Synthèse par département</h3><p class="text-xs text-gray-500 dark:text-slate-400 mt-1">Survole un département pour voir les indicateurs.</p></div>
+              <button onclick="closeMonTerrain()" class="v18-mini-btn">Fermer</button>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-[1.5fr_.8fr] gap-4 p-5 overflow-y-auto max-h-[82vh]">
+              <div id="v18-terrain-map"></div>
+              <div id="v18-terrain-stats" class="space-y-2"></div>
+            </div>
+          </div>
+        </div>`);
+    }
+  }
+  window.closeMonTerrain = function(){ document.getElementById('v18-terrain-modal')?.classList.remove('open'); };
+  window.openMonTerrain = async function(){
+    const modal = document.getElementById('v18-terrain-modal');
+    if (!modal) return;
+    modal.classList.add('open');
+    setTimeout(async () => { await renderMonTerrainMap(); }, 80);
+  };
+
+  function deptStats(){
+    const depts = selectedDepts();
+    const rows = (globalData || []).filter(item => depts.includes(item._deptNorm));
+    const grouped = new Map();
+    depts.forEach(d => grouped.set(d, { dept:d, total:0, clients:0, prospects:0, visits:0, objective:0, remaining:0 }));
+    rows.forEach(item => {
+      const d = item._deptNorm;
+      if (!grouped.has(d)) grouped.set(d, { dept:d, total:0, clients:0, prospects:0, visits:0, objective:0, remaining:0 });
+      const s = grouped.get(d);
+      s.total++;
+      const pos = safeNorm(item[COL.position] || '');
+      if (pos.includes('client') || pos === 'cl') s.clients++; else s.prospects++;
+      s.visits += getVisits2026(item);
+      s.objective += getObjectiveVisits(item);
+      s.remaining += getRemainingVisits(item);
+    });
+    return [...grouped.values()].sort((a,b)=>a.dept.localeCompare(b.dept,'fr',{numeric:true}));
+  }
+
+  async function renderMonTerrainMap(){
+    const title = document.getElementById('v18-terrain-title');
+    const statsBox = document.getElementById('v18-terrain-stats');
+    const mapDiv = document.getElementById('v18-terrain-map');
+    if (!statsBox || !mapDiv) return;
+    const stats = deptStats();
+    const depts = stats.map(s => s.dept);
+    if (title) title.textContent = `Mon terrain — ${document.getElementById('active-user-name')?.textContent || 'PSSR'}`;
+    statsBox.innerHTML = stats.map(s => {
+      const donePct = s.objective > 0 ? Math.round((s.visits / s.objective) * 100) : 0;
+      const remainingPct = s.objective > 0 ? Math.round((s.remaining / s.objective) * 100) : 0;
+      return `<div class="v18-soft-card"><div class="flex justify-between"><b>Dépt ${escapeHtml(s.dept)}</b><span>${s.total} lignes</span></div><div class="mt-2 grid grid-cols-2 gap-2 text-xs"><div>Clients : <b>${s.clients}</b></div><div>Prospects : <b>${s.prospects}</b></div><div>% visites : <b>${donePct}%</b></div><div>% reste : <b>${remainingPct}%</b></div></div></div>`;
+    }).join('');
+    if (typeof L === 'undefined') return;
+    if (window.__terrainMapV18) { window.__terrainMapV18.remove(); window.__terrainMapV18 = null; }
+    mapDiv.innerHTML = '';
+    const tmap = L.map('v18-terrain-map', { zoomControl:true }).setView([46.6, 2.2], 6);
+    window.__terrainMapV18 = tmap;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution:'&copy; OpenStreetMap' }).addTo(tmap);
+    const statsByDept = new Map(stats.map(s => [s.dept, s]));
+    try {
+      const response = await fetch('https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements.geojson', { cache:'force-cache' });
+      const geo = await response.json();
+      const layer = L.geoJSON(geo, {
+        filter: f => depts.includes(String(f.properties?.code || f.properties?.CODE_DEPT || '').padStart(2,'0')),
+        style: f => ({ color:'#eab308', weight:2, fillColor:'#facc15', fillOpacity:.22 }),
+        onEachFeature: (feature, lyr) => {
+          const code = String(feature.properties?.code || feature.properties?.CODE_DEPT || '').padStart(2,'0');
+          const s = statsByDept.get(code) || { total:0, clients:0, prospects:0, visits:0, objective:0, remaining:0 };
+          const donePct = s.objective > 0 ? Math.round((s.visits / s.objective) * 100) : 0;
+          const remainingPct = s.objective > 0 ? Math.round((s.remaining / s.objective) * 100) : 0;
+          lyr.bindTooltip(`<div class="v18-terrain-tooltip"><b>Dépt ${code}</b><br>${s.clients} clients • ${s.prospects} prospects<br>${donePct}% visites • ${remainingPct}% restant</div>`, { sticky:true });
+          lyr.on('click', () => { tmap.fitBounds(lyr.getBounds(), { padding:[30,30] }); });
+        }
+      }).addTo(tmap);
+      if (layer.getBounds && layer.getBounds().isValid()) tmap.fitBounds(layer.getBounds(), { padding:[25,25] });
+    } catch(e) {
+      mapDiv.innerHTML = '<div class="p-6 text-sm text-gray-500">Carte départementale indisponible. Les chiffres sont affichés à droite.</div>';
+    }
+  }
+
+  function applyExtraFilters(){
+    if (!Array.isArray(currentFilteredData)) return;
+    let data = currentFilteredData;
+    const clientNumero = safeNorm(document.getElementById('f-client-numero')?.value || '');
+    const cantonSelect = safeNorm(document.getElementById('f-canton-select')?.value || '');
+    const topRank = parseNumber(document.getElementById('f-top-rank')?.value || 0);
+    if (clientNumero) data = data.filter(item => safeNorm(getClientNumber(item)).includes(clientNumero));
+    if (cantonSelect) data = data.filter(item => safeNorm(getItemCanton(item)) === cantonSelect);
+    if (topRank > 0) {
+      ensureTop200RankCache();
+      data = data.filter(item => getTop200Rank(item) <= topRank);
+    }
+    currentFilteredData = data;
+    renderGrid(currentFilteredData);
+    updateActiveCounter();
+    if (isMapVisible()) renderMap(currentFilteredData);
+    updateTerrainButtonVisibility();
+  }
+
+  function updateTerrainButtonVisibility(){
+    const btn = document.getElementById('v18-terrain-button');
+    if (!btn) return;
+    btn.classList.toggle('hidden', !(Array.isArray(selectedSectorDepts) && selectedSectorDepts.length));
+  }
+
+  function addGoogleMapsButton(){
+    if (document.getElementById('v18-google-maps-btn')) return;
+    const toolbar = document.getElementById('map-toolbar');
+    const status = document.getElementById('route-status');
+    if (!toolbar && !status) return;
+    const html = `<button id="v18-google-maps-btn" onclick="openGoogleMapsRoute()" class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 text-[10px] px-3 py-2 rounded-xl font-black uppercase tracking-wider shadow-sm hover:border-komatsu-500 transition">Maps</button>`;
+    if (status) status.insertAdjacentHTML('beforebegin', html); else toolbar.insertAdjacentHTML('afterbegin', html);
+  }
+  window.openGoogleMapsRoute = function(){
+    const pts = (window.__lastRoutePointsV18 || []).filter(p => p && Number.isFinite(p._lat) && Number.isFinite(p._lon));
+    if (pts.length < 2) { alert('Calcule d’abord un itinéraire avec au moins deux points.'); return; }
+    const origin = `${pts[0]._lat},${pts[0]._lon}`;
+    const destination = `${pts[pts.length-1]._lat},${pts[pts.length-1]._lon}`;
+    const waypoints = pts.slice(1,-1).slice(0,23).map(p => `${p._lat},${p._lon}`).join('|');
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}${waypoints ? `&waypoints=${encodeURIComponent(waypoints)}` : ''}&travelmode=driving`;
+    window.open(url, '_blank', 'noopener');
+  };
+
+  function markerIconFor(item){
+    const excluded = routeExcluded.has(item._rowIndex);
+    if (excluded) return L.divIcon({ className:'', html:'<div class="v18-excluded-marker"></div>', iconSize:[28,28], iconAnchor:[14,14], popupAnchor:[0,-12] });
+    return L.divIcon({ className:'', html:'<div class="v18-standard-marker"></div>', iconSize:[24,24], iconAnchor:[12,12], popupAnchor:[0,-10] });
+  }
+  window.excludeRoutePoint = function(rowIndex){
+    routeExcluded.add(rowIndex);
+    if (Array.isArray(manualRouteOrder)) manualRouteOrder = manualRouteOrder.filter(idx => idx !== rowIndex);
+    if (isMapVisible()) renderMap(currentFilteredData || []);
+    if (window.__lastRoutePointsV18?.length) calculateRouteFromVisiblePoints(true);
+  };
+
+  function decorateRouteSteps(points){
+    const panel = document.getElementById('route-steps');
+    if (!panel || !points?.length) return;
+    const cards = [...panel.querySelectorAll('.rounded-xl.border')];
+    cards.forEach((card, i) => {
+      const item = points[i];
+      if (!item || item._isUserLocation || card.querySelector('.v18-route-trash')) return;
+      const wrapper = card.querySelector('.flex.items-start.gap-2') || card;
+      wrapper.insertAdjacentHTML('beforeend', `<button class="v18-route-trash v18-mini-btn-warning text-[10px] font-black rounded-lg px-2 py-1" title="Retirer de l’itinéraire" onclick="excludeRoutePoint(${item._rowIndex})">🗑</button>`);
+    });
+  }
+
+  function addExtraDetails(rowIndex){
+    const item = (globalData || []).find(row => row._rowIndex === rowIndex);
+    const body = document.querySelector('#details-modal .p-5.overflow-y-auto');
+    if (!item || !body || document.getElementById('v18-extra-details')) return;
+    const rows = [];
+    const email = getContactEmail(item);
+    const phone = getContactPhone(item);
+    const notes = getVisitNotes(item);
+    if (email) rows.push(['Email contact', email]);
+    if (phone) rows.push(['Téléphone contact', phone]);
+    if (notes) rows.push(['Notes de visites', notes]);
+    if (!rows.length) return;
+    const html = `<div id="v18-extra-details">${detailSection('Contact et notes de visites', rows.map(([l,v]) => [l, formatDetailValue(l, v)]))}</div>`;
+    body.insertAdjacentHTML('afterbegin', html);
+  }
+
+  function installFunctionPatches(){
+    if (window.__stableV18Installed) return;
+    window.__stableV18Installed = true;
+    const oldPopulate = populateFilterOptions;
+    populateFilterOptions = function(){ oldPopulate.apply(this, arguments); patchDom(); populateCantonOptions(); updateNafOptionLabels(); };
+    const oldRun = runFilter;
+    runFilter = function(){ oldRun.apply(this, arguments); applyExtraFilters(); patchClientEligibleText(); };
+    const oldOpen = openDetails;
+    openDetails = function(rowIndex){ oldOpen.apply(this, arguments); addExtraDetails(rowIndex); patchClientEligibleText(); };
+    const oldRenderSteps = renderRouteSteps;
+    renderRouteSteps = function(args){ window.__lastRoutePointsV18 = args?.points || []; oldRenderSteps.apply(this, arguments); decorateRouteSteps(args?.points || []); };
+    const oldCalc = calculateRouteFromVisiblePoints;
+    calculateRouteFromVisiblePoints = async function(optimize = true){
+      const saved = currentFilteredData;
+      currentFilteredData = (saved || []).filter(item => !routeExcluded.has(item._rowIndex));
+      try { await oldCalc.call(this, optimize); } finally { currentFilteredData = saved; }
+    };
+    renderKnownMarkers = function(data){
+      if (!map || !markersLayer) return { markers: 0, bounds: [] };
+      markersLayer.clearLayers();
+      const bounds = [];
+      let markers = 0;
+      (data || []).forEach(item => {
+        if (!hasCoordinates(item)) return;
+        const lat = item._lat, lon = item._lon;
+        const excluded = routeExcluded.has(item._rowIndex);
+        const marker = L.marker([lat, lon], { icon: markerIconFor(item) }).bindPopup(`
+          <div class="text-xs space-y-1 min-w-[190px]">
+            <div class="font-bold">${escapeHtml(item[COL.nom] || "Entreprise")}</div>
+            <div>${escapeHtml(item[COL.ville] || "")} (${escapeHtml(item._deptNorm || "")})</div>
+            <div>${escapeHtml(item[COL.adresse] || "")}</div>
+            <div class="font-bold text-amber-600">${escapeHtml(formatMoney(getTableFinancialAmount(item)))} <span class="text-[10px] text-gray-400">CA 2025</span></div>
+            ${excluded ? '<div class="text-[10px] font-black text-red-600">Retiré de l’itinéraire</div>' : ''}
+            <div class="flex items-center gap-1 mt-1"><button onclick="openDetails(${item._rowIndex})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button><button onclick="excludeRoutePoint(${item._rowIndex})" class="v18-mini-btn-warning text-[10px] font-black rounded px-2 py-1" title="Retirer de l’itinéraire">🗑</button></div>
+          </div>`);
+        markersLayer.addLayer(marker); bounds.push([lat, lon]); markers++;
+      });
+      if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 11 });
+      return { markers, bounds };
+    };
+  }
+
+  function patchDom(){
+    patchFleetOptions();
+    addClientNumberFilter();
+    addCantonFilter();
+    addUndercarriageBox();
+    addTopRankFilter();
+    addVisitsHelp();
+    addInfoButton();
+    addMonTerrainButton();
+    addGoogleMapsButton();
+    patchClientEligibleText();
+    updateTerrainButtonVisibility();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    installFunctionPatches();
+    patchDom();
+    setInterval(() => { patchDom(); populateCantonOptions(); updateNafOptionLabels(); }, 2500);
+  });
+})();
+</script>
 
 </body>
 </html>
