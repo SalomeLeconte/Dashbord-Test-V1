@@ -509,9 +509,9 @@
                         <div>
                             <label class="modern-label">Année CA</label>
                             <select id="f-ca-annee" onchange="setupCARange(); runFilter()" class="modern-input">
-                                <option value="total">Cumulé (Tous)</option>
+                                <option value="total" selected>Cumulé (Tous)</option>
                                 <option value="2026">2026</option>
-                                <option value="2025" selected>2025</option>
+                                <option value="2025">2025</option>
                                 <option value="2024">2024</option>
                             </select>
                         </div>
@@ -3922,7 +3922,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
 
   function patchStaticDomV20(){
     const year = document.getElementById('f-ca-annee');
-    if (year && !year.dataset.v20DefaultDone) { year.value = '2025'; year.dataset.v20DefaultDone='1'; try { setupCARange(); } catch(e){} }
+    if (year && !year.dataset.v20DefaultDone) { year.dataset.v20DefaultDone='1'; try { setupCARange(); } catch(e){} }
     const ville = document.getElementById('f-ville');
     if (ville) ville.placeholder = 'Ex: ville ou canton ...';
     const cantonLabel = document.querySelector('label[for="f-canton-select"], #f-canton-select')?.closest('div')?.querySelector('label');
@@ -4103,7 +4103,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
       repopulateCantonsV20();
       patchStaticDomV20();
       patchUndercarriageV20();
-      patchConnectedSectorV20();
+      /* v24: keep main sector filter */
     };
   }
 
@@ -4281,20 +4281,20 @@ Adresse : ${item[COL.adresse] || "-"}`);
   }
 
   async function initV20(){
-    patchCaYearDefaultInResetV20();
+    /* v24: reset keeps cumulative */
     installRenderOverridesV20();
     installFilterOverridesV20();
     installDetailsDedupeV20();
-    installRouteOverridesV20();
+    /* v24: route handled below */
     await installTerrainMapOverrideV20();
     patchStaticDomV20();
     patchUndercarriageV20();
-    patchConnectedSectorV20();
+    /* v24: keep main sector filter */
     loadCantonGeoV20().then(()=>repopulateCantonsV20());
-    setTimeout(() => { patchStaticDomV20(); patchUndercarriageV20(); repopulateCantonsV20(); patchConnectedSectorV20(); installGoogleMapsControlV20(); }, 700);
+    setTimeout(() => { patchStaticDomV20(); patchUndercarriageV20(); repopulateCantonsV20(); /* v24: keep main sector filter */ installGoogleMapsControlV20(); }, 700);
   }
   document.addEventListener('DOMContentLoaded', () => setTimeout(initV20, 100));
-  setInterval(() => { try { patchStaticDomV20(); patchUndercarriageV20(); repopulateCantonsV20(); patchConnectedSectorV20(); installGoogleMapsControlV20(); } catch(e){} }, 2500);
+  setInterval(() => { try { patchStaticDomV20(); patchUndercarriageV20(); repopulateCantonsV20(); /* v24: keep main sector filter */ installGoogleMapsControlV20(); } catch(e){} }, 2500);
 })();
 </script>
 
@@ -4464,7 +4464,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
     const old = resetFilters;
     resetFilters = function(){
       old.apply(this, arguments);
-      setTimeout(() => { forceCaYear2025(); try { runFilter(); } catch(e){} }, 0);
+      setTimeout(() => { try { setupCARange(); runFilter(); } catch(e){} }, 0);
     };
   }
 
@@ -4639,19 +4639,19 @@ Adresse : ${item[COL.adresse] || "-"}`);
   }
 
   function init(){
-    patchResetDefault();
-    forceCaYear2025();
+    /* v24: reset keeps cumulative */
+    /* v24: keep cumulative */
     patchMonTerrainButton();
-    installConnectedActivityFilter();
+    /* v24: keep main sector filter */
     installMobileIriumLine();
     installDataTableRender();
-    installRobustMapRender();
+    /* v24: robust map handled below */
     moveGoogleMapsButton();
-    setTimeout(() => { forceCaYear2025(); patchMonTerrainButton(); moveGoogleMapsButton(); installConnectedActivityFilter(); refreshVisible(); }, 600);
-    setTimeout(() => { forceCaYear2025(); refreshVisible(); }, 1600);
+    setTimeout(() => { /* v24: keep cumulative */ patchMonTerrainButton(); moveGoogleMapsButton(); /* v24: keep main sector filter */ refreshVisible(); }, 600);
+    setTimeout(() => { /* v24: keep cumulative */ refreshVisible(); }, 1600);
   }
   document.addEventListener('DOMContentLoaded', () => setTimeout(init, 250));
-  setInterval(() => { try { forceCaYear2025(); patchMonTerrainButton(); moveGoogleMapsButton(); installConnectedActivityFilter(); installRobustMapRender(); } catch(e){} }, 2200);
+  setInterval(() => { try { /* v24: keep cumulative */ patchMonTerrainButton(); moveGoogleMapsButton(); /* v24: keep main sector filter */ /* v24: robust map handled below */ } catch(e){} }, 2200);
 })();
 </script>
 
@@ -4917,11 +4917,11 @@ Adresse : ${item[COL.adresse] || "-"}`);
   }
   function initV23(){
     try{ document.querySelectorAll('.v21-france-mini').forEach(el=>el.remove()); const btn=document.getElementById('v18-terrain-button'); if(btn) btn.textContent='Mon terrain'; }catch(e){}
-    forceCaYear2025V23();
-    restoreMainSectorFilterV23();
+    /* v24: keep cumulative */
+    /* v24: keep main sector filter */
     installRenderGridV23();
     installDetailsV23();
-    installMapV23();
+    /* v24: robust map handled below */
     installRouteButtonsV23();
     moveGmapsLeftOfGpsV23();
     installTerrainPatchV23();
@@ -4931,7 +4931,242 @@ Adresse : ${item[COL.adresse] || "-"}`);
   }
   document.addEventListener('DOMContentLoaded',()=>setTimeout(initV23,500));
   setTimeout(initV23,1500);
-  setInterval(()=>{ try{ forceCaYear2025V23(); restoreMainSectorFilterV23(); installMapV23(); installRouteButtonsV23(); moveGmapsLeftOfGpsV23(); installReleaseShortcutsV23(); }catch(e){} },1100);
+  setInterval(()=>{ try{ /* v24: keep cumulative */ /* v24: keep main sector filter */ /* v24: robust map handled below */ installRouteButtonsV23(); moveGmapsLeftOfGpsV23(); installReleaseShortcutsV23(); }catch(e){} },1100);
+})();
+</script>
+
+
+
+<style id="wip-v24-adjustments-css">
+/* v24 WIP corrections */
+#v18-terrain-button .v21-france-mini, #v18-terrain-button svg { display:none !important; }
+#v18-terrain-button, #v18-terrain-button * { visibility:visible !important; opacity:1 !important; }
+.v24-client-meta { color:#9ca3af; font-weight:700; }
+.dark .v24-client-meta { color:#94a3b8; }
+.v24-copy-line { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+.v24-copy-btn { flex:0 0 auto; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; padding:.22rem .48rem; border-radius:.55rem; border:1px solid rgba(234,179,8,.38); background:rgba(234,179,8,.10); color:#92400e; }
+.dark .v24-copy-btn { color:#fde68a; border-color:rgba(234,179,8,.35); background:rgba(234,179,8,.12); }
+.v24-map-badges { display:flex; flex-wrap:wrap; gap:3px; margin:.35rem 0; }
+.v24-map-badges span { font-size:9px !important; line-height:1.1 !important; padding:2px 5px !important; }
+.v24-excluded-marker { width:28px; height:28px; border-radius:999px; background:#ef4444; border:3px solid #fff; opacity:.72; box-shadow:0 0 0 0 rgba(239,68,68,.35); animation:v24-red-blink 1.6s ease-in-out infinite; }
+@keyframes v24-red-blink { 0%,100% { opacity:.38; box-shadow:0 0 0 0 rgba(239,68,68,.12); transform:scale(.96); } 50% { opacity:.85; box-shadow:0 0 0 7px rgba(239,68,68,.20); transform:scale(1.05); } }
+.v24-route-trash { display:inline-flex; align-items:center; justify-content:center; width:25px; height:25px; border-radius:999px; border:1px solid #fecaca; background:#fee2e2; color:#b91c1c; font-weight:900; cursor:pointer; margin-left:auto; }
+.v24-route-trash:hover { background:#fecaca; transform:translateY(-1px); }
+.dark .v24-route-trash { background:rgba(127,29,29,.28); border-color:#7f1d1d; color:#fecaca; }
+.v24-route-add { display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:999px; background:#16a34a; color:#fff; font-weight:1000; font-size:16px; border:1px solid #15803d; box-shadow:0 8px 18px rgba(22,163,74,.25); }
+.v24-terrain-pie-card { border:1px solid #e5e7eb; border-radius:18px; padding:14px; background:#fff; box-shadow:0 12px 26px rgba(15,23,42,.07); margin-bottom:.75rem; }
+.dark .v24-terrain-pie-card { background:#020617; border-color:#334155; }
+.v24-terrain-pie { width:160px; height:160px; border-radius:999px; margin:0 auto; border:1px solid rgba(148,163,184,.35); box-shadow:inset 0 0 0 28px rgba(255,255,255,.72),0 12px 24px rgba(15,23,42,.12); }
+.dark .v24-terrain-pie { box-shadow:inset 0 0 0 28px rgba(2,6,23,.80),0 12px 24px rgba(0,0,0,.35); }
+.v24-terrain-dot { width:9px; height:9px; border-radius:999px; display:inline-block; flex:0 0 auto; }
+.v24-terrain-legend { max-height:230px; overflow:auto; padding-right:4px; }
+.v24-terrain-card { border:1px solid #e5e7eb; border-radius:14px; padding:12px; background:#fff; }
+.dark .v24-terrain-card { background:#020617; border-color:#334155; }
+</style>
+<script id="wip-v24-adjustments-js">
+(function(){
+  const PATCH_ID='v24-WIP-2026-06-29';
+  window.__WIP_VERSION__=PATCH_ID;
+  const safeEsc = v => { try { return escapeHtml(v); } catch(e){ return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); } };
+  const norm = v => { try { return normalizeText(v || ''); } catch(e){ return String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); } };
+  const fmt = v => { try { return formatNumber(v); } catch(e){ return String(v ?? ''); } };
+  function getIrium(item){
+    const keys=[]; try{ if(COL && COL.clientNumero) keys.push(COL.clientNumero); }catch(e){}
+    keys.push('Client_Irium.Client (Numéro)','Client_Irium.Client Numéro','Client_Irium.Client','Client (Numéro)','Numéro client','Numero client','N° client','Num client','Code Irium','Code client Irium','Client Irium');
+    for(const k of keys){ const v=item && item[k]; if(v!==undefined && v!==null && String(v).trim()!=='' && String(v).toLowerCase()!=='nan') return String(v).trim(); }
+    return '';
+  }
+  function getEmail(item){ try { if (typeof getContactEmail==='function') return getContactEmail(item); } catch(e){}; const keys=['Email','email','Mail','E-mail','datap2..Email','datav2..Email']; for(const k of keys){ const v=item && item[k]; if(v && String(v).trim()) return String(v).trim(); } return ''; }
+  function getPhone(item){ try { if (typeof getContactPhone==='function') return getContactPhone(item); } catch(e){}; const keys=['Téléphone','Telephone','Tel','Mobile','datap2.Téléphone','datav2.Téléphone']; for(const k of keys){ const v=item && item[k]; if(v && String(v).trim()) return String(v).trim(); } return ''; }
+  function copyBtnHtml(value){ return `<button type="button" class="v24-copy-btn" onclick="copyToClipboard(${JSON.stringify(String(value||'')).replace(/"/g,'&quot;')})">Copier</button>`; }
+  function copyLine(value, isPhone=false){ const val = isPhone && typeof cleanPhone==='function' ? cleanPhone(value) : String(value ?? '').trim(); return `<span class="v24-copy-line"><span>${safeEsc(val)}</span>${copyBtnHtml(val)}</span>`; }
+  function renderBadgesSafe(item){ try { return typeof renderBadges==='function' ? renderBadges(item) : ''; } catch(e){ return ''; } }
+  function routeSet(){ return window.__routeExcludedV18 || window.__routeExcludedV20 || (window.__routeExcludedV24 ||= new Set()); }
+
+  function keepCaCumulative(){
+    const year=document.getElementById('f-ca-annee');
+    if(year && (year.dataset.v24Touched!=='1') && year.value==='2025') { year.value='total'; try{ setupCARange(); }catch(e){} }
+  }
+  function patchResetKeepsCumulative(){
+    if(window.__v24ResetPatched || typeof resetFilters!=='function') return;
+    window.__v24ResetPatched=true;
+    const old=resetFilters;
+    resetFilters=function(){
+      old.apply(this, arguments);
+      const year=document.getElementById('f-ca-annee');
+      if(year){ year.value='total'; year.dataset.v24Touched='1'; }
+      try{ setupCARange(); runFilter(); }catch(e){}
+    };
+    const year=document.getElementById('f-ca-annee');
+    if(year && !year.dataset.v24ChangeListener){ year.dataset.v24ChangeListener='1'; year.addEventListener('change',()=>{ year.dataset.v24Touched='1'; }); }
+  }
+  function patchMonTerrainButton(){
+    const btn=document.getElementById('v18-terrain-button');
+    if(!btn) return;
+    btn.innerHTML='<span>Mon terrain</span>';
+    btn.title='Afficher mon terrain par département';
+    btn.classList.remove('hidden');
+    btn.style.display='';
+  }
+  function installDataTableV24(){
+    if(typeof renderGrid==='function'){
+      renderGrid=function(data){
+        try{ if(typeof renderMobileGridCards==='function') renderMobileGridCards(data); }catch(e){}
+        const tbody=document.getElementById('grid-tbody'); if(!tbody) return;
+        if(!data || !data.length){ tbody.innerHTML='<tr><td colspan="6" class="p-8 text-center text-sm text-gray-400">Aucun résultat avec les filtres actuels.</td></tr>'; return; }
+        tbody.innerHTML=data.map(item=>{
+          const amount=getTableFinancialAmount(item);
+          const machines=String(item?.[COL.machines] || '').trim();
+          const series=String(item?.[COL.series] || '').trim();
+          const position=String(item?.[COL.position] || '').trim();
+          const groupe=String(item?.[COL.groupe] || '').trim();
+          const categorie=String(item?.[COL.categorie] || '').trim();
+          const irium=getIrium(item);
+          const meta=[irium, position, groupe, categorie].filter(Boolean).join(' • ');
+          return `<tr class="hover:bg-gray-50/80 dark:hover:bg-slate-800/40 transition align-top">
+            <td class="p-4 pl-6"><div class="font-semibold text-gray-900 dark:text-white">${safeEsc(item?.[COL.nom] || 'Inconnu')}</div><div class="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">${safeEsc(meta)}</div>${renderBadgesSafe(item)}</td>
+            <td class="p-4 text-xs font-mono text-gray-500">${safeEsc(item?.[COL.siret] || '')}</td>
+            <td class="p-4 text-xs"><div>${safeEsc(item?.[COL.ville] || '')} (${safeEsc(item?._deptNorm || '')})</div><div class="text-[10px] text-gray-400 mt-1 truncate max-w-[260px]">${safeEsc(item?.[COL.adresse] || '')}</div><div class="text-[10px] text-gray-400 mt-1">Agence : ${safeEsc(item?.[COL.agence] || '-')}</div></td>
+            <td class="p-4 text-right"><div class="font-bold text-amber-600">${formatMoney(amount)}</div><div class="text-[10px] text-gray-400">CA Global</div></td>
+            <td class="p-4 text-xs text-gray-500 dark:text-slate-400"><div class="font-bold text-gray-700 dark:text-slate-200">${formatNumber(parseNumber(item?.[COL.nbMachines]))} machine(s)</div><div class="truncate max-w-[260px] mt-1">${safeEsc(machines || 'Aucune machine renseignée')}</div>${series ? `<div class="mt-1 text-[10px] text-gray-600 dark:text-slate-300 font-bold truncate max-w-[260px]">N° série : ${safeEsc(series)}</div>` : ''}${typeof hasNewMachine==='function' && hasNewMachine(item) ? `<div class="mt-2 text-[10px] text-emerald-700 dark:text-emerald-300 font-bold truncate max-w-[260px]">Nouvelle : ${safeEsc(item?.[COL.machinesRecentes] || item?.[COL.newMachineFlag] || 'NEW')}</div>` : ''}${typeof hasOldMachine==='function' && hasOldMachine(item) ? `<div class="mt-1 text-[10px] text-cyan-700 dark:text-cyan-300 font-bold truncate max-w-[260px]">5 ans+ : ${safeEsc(getOldMachineDetails(item))}</div>` : ''}</td>
+            <td class="p-4 text-center pr-6">${eyeIconButton(item._rowIndex)}</td>
+          </tr>`;
+        }).join('');
+      };
+    }
+    if(typeof renderMobileGridCards==='function'){
+      renderMobileGridCards=function(data){
+        const container=document.getElementById('mobile-grid-cards'); if(!container) return;
+        if(!data || !data.length){ container.innerHTML='<div class="mobile-card text-center text-sm text-gray-400">Aucun résultat avec les filtres actuels.</div>'; return; }
+        container.innerHTML=data.map(item=>{ const amount=getTableFinancialAmount(item); const machines=String(item?.[COL.machines] || '').trim(); const series=String(item?.[COL.series] || '').trim(); const irium=getIrium(item); const meta=[irium,item?.[COL.position],item?.[COL.groupe],item?.[COL.categorie]].filter(Boolean).join(' • '); return `<article class="mobile-card"><div class="flex items-start justify-between gap-3"><div class="min-w-0"><div class="mobile-card-title">${safeEsc(item?.[COL.nom] || 'Inconnu')}</div><div class="mobile-card-subtitle">${safeEsc(meta)}</div></div>${eyeIconButton(item._rowIndex)}</div><div class="mt-2">${renderBadgesSafe(item)}</div><div class="mobile-card-grid">${mobileField('CA Global', formatMoney(amount))}${mobileField('Ville', `${item?.[COL.ville] || '-'} (${item?._deptNorm || '-'})`)}${mobileField('Agence', item?.[COL.agence] || '-')}${mobileField('Machines', `${formatNumber(parseNumber(item?.[COL.nbMachines]))} machine(s)`)}${mobileField('SIRET', item?.[COL.siret] || '-')}</div><div class="mt-3 text-xs text-gray-500 dark:text-slate-400 truncate">${safeEsc(item?.[COL.adresse] || 'Adresse non renseignée')}</div><div class="mt-2 text-xs text-gray-500 dark:text-slate-400 line-clamp-2">${safeEsc(machines || 'Aucune machine renseignée')}</div>${series ? `<div class="mt-1 text-[11px] font-bold text-gray-600 dark:text-slate-300 line-clamp-2">N° série : ${safeEsc(series)}</div>` : ''}</article>`; }).join('');
+      };
+    }
+  }
+  function installDetailsV24(){
+    if(typeof openDetails!=='function') return;
+    openDetails=function(rowIndex){
+      const item=(globalData || []).find(row => row._rowIndex === rowIndex); if(!item) return;
+      const modal=ensureDetailsModal(); if(!modal){ alert(`${item[COL.nom] || 'Entreprise'}\nSIRET : ${item[COL.siret] || '-'}\nAdresse : ${item[COL.adresse] || '-'}`); return; }
+      ensureTop200RankCache();
+      const rowsFrom = fields => fields.map(([label,keyOrValue,isValue=false]) => { const value=isValue ? keyOrValue : item[keyOrValue]; return [label, formatDetailValue(label,value)]; }).filter(([,value]) => !isEmptyDetailValue(value));
+      const email=getEmail(item); const phone=getPhone(item); const topRank=getTop200Rank(item);
+      const identRows=rowsFrom([["Entreprise", COL.nom],["SIRET", COL.siret],["Client Irium", COL.clientNumero],["Statut client", COL.position],["Groupe", COL.groupe],["Agence", COL.agence],["PSSR", COL.pssr],["Adresse", COL.adresse],["Département", COL.dept],["Ville", COL.ville],["Nombre de salariés", COL.salaries]]);
+      if(email) identRows.splice(7,0,["Email", email]);
+      if(phone) identRows.splice(email?8:7,0,["Téléphone", phone]);
+      const sections=[
+        {title:'Synthèse visite', rows:[["Rang TOP 200 PSSR", Number.isFinite(topRank) ? formatNumber(topRank) : '', true],["Badge TOP", getTopBandLabel(item), true],["Visites obligatoires", getObjectiveVisits(item) ? formatNumber(getObjectiveVisits(item)) : '', true],["Visites effectuées 2026", item[COL.visits2026] !== undefined && item[COL.visits2026] !== '' ? formatNumber(getVisits2026(item)) : '', true],["Visites restantes", getRemainingVisits(item) > 0 ? formatNumber(getRemainingVisits(item)) : '', true],["Nouvelle machine", hasNewMachine(item) ? `Oui${getRecentMachineAgeLabel(item) ? ' — ' + getRecentMachineAgeLabel(item) : ''}` : '', true],["Machine 5 ans et +", hasOldMachine(item) ? 'Oui' : '', true],["Client éligible", isGrandCompte(item) ? 'Oui' : '', true]].filter(([,value])=>!isEmptyDetailValue(value))},
+        {title:'Identité et localisation', rows: identRows},
+        {title:'Potentiel commercial', rows: rowsFrom([["CA Global", COL.caGlobal],["CA 2025", COL.ca2025],["CA PDR cumulé", COL.pcsTotal],["CA SERVICE cumulé", COL.savTotal]])},
+        {title:'Parc machines', rows: rowsFrom([["Nombre de machines", COL.nbMachines],["Liste machines", COL.machines],["N° série", COL.series],["Machines récentes", COL.machinesRecentes],["Flag machine récente", COL.newMachineFlag],["Machines 5 ans et +", COL.oldMachineFlag],["Âge machine", COL.ageMachineAll],["Machines fin garantie", 'Machines fin garantie par client'],["Nb machines source", 'Somme de .Nb Machines/clients']])},
+        {title:'CRM et opportunités', rows: rowsFrom([["Dernier contact - date", COL.crmDate],["Dernier contact - vendeur", COL.crmVendeur],["Dernier contact - sujet", COL.crmSujet],["Dernier contact - note", COL.crmNote],["Dernière opportunité - vendeur", 'CRM_DerniereOpp_Vendeur'],["Dernière opportunité - type matériel", 'CRM_DerniereOpp_TypeMateriel'],["Dernière opportunité - date", 'CRM_DerniereOppDate'],["Dernière opportunité - statut", 'CRM_DerniereOpp_Status'],["Dernière opportunité - nature matériel", 'CRM_DerniereOpp_NatureMateriel']])},
+        {title:'Secteur d’activité', rows: rowsFrom([["Catégorie", COL.categorie],["NAF", COL.naf],["Description", COL.description]])}
+      ];
+      modal.innerHTML = `<div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onclick="closeDetails()"></div><div class="relative bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-2xl w-[min(1040px,96vw)] max-h-[90vh] overflow-hidden shadow-2xl"><div class="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between gap-4 items-start"><div><div class="text-[10px] uppercase tracking-widest font-black text-komatsu-600 dark:text-komatsu-400">Détails entreprise</div><h3 class="font-display font-black text-lg text-gray-900 dark:text-white mt-1">${safeEsc(item[COL.nom] || 'Entreprise')}</h3><p class="text-xs text-gray-500 dark:text-slate-400 mt-1">${safeEsc(item[COL.adresse] || 'Adresse non renseignée')}</p>${renderBadgesSafe(item)}</div><button onclick="closeDetails()" class="shrink-0 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl px-3 py-2 text-xs font-black text-gray-600 dark:text-slate-200">Fermer</button></div><div class="p-5 overflow-y-auto max-h-[74vh] space-y-5">${caMiniChartsSection(item)}${sections.filter(s=>s.rows.length).map(s=>detailSection(s.title,s.rows)).join('')}</div></div>`;
+      modal.classList.remove('hidden'); modal.style.display='flex';
+    };
+  }
+  function installMainSectorFilterV24(){
+    const cat=document.getElementById('f-categorie'); const naf=document.getElementById('f-naf');
+    if(!cat || !naf || !Array.isArray(globalData)) return;
+    const oldCat=cat.value || ''; const oldNaf=naf.value || '';
+    const scope=(typeof getFilterScopeData==='function' ? getFilterScopeData() : globalData) || [];
+    const categories=[...new Set(scope.map(item=>String(item?.[COL.categorie] || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+    const nafs=[...new Set(scope.map(item=>String(item?.[COL.naf] || '').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
+    cat.innerHTML='<option value="">Tous</option>' + categories.map(v=>`<option value="${safeEsc(v)}">${safeEsc(v)}</option>`).join('');
+    naf.innerHTML='<option value="">Tous</option>' + nafs.map(v=>`<option value="${safeEsc(v)}">${safeEsc(v)}</option>`).join('');
+    if(categories.includes(oldCat)) cat.value=oldCat;
+    if(nafs.includes(oldNaf)) naf.value=oldNaf;
+    cat.onchange=function(){ try{ runFilter(); }catch(e){} };
+    naf.onchange=function(){ try{ runFilter(); }catch(e){} };
+  }
+  function iconForMarker(item){
+    if(routeSet().has(item?._rowIndex) && typeof L!=='undefined') return L.divIcon({className:'', html:'<div class="v24-excluded-marker"></div>', iconSize:[30,30], iconAnchor:[15,15], popupAnchor:[0,-14]});
+    try{ if(typeof markerIconFor==='function') return markerIconFor(item); }catch(e){}
+    return undefined;
+  }
+  function popupHtml(item){
+    const excluded=routeSet().has(item?._rowIndex);
+    return `<div class="text-xs space-y-1 min-w-[220px]"><div class="font-bold">${safeEsc(item?.[COL.nom] || 'Entreprise')}</div><div>${safeEsc(item?.[COL.ville] || '')} (${safeEsc(item?._deptNorm || '')})</div><div>${safeEsc(item?.[COL.adresse] || '')}</div><div class="v24-map-badges">${renderBadgesSafe(item)}</div><div class="font-bold text-amber-600">${safeEsc(formatMoney(getTableFinancialAmount(item)))} <span class="text-[10px] text-gray-400">CA 2025</span></div>${excluded ? '<div class="text-[10px] font-black text-red-600">Retiré de l’itinéraire</div>' : ''}<div class="flex items-center gap-1 mt-2"><button onclick="openDetails(${item._rowIndex})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button>${excluded ? `<button onclick="excludeRoutePoint(${item._rowIndex})" class="v24-route-add" title="Rajouter à l’itinéraire">+</button>` : ''}</div></div>`;
+  }
+  function installMapV24(){
+    if(typeof renderKnownMarkers==='function'){
+      renderKnownMarkers=function(data){
+        if(!map || !markersLayer) return {markers:0,bounds:[]};
+        markersLayer.clearLayers(); const bounds=[]; let markers=0;
+        (data || []).forEach(item=>{ try{ if(!hasCoordinates(item)) return; const opt=iconForMarker(item) ? {icon:iconForMarker(item)} : undefined; const marker=L.marker([item._lat,item._lon], opt).bindPopup(popupHtml(item)); markersLayer.addLayer(marker); bounds.push([item._lat,item._lon]); markers++; }catch(e){ console.warn('marker v24',e); } });
+        if(bounds.length) map.fitBounds(bounds,{padding:[30,30],maxZoom:11});
+        return {markers,bounds};
+      };
+    }
+    if(typeof renderMap==='function'){
+      renderMap=function(data){
+        if(!map || !markersLayer) return;
+        geocodeRunId++; const runId=geocodeRunId; const rows=data || [];
+        const stats=renderKnownMarkers(rows);
+        if(!rows.length){ showMapNotice(true,'Aucune donnée','Aucune entreprise ne correspond aux filtres actuels.'); updateRouteStatus('Aucun point disponible pour calculer un itinéraire.',true); return; }
+        const missing=rows.filter(item=>!hasCoordinates(item) && buildAddressQuery(item));
+        if(!missing.length){ if(stats.markers>0){ showMapNotice(false); updateRouteStatus(`${stats.markers} point(s) disponible(s) pour l’itinéraire.`,true); } else { showMapNotice(true,'Carte non alimentée','Aucune coordonnée ou adresse exploitable pour les lignes filtrées.'); updateRouteStatus('Aucun point géolocalisable.',true); } return; }
+        showMapNotice(true,'Géocodage automatique',`${stats.markers} point(s) déjà affiché(s). Recherche des coordonnées pour ${missing.length} adresse(s)...`);
+        updateRouteStatus(`Géocodage en cours : ${missing.length} adresse(s) à traiter.`,true);
+        geocodeVisibleData(rows, missing, runId);
+      };
+    }
+    window.excludeRoutePoint=function(rowIndex){ const set=routeSet(); if(set.has(rowIndex)) set.delete(rowIndex); else set.add(rowIndex); if(Array.isArray(manualRouteOrder) && set.has(rowIndex)) manualRouteOrder=manualRouteOrder.filter(idx=>idx!==rowIndex); if(typeof isMapVisible==='function' && isMapVisible()) renderMap(currentFilteredData || []); if(window.__lastRoutePointsV18?.length) calculateRouteFromVisiblePoints(true); };
+    if(!window.__v24ClearRouteWrapped && typeof clearRoute==='function'){ window.__v24ClearRouteWrapped=true; const old=clearRoute; clearRoute=function(){ const set=routeSet(); if(set && typeof set.clear==='function') set.clear(); old.apply(this,arguments); if(typeof isMapVisible==='function' && isMapVisible()) renderMap(currentFilteredData || []); }; }
+    if(!window.__v24RouteStepsWrapped && typeof renderRouteSteps==='function'){ window.__v24RouteStepsWrapped=true; const old=renderRouteSteps; renderRouteSteps=function(args){ window.__lastRoutePointsV18=args?.points || []; old.apply(this,arguments); setTimeout(()=>decorateRouteSteps(args?.points || []),0); }; }
+    decorateRouteSteps(window.__lastRoutePointsV18 || []);
+  }
+  function decorateRouteSteps(points){
+    const panel=document.getElementById('route-steps'); if(!panel || !points?.length) return;
+    const cards=[...panel.querySelectorAll('.rounded-xl.border')];
+    cards.forEach((card,i)=>{ const item=points[i]; if(!item || item._isUserLocation) return; card.querySelectorAll('.v18-route-trash,.v20-route-toggle,.v23-route-trash,.v24-route-trash').forEach(b=>b.remove()); const wrapper=card.querySelector('.flex.items-start.gap-2') || card; wrapper.insertAdjacentHTML('beforeend', `<button class="v24-route-trash" onclick="excludeRoutePoint(${item._rowIndex})" title="Retirer de l’itinéraire">🗑</button>`); });
+  }
+  function moveGmapsLeftOfGps(){
+    document.querySelectorAll('.v20-google-control').forEach(el=>el.style.display='none');
+    const old=document.getElementById('v18-google-maps-btn'); if(old) old.style.display='none';
+    const gps=[...document.querySelectorAll('button')].find(btn=>norm(btn.textContent).trim()==='autoriser gps'); if(!gps) return;
+    let btn=document.getElementById('v24-gmaps-btn');
+    if(!btn){ btn=document.createElement('button'); btn.id='v24-gmaps-btn'; btn.type='button'; btn.className='bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-200 text-[10px] px-3 py-2 rounded-xl font-black uppercase tracking-wider shadow-sm hover:border-komatsu-500 transition'; btn.onclick=function(){ if(typeof openGoogleMapsRoute==='function') openGoogleMapsRoute(); }; btn.innerHTML='<span style="color:#4285F4;font-weight:1000">G</span><span style="color:#DB4437;font-weight:1000;margin-left:-.25rem">M</span><span>aps</span>'; }
+    gps.insertAdjacentElement('beforebegin',btn);
+  }
+  function terrainStatsV24(){
+    const depts=typeof selectedDepts==='function' ? selectedDepts() : [...new Set((globalData||[]).map(i=>i._deptNorm).filter(Boolean))];
+    const rows=(globalData || []).filter(item=>depts.includes(item._deptNorm));
+    const grouped=new Map();
+    depts.forEach(d=>grouped.set(d,{dept:d,total:0,clients:0,prospects:0,visits:0,objective:0,remaining:0}));
+    rows.forEach(item=>{ const d=item._deptNorm; if(!grouped.has(d)) grouped.set(d,{dept:d,total:0,clients:0,prospects:0,visits:0,objective:0,remaining:0}); const s=grouped.get(d); s.total++; const pos=norm(item?.[COL.position] || ''); if(pos==='cl' || pos.includes('client')) s.clients++; else s.prospects++; s.visits += getVisits2026(item); s.objective += getObjectiveVisits(item); });
+    grouped.forEach(s=>{ s.remaining=Math.max(0, s.objective - s.visits); s.donePct=s.objective>0 ? Math.min(100, Math.round((s.visits/s.objective)*100)) : 0; s.remainingPct=s.objective>0 ? Math.max(0, 100-s.donePct) : 0; });
+    return [...grouped.values()].sort((a,b)=>a.dept.localeCompare(b.dept,'fr',{numeric:true}));
+  }
+  function terrainPie(stats){
+    const total=stats.reduce((a,s)=>a+s.clients+s.prospects,0); if(!total) return '';
+    let cursor=0; const stops=[]; const legend=[];
+    stats.forEach((s,idx)=>{ const hue=(idx*47+205)%360; const clientColor=`hsl(${hue} 78% 42%)`; const prospectColor=`hsl(${hue} 78% 72%)`; [['Clients',s.clients,clientColor],['Prospects',s.prospects,prospectColor]].forEach(([label,val,color])=>{ if(val<=0) return; const start=cursor/total*100; cursor+=val; const end=cursor/total*100; stops.push(`${color} ${start.toFixed(2)}% ${end.toFixed(2)}%`); }); legend.push(`<div class="flex items-center justify-between gap-2 text-[11px]"><span class="flex items-center gap-1 min-w-0"><span class="v24-terrain-dot" style="background:${clientColor}"></span><span class="truncate">${safeEsc(s.dept)} clients</span></span><b>${fmt(s.clients)}</b></div><div class="flex items-center justify-between gap-2 text-[11px]"><span class="flex items-center gap-1 min-w-0"><span class="v24-terrain-dot" style="background:${prospectColor}"></span><span class="truncate">${safeEsc(s.dept)} prospects</span></span><b>${fmt(s.prospects)}</b></div>`); });
+    return `<div class="v24-terrain-pie-card"><div class="text-[10px] uppercase tracking-widest font-black text-komatsu-600 dark:text-komatsu-400 mb-3">Répartition clients / prospects par département</div><div class="grid grid-cols-1 sm:grid-cols-[180px_1fr] gap-3 items-center"><div class="v24-terrain-pie" style="background:conic-gradient(${stops.join(',')})"></div><div class="v24-terrain-legend space-y-1">${legend.join('')}</div></div></div>`;
+  }
+  async function renderMonTerrainV24(){
+    const title=document.getElementById('v18-terrain-title'); const statsBox=document.getElementById('v18-terrain-stats'); const mapDiv=document.getElementById('v18-terrain-map'); if(!statsBox || !mapDiv) return;
+    const stats=terrainStatsV24(); const depts=stats.map(s=>s.dept); if(title) title.textContent=`Mon terrain — ${document.getElementById('active-user-name')?.textContent || 'PSSR'}`;
+    statsBox.innerHTML=terrainPie(stats)+stats.map(s=>`<div class="v24-terrain-card"><div class="flex justify-between"><b>Dépt ${safeEsc(s.dept)}</b><span>${fmt(s.total)} lignes</span></div><div class="mt-2 grid grid-cols-2 gap-2 text-xs"><div>Clients : <b>${fmt(s.clients)}</b></div><div>Prospects : <b>${fmt(s.prospects)}</b></div><div>Visites faites : <b>${fmt(s.visits)}</b></div><div>Objectif : <b>${fmt(s.objective)}</b></div><div>% fait : <b>${s.donePct}%</b></div><div>% reste : <b>${s.remainingPct}%</b></div></div></div>`).join('');
+    if(typeof L==='undefined') return;
+    try{ if(window.__terrainMapV18){ window.__terrainMapV18.remove(); window.__terrainMapV18=null; } if(window.__terrainLeafletMap){ window.__terrainLeafletMap.remove(); window.__terrainLeafletMap=null; } }catch(e){}
+    mapDiv.innerHTML='';
+    const tmap=L.map('v18-terrain-map',{zoomControl:true}).setView([46.6,2.2],6); window.__terrainMapV18=tmap; window.__terrainLeafletMap=tmap;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(tmap);
+    const statsByDept=new Map(stats.map(s=>[s.dept,s]));
+    try{ const response=await fetch('https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements.geojson',{cache:'force-cache'}); const geo=await response.json(); const layer=L.geoJSON(geo,{ filter:f=>depts.includes(String(f.properties?.code || f.properties?.CODE_DEPT || '').padStart(2,'0')), style:f=>({color:'#eab308',weight:2,fillColor:'#facc15',fillOpacity:.22}), onEachFeature:(feature,lyr)=>{ const code=String(feature.properties?.code || feature.properties?.CODE_DEPT || '').padStart(2,'0'); const s=statsByDept.get(code) || {clients:0,prospects:0,visits:0,objective:0,donePct:0,remainingPct:0}; lyr.bindTooltip(`<div class="v18-terrain-tooltip"><b>Dépt ${safeEsc(code)}</b><br>${fmt(s.clients)} clients • ${fmt(s.prospects)} prospects<br>${s.donePct}% fait • ${s.remainingPct}% reste</div>`,{sticky:true}); lyr.on('click',()=>tmap.fitBounds(lyr.getBounds(),{padding:[30,30]})); } }).addTo(tmap); if(layer.getBounds && layer.getBounds().isValid()) tmap.fitBounds(layer.getBounds(),{padding:[25,25]}); } catch(e){ mapDiv.innerHTML='<div class="p-6 text-sm text-gray-500">Carte départementale indisponible. Les chiffres sont affichés à droite.</div>'; }
+  }
+  function installTerrainV24(){
+    window.renderMonTerrainMap=renderMonTerrainV24;
+    window.openMonTerrain=async function(){ const modal=document.getElementById('v18-terrain-modal'); if(!modal) return; modal.classList.add('open'); patchMonTerrainButton(); setTimeout(renderMonTerrainV24,80); };
+  }
+  function refreshAll(){
+    keepCaCumulative(); patchResetKeepsCumulative(); patchMonTerrainButton(); installDataTableV24(); installDetailsV24(); installMainSectorFilterV24(); installMapV24(); moveGmapsLeftOfGps(); installTerrainV24();
+    try{ if(Array.isArray(currentFilteredData) && typeof renderGrid==='function') renderGrid(currentFilteredData); }catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(refreshAll,700));
+  setTimeout(refreshAll,1600);
+  setInterval(()=>{ try{ patchMonTerrainButton(); installMainSectorFilterV24(); installMapV24(); moveGmapsLeftOfGps(); installTerrainV24(); }catch(e){} },1200);
 })();
 </script>
 
