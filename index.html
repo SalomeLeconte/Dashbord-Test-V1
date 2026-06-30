@@ -5170,5 +5170,233 @@ Adresse : ${item[COL.adresse] || "-"}`);
 })();
 </script>
 
+
+<style id="wip-v25-adjustments-css">
+/* v25 WIP corrections */
+#v25-sector-tree { border:1px solid #e5e7eb; border-radius:18px; padding:12px; background:#fff; box-shadow:0 12px 26px rgba(15,23,42,.06); }
+.dark #v25-sector-tree { background:#020617; border-color:#334155; }
+.v25-sector-hidden { display:none !important; }
+.v25-sector-title { color:#94a3b8; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; }
+.v25-sector-status { font-size:12px; font-weight:900; color:#475569; margin-bottom:10px; text-transform:uppercase; letter-spacing:.04em; }
+.dark .v25-sector-status { color:#cbd5e1; }
+.v25-sector-actions { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.v25-sector-actions button { border:1px solid #e5e7eb; background:#fff; color:#64748b; border-radius:9px; padding:7px 12px; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; }
+.dark .v25-sector-actions button { background:#0f172a; border-color:#334155; color:#cbd5e1; }
+.v25-sector-body { max-height:360px; overflow:auto; padding-right:4px; }
+.v25-sector-cat { border-bottom:1px solid #eef2f7; padding:8px 0; }
+.dark .v25-sector-cat { border-color:#1e293b; }
+.v25-sector-cat-row { display:grid; grid-template-columns:30px 18px minmax(0,1fr) auto; align-items:center; gap:8px; }
+.v25-sector-arrow { width:28px; height:28px; border:1px solid #e5e7eb; border-radius:9px; display:flex; align-items:center; justify-content:center; color:#94a3b8; background:#fff; }
+.dark .v25-sector-arrow { background:#0f172a; border-color:#334155; }
+.v25-sector-cat-title { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:11px; font-weight:1000; color:#475569; text-transform:uppercase; letter-spacing:.03em; }
+.dark .v25-sector-cat-title { color:#dbeafe; }
+.v25-sector-count { font-size:11px; color:#94a3b8; font-weight:900; }
+.v25-naf-list { padding:8px 0 2px 44px; display:grid; gap:6px; }
+.v25-naf-row { display:flex; align-items:center; gap:8px; background:#f8fafc; border:1px solid #eef2f7; border-radius:9px; padding:7px 10px; font-size:11px; font-weight:900; color:#475569; }
+.dark .v25-naf-row { background:#0f172a; border-color:#334155; color:#cbd5e1; }
+.v25-sector-help { margin-top:9px; font-size:10px; line-height:1.4; color:#94a3b8; }
+.v25-canton-progress { margin-top:5px; font-size:10px; color:#b45309; font-weight:800; line-height:1.35; }
+.dark .v25-canton-progress { color:#fbbf24; }
+.v25-gmaps-btn { display:inline-flex; align-items:center; gap:4px; background:#fff; border:1px solid #e5e7eb; color:#334155; font-size:10px; padding:.5rem .72rem; border-radius:.75rem; font-weight:1000; text-transform:uppercase; letter-spacing:.04em; box-shadow:0 10px 22px rgba(15,23,42,.10); transition:.16s ease; margin-right:.5rem; }
+.v25-gmaps-btn:hover { border-color:#facc15; transform:translateY(-1px); }
+.dark .v25-gmaps-btn { background:#0f172a; border-color:#334155; color:#e2e8f0; }
+.v25-copy-btn { flex:0 0 auto; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.04em; padding:.22rem .48rem; border-radius:.55rem; border:1px solid rgba(234,179,8,.38); background:rgba(234,179,8,.10); color:#92400e; }
+.dark .v25-copy-btn { color:#fde68a; border-color:rgba(234,179,8,.35); background:rgba(234,179,8,.12); }
+#v18-terrain-button { min-width:92px; }
+</style>
+<script id="wip-v25-adjustments-js">
+(function(){
+  const PATCH_ID='v25-WIP-2026-06-30';
+  window.__WIP_VERSION__ = PATCH_ID;
+  const esc = v => { try { return escapeHtml(v); } catch(e){ return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); } };
+  const n = v => { try { return normalizeText(v || ''); } catch(e){ return String(v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); } };
+  const isEmpty = v => { const raw=String(v ?? '').trim(); return !raw || raw==='-' || raw.toLowerCase()==='nan'; };
+  function field(item, keys){
+    for(const key of keys){ const v=item && item[key]; if(!isEmpty(v)) return String(v).trim(); }
+    const all=Object.keys(item || {});
+    for(const key of all){ const lk=String(key).toLowerCase(); if(keys.some(k=>lk===String(k).toLowerCase())){ const v=item[key]; if(!isEmpty(v)) return String(v).trim(); } }
+    return '';
+  }
+  function fieldByHeader(item, tests){
+    for(const key of Object.keys(item || {})){
+      const nk=n(key); const raw=String(key).toLowerCase();
+      if(tests.some(fn=>fn(nk, raw, key))){ const v=item[key]; if(!isEmpty(v)) return String(v).trim(); }
+    }
+    return '';
+  }
+  function getEmailV25(item){ return field(item, ['Email','email','Mail','E-mail','datav2..Email','datap2..Email']) || fieldByHeader(item, [(nk,raw)=>nk.includes('email') || nk.includes('mail') || raw.includes('email') || raw.includes('mail')]); }
+  function getPhoneV25(item){ return field(item, ['Téléphone','Telephone','Tel','Mobile','Portable','datav2.Téléphone','datap2.Téléphone']) || fieldByHeader(item, [(nk,raw)=>nk.includes('telephone') || nk.includes('tel') || nk.includes('mobile') || nk.includes('portable') || raw.includes('phone') || raw.includes('tel')]); }
+  function getIriumV25(item){ const keys=[]; try{ if(COL && COL.clientNumero) keys.push(COL.clientNumero); }catch(e){} keys.push('Client_Irium.Client (Numéro)','Client_Irium.Client Numéro','Client_Irium.Client','Client (Numéro)','Numéro client','Numero client','N° client','Num client','Code Irium','Code client Irium','Client Irium'); return field(item, keys); }
+  function rowValue(item, key){ return key ? item?.[key] : ''; }
+  function formatPhoneV25(v){ try { return cleanPhone(v); } catch(e){ return String(v ?? '').replace(/[.\s]/g,''); } }
+  function copyButtonV25(value){ const safe = JSON.stringify(String(value || '')).replace(/"/g,'&quot;'); return `<button onclick="copyToClipboard(${safe})" class="v25-copy-btn">Copier</button>`; }
+  function detailRowV25(label, value){
+    const isTel=n(label).includes('telephone');
+    const display=isTel ? formatPhoneV25(value) : String(value ?? '').trim();
+    const copy = n(label).includes('email') || n(label).includes('telephone') || n(label).includes('siret') || n(label).includes('client irium') ? copyButtonV25(display) : '';
+    return `<div class="grid grid-cols-[190px_1fr] gap-4 px-4 py-3 bg-white dark:bg-slate-950"><div class="text-[10px] uppercase tracking-wider font-black text-gray-400 dark:text-slate-500">${esc(label)}</div><div class="flex items-start gap-2"><div class="text-xs text-gray-800 dark:text-slate-100 whitespace-pre-wrap break-words flex-1">${esc(display)}</div>${copy}</div></div>`;
+  }
+  function sectionV25(title, rows){ rows = rows.filter(([,v]) => !isEmpty(v)); if(!rows.length) return ''; return `<section class="rounded-2xl border border-gray-200 dark:border-slate-800 overflow-hidden"><div class="bg-gray-50 dark:bg-slate-900 px-4 py-2 border-b border-gray-200 dark:border-slate-800 text-[10px] uppercase tracking-widest font-black text-gray-500 dark:text-slate-400">${esc(title)}</div><div class="divide-y divide-gray-100 dark:divide-slate-800">${rows.map(([l,v])=>detailRowV25(l,v)).join('')}</div></section>`; }
+
+  function installDetailsV25(){
+    if(typeof ensureDetailsModal !== 'function') return;
+    openDetails=function(rowIndex){
+      const item=(globalData || []).find(row => row._rowIndex === rowIndex); if(!item) return;
+      const modal=ensureDetailsModal(); if(!modal) return;
+      try{ ensureTop200RankCache(); }catch(e){}
+      const topRank=typeof getTop200Rank==='function' ? getTop200Rank(item) : NaN;
+      const rowsFrom=fields=>fields.map(([label,key,isValue=false])=>[label, isValue ? key : rowValue(item,key)]).filter(([,v])=>!isEmpty(v));
+      const email=getEmailV25(item), phone=getPhoneV25(item);
+      const identity=rowsFrom([
+        ['Entreprise', COL.nom], ['SIRET', COL.siret], ['Client Irium', COL.clientNumero], ['Statut client', COL.position], ['Groupe', COL.groupe], ['Agence', COL.agence], ['PSSR', COL.pssr]
+      ]);
+      if(email) identity.push(['Email', email]);
+      if(phone) identity.push(['Téléphone', phone]);
+      identity.push(...rowsFrom([['Adresse', COL.adresse], ['Département', COL.dept], ['Ville', COL.ville], ['Nombre de salariés', COL.salaries]]));
+      const synth=[
+        ['Rang TOP 200 PSSR', Number.isFinite(topRank) ? (typeof formatNumber==='function'?formatNumber(topRank):topRank) : ''],
+        ['Badge TOP', typeof getTopBandLabel==='function' ? getTopBandLabel(item) : ''],
+        ['Visites obligatoires', typeof getObjectiveVisits==='function' && getObjectiveVisits(item) ? formatNumber(getObjectiveVisits(item)) : ''],
+        ['Visites effectuées 2026', typeof getVisits2026==='function' ? formatNumber(getVisits2026(item)) : ''],
+        ['Visites restantes', typeof getRemainingVisits==='function' && getRemainingVisits(item)>0 ? formatNumber(getRemainingVisits(item)) : '']
+      ];
+      const html = [
+        sectionV25('Synthèse visite', synth),
+        sectionV25('Identité et localisation', identity),
+        sectionV25('Potentiel commercial', rowsFrom([['CA Global', COL.caGlobal], ['CA 2025', COL.ca2025], ['CA PDR cumulé', COL.pcsTotal], ['CA SERVICE cumulé', COL.savTotal]])),
+        sectionV25('Parc machines', rowsFrom([['Nombre de machines', COL.nbMachines], ['Liste machines', COL.machines], ['N° série', COL.series], ['Machines récentes', COL.machinesRecentes], ['Flag machine récente', COL.newMachineFlag], ['Machines 5 ans et +', COL.oldMachineFlag], ['Âge machine', COL.ageMachineAll], ['Machines fin garantie', 'Machines fin garantie par client']])),
+        sectionV25('CRM et opportunités', rowsFrom([['Dernier contact - date', COL.crmDate], ['Dernier contact - vendeur', COL.crmVendeur], ['Dernier contact - sujet', COL.crmSujet], ['Dernier contact - note', COL.crmNote], ['Dernière opportunité - vendeur', 'CRM_DerniereOpp_Vendeur'], ['Dernière opportunité - type matériel', 'CRM_DerniereOpp_TypeMateriel'], ['Dernière opportunité - date', 'CRM_DerniereOppDate'], ['Dernière opportunité - statut', 'CRM_DerniereOpp_Status'], ['Dernière opportunité - nature matériel', 'CRM_DerniereOpp_NatureMateriel']])),
+        sectionV25('Secteur d’activité', rowsFrom([['Catégorie', COL.categorie], ['NAF', COL.naf], ['Description', COL.description]]))
+      ].join('');
+      modal.innerHTML = `<div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" onclick="closeDetails()"></div><div class="relative bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-2xl w-[min(1040px,96vw)] max-h-[90vh] overflow-hidden shadow-2xl"><div class="p-5 border-b border-gray-100 dark:border-slate-800 flex justify-between gap-4 items-start"><div><div class="text-[10px] uppercase tracking-widest font-black text-komatsu-600 dark:text-komatsu-400">Détails entreprise</div><h3 class="font-display font-black text-lg text-gray-900 dark:text-white mt-1">${esc(item[COL.nom] || 'Entreprise')}</h3><p class="text-xs text-gray-500 dark:text-slate-400 mt-1">${esc(item[COL.adresse] || 'Adresse non renseignée')}</p>${typeof renderBadges==='function'?renderBadges(item):''}</div><button onclick="closeDetails()" class="shrink-0 bg-gray-100 dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700 rounded-xl px-3 py-2 text-xs font-black text-gray-600 dark:text-slate-200">Fermer</button></div><div class="p-5 overflow-y-auto max-h-[74vh] space-y-5">${typeof caMiniChartsSection==='function'?caMiniChartsSection(item):''}${html}</div></div>`;
+      modal.classList.remove('hidden'); modal.style.display='flex';
+    };
+  }
+
+  function patchCantonInProgress(){
+    const select=document.getElementById('f-canton-select'); if(!select) return;
+    const wrap=select.closest('div');
+    const label=wrap?.querySelector('label'); if(label) label.textContent='Cantons — In progress';
+    select.innerHTML='<option value="">In progress — non fonctionnel</option>';
+    select.value=''; select.disabled=true; select.onchange=null; select.removeAttribute('onchange');
+    if(wrap && !wrap.querySelector('.v25-canton-progress')) wrap.insertAdjacentHTML('beforeend','<div class="v25-canton-progress">Menu déroulant canton en cours de développement : non fonctionnel pour le moment. Utilisez uniquement le champ Ville / Canton au-dessus.</div>');
+  }
+
+  const sectorState = window.__v25SectorState ||= {cats:new Set(), nafs:new Set(), open:new Set(), wrapped:false};
+  function sectorScope(){
+    const rows=(globalData || []).filter(item=>{ try{ return typeof itemBelongsToActivePssr==='function' ? itemBelongsToActivePssr(item) : true; }catch(e){ return true; }});
+    const dept=document.getElementById('f-dept')?.value || '';
+    return dept ? rows.filter(item=>item._deptNorm===dept) : rows;
+  }
+  function sectorData(){
+    const map=new Map();
+    sectorScope().forEach(item=>{
+      const c=String(item?.[COL.categorie] || '').trim(); const naf=String(item?.[COL.naf] || '').trim();
+      if(!c && !naf) return; const cat=c || 'Sans catégorie';
+      if(!map.has(cat)) map.set(cat,new Set()); if(naf) map.get(cat).add(naf);
+    });
+    return [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],'fr',{numeric:true})).map(([cat,set])=>({cat,nafs:[...set].sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}))}));
+  }
+  function updateSectorStatus(){ const el=document.getElementById('v25-sector-status'); if(!el) return; const count=sectorState.cats.size+sectorState.nafs.size; el.textContent = count ? `${count} sélection(s)` : 'Aucun secteur sélectionné'; }
+  function renderSectorTree(){
+    const root=document.getElementById('v25-sector-tree'); if(!root) return;
+    const data=sectorData();
+    sectorState.cats = new Set([...sectorState.cats].filter(c=>data.some(d=>d.cat===c)));
+    const allNafs=new Set(data.flatMap(d=>d.nafs)); sectorState.nafs = new Set([...sectorState.nafs].filter(x=>allNafs.has(x)));
+    const body=data.map(d=>{
+      const isOpen=sectorState.open.has(d.cat); const checked=sectorState.cats.has(d.cat);
+      const nafs=isOpen ? `<div class="v25-naf-list">${d.nafs.map(naf=>`<label class="v25-naf-row"><input type="checkbox" ${sectorState.nafs.has(naf)?'checked':''} onchange="v25ToggleNaf(${JSON.stringify(naf).replace(/"/g,'&quot;')}, this.checked)"><span>${esc(naf)}</span></label>`).join('') || '<div class="text-[10px] text-gray-400">Aucun code NAF</div>'}</div>` : '';
+      return `<div class="v25-sector-cat"><div class="v25-sector-cat-row"><button type="button" class="v25-sector-arrow" onclick="v25ToggleSectorOpen(${JSON.stringify(d.cat).replace(/"/g,'&quot;')})">${isOpen?'⌄':'›'}</button><input type="checkbox" ${checked?'checked':''} onchange="v25ToggleCat(${JSON.stringify(d.cat).replace(/"/g,'&quot;')}, this.checked)"><div class="v25-sector-cat-title" title="${esc(d.cat)}">${esc(d.cat)}</div><div class="v25-sector-count">· ${d.nafs.length}</div></div>${nafs}</div>`;
+    }).join('');
+    root.innerHTML = `<div class="v25-sector-title">Secteur d’activité</div><div id="v25-sector-status" class="v25-sector-status"></div><div class="v25-sector-actions"><button type="button" onclick="v25ExpandSectors(true)">Tout déplier</button><button type="button" onclick="v25ExpandSectors(false)">Tout replier</button><button type="button" onclick="v25ResetSectors()">Réinitialiser</button></div><div class="v25-sector-body">${body || '<div class="text-xs text-gray-400">Aucun secteur disponible.</div>'}</div><div class="v25-sector-help">Cochez une catégorie pour sélectionner tous les codes NAF / APE associés, ou cochez uniquement certains codes.</div>`;
+    updateSectorStatus();
+  }
+  window.v25ToggleSectorOpen=function(cat){ if(sectorState.open.has(cat)) sectorState.open.delete(cat); else sectorState.open.add(cat); renderSectorTree(); };
+  window.v25ToggleCat=function(cat,checked){ if(checked) sectorState.cats.add(cat); else sectorState.cats.delete(cat); updateSectorStatus(); try{ runFilter(); }catch(e){} };
+  window.v25ToggleNaf=function(naf,checked){ if(checked) sectorState.nafs.add(naf); else sectorState.nafs.delete(naf); updateSectorStatus(); try{ runFilter(); }catch(e){} };
+  window.v25ExpandSectors=function(open){ sectorState.open.clear(); if(open) sectorData().forEach(d=>sectorState.open.add(d.cat)); renderSectorTree(); };
+  window.v25ResetSectors=function(){ sectorState.cats.clear(); sectorState.nafs.clear(); renderSectorTree(); try{ runFilter(); }catch(e){} };
+  function installSectorTree(){
+    const acc=document.getElementById('acc-secteur-activite'); if(!acc) return;
+    const cat=document.getElementById('f-categorie'); const naf=document.getElementById('f-naf');
+    if(cat){ cat.value=''; cat.closest('div')?.classList.add('v25-sector-hidden'); }
+    if(naf){ naf.value=''; naf.closest('div')?.classList.add('v25-sector-hidden'); }
+    if(!document.getElementById('v25-sector-tree')) acc.insertAdjacentHTML('afterbegin','<div id="v25-sector-tree"></div>');
+    renderSectorTree();
+  }
+  function sectorPass(item){
+    if(!sectorState.cats.size && !sectorState.nafs.size) return true;
+    const cat=String(item?.[COL.categorie] || '').trim(); const naf=String(item?.[COL.naf] || '').trim();
+    return sectorState.cats.has(cat) || sectorState.nafs.has(naf);
+  }
+  function wrapRunFilterForSector(){
+    if(sectorState.wrapped || typeof runFilter!=='function') return; sectorState.wrapped=true;
+    const old=runFilter;
+    runFilter=function(){
+      const cat=document.getElementById('f-categorie'); const naf=document.getElementById('f-naf'); if(cat) cat.value=''; if(naf) naf.value='';
+      old.apply(this, arguments);
+      if(Array.isArray(currentFilteredData) && (sectorState.cats.size || sectorState.nafs.size)){
+        currentFilteredData=currentFilteredData.filter(sectorPass);
+        try{ renderGrid(currentFilteredData); updateActiveCounter(); if(typeof isMapVisible==='function' && isMapVisible()) renderMap(currentFilteredData); }catch(e){}
+      }
+      patchCantonInProgress();
+    };
+  }
+
+  function installGridV25(){
+    if(typeof renderGrid!=='function') return;
+    renderGrid=function(data){
+      try{ if(typeof renderMobileGridCards==='function') renderMobileGridCards(data); }catch(e){}
+      const tbody=document.getElementById('grid-tbody'); if(!tbody) return;
+      if(!data || !data.length){ tbody.innerHTML='<tr><td colspan="6" class="p-8 text-center text-sm text-gray-400">Aucun résultat avec les filtres actuels.</td></tr>'; return; }
+      tbody.innerHTML=data.map(item=>{
+        const amount=typeof getTableFinancialAmount==='function' ? getTableFinancialAmount(item) : item?.[COL.caGlobal];
+        const meta=[getIriumV25(item), item?.[COL.position], item?.[COL.groupe], item?.[COL.categorie]].filter(Boolean).join(' • ');
+        const machines=String(item?.[COL.machines] || '').trim(); const series=String(item?.[COL.series] || '').trim();
+        return `<tr class="hover:bg-gray-50/80 dark:hover:bg-slate-800/40 transition align-top"><td class="p-4 pl-6"><div class="font-semibold text-gray-900 dark:text-white">${esc(item?.[COL.nom] || 'Inconnu')}</div><div class="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">${esc(meta)}</div>${typeof renderBadges==='function'?renderBadges(item):''}</td><td class="p-4 text-xs font-mono text-gray-500">${esc(item?.[COL.siret] || '')}</td><td class="p-4 text-xs"><div>${esc(item?.[COL.ville] || '')} (${esc(item?._deptNorm || '')})</div><div class="text-[10px] text-gray-400 mt-1 truncate max-w-[260px]">${esc(item?.[COL.adresse] || '')}</div><div class="text-[10px] text-gray-400 mt-1">Agence : ${esc(item?.[COL.agence] || '-')}</div></td><td class="p-4 text-right"><div class="font-bold text-amber-600">${typeof formatMoney==='function'?formatMoney(amount):esc(amount)}</div><div class="text-[10px] text-gray-400">CA Global</div></td><td class="p-4 text-xs text-gray-500 dark:text-slate-400"><div class="font-bold text-gray-700 dark:text-slate-200">${typeof formatNumber==='function'?formatNumber(parseNumber(item?.[COL.nbMachines])):esc(item?.[COL.nbMachines])} machine(s)</div><div class="truncate max-w-[260px] mt-1">${esc(machines || 'Aucune machine renseignée')}</div>${series ? `<div class="mt-1 text-[10px] text-gray-600 dark:text-slate-300 font-bold truncate max-w-[260px]">N° série : ${esc(series)}</div>` : ''}</td><td class="p-4 text-center pr-6">${typeof eyeIconButton==='function'?eyeIconButton(item._rowIndex):''}</td></tr>`;
+      }).join('');
+    };
+  }
+
+  function ensureSingleGmaps(){
+    const gps=[...document.querySelectorAll('button')].find(btn=>n(btn.textContent).trim()==='autoriser gps'); if(!gps) return;
+    document.querySelectorAll('.v20-google-control,#v18-google-maps-btn,#v24-gmaps-btn').forEach(el=>el.remove());
+    [...document.querySelectorAll('button')].forEach(btn=>{ const txt=n(btn.textContent); if(btn.id!=='v25-gmaps-btn' && (txt.includes('gmaps') || txt.includes('google maps') || txt==='maps')) btn.remove(); });
+    let btn=document.getElementById('v25-gmaps-btn');
+    if(!btn){ btn=document.createElement('button'); btn.id='v25-gmaps-btn'; btn.type='button'; btn.className='v25-gmaps-btn'; btn.onclick=function(){ if(typeof openGoogleMapsRoute==='function') openGoogleMapsRoute(); }; btn.innerHTML='<span style="color:#4285F4;font-weight:1000">G</span><span style="color:#DB4437;font-weight:1000;margin-left:-.25rem">M</span><span>aps</span>'; }
+    if(gps.previousElementSibling!==btn) gps.insertAdjacentElement('beforebegin',btn);
+  }
+
+  function patchMonTerrainButtonV25(){ const btn=document.getElementById('v18-terrain-button'); if(!btn) return; btn.innerHTML='<span>Mon terrain</span>'; btn.title='Afficher mon terrain par département'; btn.classList.remove('hidden'); btn.style.display=''; }
+  function deptStatsV25(){
+    const depts=typeof selectedDepts==='function' ? selectedDepts() : [...new Set((globalData||[]).map(i=>i._deptNorm).filter(Boolean))];
+    const rows=(globalData || []).filter(item=>depts.includes(item._deptNorm));
+    const grouped=new Map(); depts.forEach(d=>grouped.set(d,{dept:d,total:0,clients:0,prospects:0,visits:0,objective:0,remaining:0}));
+    rows.forEach(item=>{ const d=item._deptNorm; if(!grouped.has(d)) grouped.set(d,{dept:d,total:0,clients:0,prospects:0,visits:0,objective:0,remaining:0}); const s=grouped.get(d); s.total++; const pos=n(item?.[COL.position] || ''); if(pos.includes('client') || pos==='cl') s.clients++; else s.prospects++; s.visits += typeof getVisits2026==='function'?getVisits2026(item):0; s.objective += typeof getObjectiveVisits==='function'?getObjectiveVisits(item):0; s.remaining += typeof getRemainingVisits==='function'?getRemainingVisits(item):0; });
+    return [...grouped.values()].sort((a,b)=>a.dept.localeCompare(b.dept,'fr',{numeric:true}));
+  }
+  async function renderMonTerrainMapV25(){
+    const title=document.getElementById('v18-terrain-title'), statsBox=document.getElementById('v18-terrain-stats'), mapDiv=document.getElementById('v18-terrain-map'); if(!statsBox || !mapDiv) return;
+    const stats=deptStatsV25(); const depts=stats.map(s=>s.dept); if(title) title.textContent=`Mon terrain — ${document.getElementById('active-user-name')?.textContent || 'PSSR'}`;
+    statsBox.innerHTML=stats.map(s=>{ const donePct=s.objective>0 ? Math.round((s.visits/s.objective)*100) : 0; const remainingPct=s.objective>0 ? Math.round((s.remaining/s.objective)*100) : 0; return `<div class="v18-soft-card"><div class="flex justify-between"><b>Dépt ${esc(s.dept)}</b><span>${s.total} lignes</span></div><div class="mt-2 grid grid-cols-2 gap-2 text-xs"><div>Clients : <b>${s.clients}</b></div><div>Prospects : <b>${s.prospects}</b></div><div>% visites : <b>${donePct}%</b></div><div>% reste : <b>${remainingPct}%</b></div></div></div>`; }).join('');
+    if(typeof L==='undefined') return;
+    try{ if(window.__terrainMapV18){ window.__terrainMapV18.remove(); window.__terrainMapV18=null; } if(window.__terrainLeafletMap){ window.__terrainLeafletMap.remove(); window.__terrainLeafletMap=null; } }catch(e){}
+    mapDiv.innerHTML=''; const tmap=L.map('v18-terrain-map',{zoomControl:true}).setView([46.6,2.2],6); window.__terrainMapV18=tmap; window.__terrainLeafletMap=tmap;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap'}).addTo(tmap);
+    const statsByDept=new Map(stats.map(s=>[s.dept,s]));
+    try{ const response=await fetch('https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements.geojson',{cache:'force-cache'}); const geo=await response.json(); const layer=L.geoJSON(geo,{ filter:f=>depts.includes(String(f.properties?.code || f.properties?.CODE_DEPT || '').padStart(2,'0')), style:f=>({color:'#eab308',weight:2,fillColor:'#facc15',fillOpacity:.22}), onEachFeature:(feature,lyr)=>{ const code=String(feature.properties?.code || feature.properties?.CODE_DEPT || '').padStart(2,'0'); const s=statsByDept.get(code) || {clients:0,prospects:0,visits:0,objective:0,remaining:0}; const donePct=s.objective>0 ? Math.round((s.visits/s.objective)*100) : 0; const remainingPct=s.objective>0 ? Math.round((s.remaining/s.objective)*100) : 0; lyr.bindTooltip(`<div class="v18-terrain-tooltip"><b>Dépt ${esc(code)}</b><br>${s.clients} clients • ${s.prospects} prospects<br>${donePct}% visites • ${remainingPct}% restant</div>`,{sticky:true}); lyr.on('click',()=>tmap.fitBounds(lyr.getBounds(),{padding:[30,30]})); } }).addTo(tmap); if(layer.getBounds && layer.getBounds().isValid()) tmap.fitBounds(layer.getBounds(),{padding:[25,25]}); } catch(e){ mapDiv.innerHTML='<div class="p-6 text-sm text-gray-500">Carte départementale indisponible. Les chiffres sont affichés à droite.</div>'; }
+  }
+  function installMonTerrainV25(){ window.renderMonTerrainMap=renderMonTerrainMapV25; window.openMonTerrain=async function(){ const modal=document.getElementById('v18-terrain-modal'); if(!modal) return; modal.classList.add('open'); patchMonTerrainButtonV25(); setTimeout(renderMonTerrainMapV25,80); }; }
+
+  function initV25(){
+    patchCantonInProgress(); installSectorTree(); wrapRunFilterForSector(); installGridV25(); installDetailsV25(); ensureSingleGmaps(); patchMonTerrainButtonV25(); installMonTerrainV25();
+    try{ if(Array.isArray(currentFilteredData) && typeof renderGrid==='function') renderGrid(currentFilteredData); }catch(e){}
+  }
+  document.addEventListener('DOMContentLoaded',()=>setTimeout(initV25,700));
+  setTimeout(initV25,1700);
+  setInterval(()=>{ try{ patchCantonInProgress(); installSectorTree(); ensureSingleGmaps(); patchMonTerrainButtonV25(); installMonTerrainV25(); }catch(e){} },1200);
+})();
+</script>
+
 </body>
 </html>
