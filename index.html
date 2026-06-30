@@ -824,7 +824,7 @@
             { nom: "DEMEYERE", prenom: "MELODY", machine: "demolitionExcavator", depts: ["19", "23", "87"] }
         ];
 
-        const CSV_FILE = "data11.csv";
+        const CSV_FILE = "data11.csv"; // v27 : CSV externe avec détection encodage/délimiteur
         const EMBEDDED_CSV_DATA = ""; // Données séparées : chargement externe via data11.csv
 
         const COL = {
@@ -1039,15 +1039,51 @@
 
         async function loadCSVData() {
             setLoadingState("Chargement de data11.csv...");
-            try {
-                const response = await fetch(CSV_FILE, { cache: "no-store" });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const text = await response.text();
-                ingestCSVText(text);
-            } catch (error) {
-                console.error("Chargement de data11.csv impossible.", error);
-                showCsvLoadError(error);
+            const csvCandidates = buildCsvCandidateUrls();
+            let lastError = null;
+            for (const url of csvCandidates) {
+                try {
+                    const response = await fetch(url, { cache: "no-store" });
+                    if (!response.ok) throw new Error(`${url} → HTTP ${response.status}`);
+                    const buffer = await response.arrayBuffer();
+                    const text = decodeCsvBuffer(buffer);
+                    ingestCSVText(text);
+                    return;
+                } catch (error) {
+                    lastError = error;
+                    console.warn("Chargement CSV échoué:", url, error);
+                }
             }
+            console.error("Chargement de data11.csv impossible.", lastError);
+            showCsvLoadError(lastError || new Error("data11.csv introuvable"));
+        }
+
+        function buildCsvCandidateUrls() {
+            const base = String(CSV_FILE || "data11.csv").trim() || "data11.csv";
+            const clean = base.replace(/^\.\//, "");
+            const stamp = `v=${Date.now()}`;
+            const candidates = [
+                base,
+                `./${clean}`,
+                `${base}${base.includes("?") ? "&" : "?"}${stamp}`,
+                `./${clean}${clean.includes("?") ? "&" : "?"}${stamp}`
+            ];
+            return [...new Set(candidates)];
+        }
+
+        function decodeCsvBuffer(buffer) {
+            const bytes = new Uint8Array(buffer);
+            let utf8Text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+            const replacementCount = (utf8Text.match(/ /g) || []).length;
+            if (replacementCount > 3 && "TextDecoder" in window) {
+                try {
+                    const winText = new TextDecoder("windows-1252", { fatal: false }).decode(bytes);
+                    if ((winText.match(/ /g) || []).length < replacementCount) return winText;
+                } catch (error) {
+                    console.warn("Décodage windows-1252 indisponible, conservation UTF-8.", error);
+                }
+            }
+            return utf8Text;
         }
 
         function ingestCSVText(text) {
@@ -1094,6 +1130,7 @@
         }
 
         function parseCSV(text) {
+            const delimiter = detectCSVDelimiter(text);
             const rows = [];
             let row = [];
             let field = "";
@@ -1110,7 +1147,7 @@
                     } else {
                         inQuotes = !inQuotes;
                     }
-                } else if (char === "," && !inQuotes) {
+                } else if (char === delimiter && !inQuotes) {
                     row.push(field);
                     field = "";
                 } else if ((char === "\n" || char === "\r") && !inQuotes) {
@@ -1129,6 +1166,32 @@
                 if (row.some(v => String(v).trim() !== "")) rows.push(row);
             }
             return rows;
+        }
+
+        function detectCSVDelimiter(text) {
+            const sample = String(text || "").split(/\r?\n/).slice(0, 5).join("\n");
+            const candidates = [",", ";", "\t"];
+            let best = ",";
+            let bestScore = -1;
+            for (const candidate of candidates) {
+                let score = 0;
+                let inQuotes = false;
+                for (let i = 0; i < sample.length; i++) {
+                    const char = sample[i];
+                    const next = sample[i + 1];
+                    if (char === '"') {
+                        if (inQuotes && next === '"') i++;
+                        else inQuotes = !inQuotes;
+                    } else if (char === candidate && !inQuotes) {
+                        score++;
+                    }
+                }
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = candidate;
+                }
+            }
+            return best;
         }
 
         function getFilterScopeData() {
