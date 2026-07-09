@@ -219,7 +219,7 @@
   </style>
 </head>
 <body>
-  <iframe id="app-frame" src="./dashboard-wip.html" title="Dashboard WIP"></iframe>
+  <iframe id="app-frame" title="Dashboard WIP"></iframe>
 
   <aside id="wip-warning" aria-live="polite" aria-label="Avertissement version expérimentale">
     <div class="wip-card">
@@ -267,8 +267,10 @@
       const frame = document.getElementById('app-frame');
       const warning = document.getElementById('wip-warning');
       let timer = null;
+      let frameReady = false;
 
       function isPortfolioSelectionVisible() {
+        if (!frameReady) return true;
         try {
           const doc = frame.contentDocument;
           const win = frame.contentWindow;
@@ -289,12 +291,34 @@
       }
 
       frame.addEventListener('load', () => {
+        frameReady = true;
         syncWarning();
         clearInterval(timer);
         timer = setInterval(syncWarning, 300);
       });
 
+      async function bootDashboard() {
+        try {
+          const response = await fetch('./dashboard-wip.html', { cache: 'no-store' });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+          let html = await response.text();
+          const baseHref = new URL('./', window.location.href).href;
+          html = html.replace('<head>', `<head>\n<base href="${baseHref}">`);
+          html = html.replace(
+            '</body>',
+            '<script src="./wip-performance-patch.js"><\\/script>\n</body>'
+          );
+
+          frame.srcdoc = html;
+        } catch (error) {
+          console.error('Chargement du dashboard WIP impossible.', error);
+          frame.src = './dashboard-wip.html';
+        }
+      }
+
       timer = setInterval(syncWarning, 300);
+      bootDashboard();
     })();
   </script>
 </body>
