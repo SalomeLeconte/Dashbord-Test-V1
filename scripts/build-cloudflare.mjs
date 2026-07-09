@@ -27,8 +27,10 @@ function copyDirectoryIfExists(directoryName) {
   }
 }
 
-// Main application entry point.
+// Main application entry point and WIP runtime files.
 copyFileIfExists('index.html');
+copyFileIfExists('dashboard-wip.html');
+copyFileIfExists('wip-performance-patch.js');
 
 // Cloudflare Pages configuration files. They must be present in the output directory.
 copyFileIfExists('_headers');
