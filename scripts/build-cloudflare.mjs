@@ -32,6 +32,7 @@ copyFileIfExists('index.html');
 copyFileIfExists('dashboard-wip.html');
 copyFileIfExists('wip-performance-patch.js');
 copyFileIfExists('wip-followup-patch.js');
+copyFileIfExists('wip-release-refine-patch.js');
 
 // Cloudflare Pages configuration files. They must be present in the output directory.
 copyFileIfExists('_headers');
