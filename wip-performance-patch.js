@@ -100,7 +100,7 @@
 })();
 
 (() => {
-  window.__WIP_FEATURE_PATCH__ = 'wip-map-terrain-novelty-2026-07-10';
+  window.__WIP_FEATURE_PATCH__ = 'wip-final-map-terrain-route-reset-2026-07-10';
   let routeRecalcTimer = null;
   let terrainRunId = 0;
 
@@ -136,6 +136,17 @@
     }
   }
 
+  function refreshPortfolioChoice() {
+    addChristopherDepartments();
+    try {
+      if (document.getElementById('collaborator-grid') && typeof renderCollaboratorGrid === 'function') {
+        renderCollaboratorGrid();
+      }
+    } catch (error) {
+      console.warn('Rafraîchissement du choix portefeuille impossible.', error);
+    }
+  }
+
   function selectedDepartments() {
     try {
       if (Array.isArray(selectedSectorDepts) && selectedSectorDepts.length) {
@@ -145,16 +156,33 @@
     return [];
   }
 
+  function isClient(item) {
+    const value = norm(item?.[COL.position] || '');
+    return value === 'cl' || value.includes('client');
+  }
+
   function isTop10(item) {
     try {
       ensureTop200RankCache();
-      return Number(getTop200Rank(item)) <= 10;
+      const rank = Number(getTop200Rank(item));
+      return Number.isFinite(rank) && rank > 0 && rank <= 10;
     } catch (error) { return false; }
   }
 
   function isNovelty(item) {
     try { return Boolean(hasNewMachine(item)); }
     catch (error) { return false; }
+  }
+
+  function tableNewMachineBadge(item) {
+    if (!isNovelty(item)) return '';
+    try {
+      const badge = getDataBadges(item).find((entry) => norm(entry?.label) === 'nouvelle machine');
+      if (badge) {
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-black ${badge.cls}">${esc(badge.label)}</span>`;
+      }
+    } catch (error) {}
+    return '<span class="inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-black bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20">Nouvelle machine</span>';
   }
 
   function markerHtml(item) {
@@ -181,27 +209,25 @@
 
   function popupHtml(item) {
     const excluded = excludedSet().has(item?._rowIndex);
-    const badges = [
-      isTop10(item) ? '<span class="wip-popup-badge gold">TOP 10</span>' : '',
-      isNovelty(item) ? '<span class="wip-popup-badge new">NOUVEAUTÉ</span>' : '',
-      excluded ? '<span class="wip-popup-badge excluded">HORS ITINÉRAIRE</span>' : ''
-    ].filter(Boolean).join(' ');
+    const topBadge = isTop10(item) ? '<span class="wip-popup-badge gold">TOP 10</span>' : '';
+    const noveltyBadge = tableNewMachineBadge(item);
+    const excludedBadge = excluded ? '<span class="wip-popup-badge excluded">HORS ITINÉRAIRE</span>' : '';
 
     return `<div class="text-xs space-y-1 min-w-[220px]">
       <div class="font-bold">${esc(item?.[COL.nom] || 'Entreprise')}</div>
       <div>${esc(item?.[COL.ville] || '')} (${esc(item?._deptNorm || '')})</div>
       <div>${esc(item?.[COL.adresse] || '')}</div>
-      <div class="flex flex-wrap gap-1 py-1">${badges}</div>
+      <div class="wip-map-badges">${topBadge}${noveltyBadge}${excludedBadge}</div>
       <div class="font-bold text-amber-600">${esc(formatMoney(getTableFinancialAmount(item)))} <span class="text-[10px] text-gray-400">CA 2025</span></div>
       <div class="flex items-center gap-1 mt-2">
         <button onclick="openDetails(${item._rowIndex})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button>
-        ${excluded ? `<button onclick="excludeRoutePoint(${item._rowIndex})" class="wip-route-add">Rajouter</button>` : ''}
+        ${excluded ? `<button onclick="excludeRoutePoint(${item._rowIndex})" class="wip-route-add" title="Rajouter et réoptimiser">+</button>` : ''}
       </div>
     </div>`;
   }
 
   function installMarkerRendering() {
-    window.renderKnownMarkers = function renderKnownMarkersWip(data) {
+    const render = function renderKnownMarkersWip(data) {
       if (!map || !markersLayer) return { markers: 0, bounds: [] };
       markersLayer.clearLayers();
       const bounds = [];
@@ -218,12 +244,14 @@
       if (bounds.length) map.fitBounds(bounds, { padding: [30, 30], maxZoom: 11 });
       return { markers, bounds };
     };
+    window.renderKnownMarkers = render;
+    try { renderKnownMarkers = render; } catch (error) {}
   }
 
   function preserveExcludedDuringInternalClear() {
     if (typeof clearRoute !== 'function' || clearRoute.__wipPreserveExcluded) return;
     const oldClearRoute = clearRoute;
-    clearRoute = function clearRouteWip(showStatus = true) {
+    const wrapped = function clearRouteWip(showStatus = true) {
       const set = excludedSet();
       const snapshot = new Set(set);
       const result = oldClearRoute.apply(this, arguments);
@@ -233,18 +261,70 @@
       }
       return result;
     };
-    clearRoute.__wipPreserveExcluded = true;
+    wrapped.__wipPreserveExcluded = true;
+    window.clearRoute = wrapped;
+    try { clearRoute = wrapped; } catch (error) {}
+  }
+
+  function installRouteCalculationFilter() {
+    if (typeof calculateRouteFromVisiblePoints !== 'function' || calculateRouteFromVisiblePoints.__wipExcludedFilter) return;
+    const oldCalculate = calculateRouteFromVisiblePoints;
+    const wrapped = async function calculateRouteFilteredWip(optimize = true) {
+      const saved = currentFilteredData;
+      currentFilteredData = (saved || []).filter((item) => !excludedSet().has(item?._rowIndex));
+      try {
+        return await oldCalculate.call(this, optimize);
+      } finally {
+        currentFilteredData = saved;
+        setTimeout(() => {
+          try { renderKnownMarkers(saved || []); } catch (error) {}
+        }, 0);
+      }
+    };
+    wrapped.__wipExcludedFilter = true;
+    window.calculateRouteFromVisiblePoints = wrapped;
+    try { calculateRouteFromVisiblePoints = wrapped; } catch (error) {}
+  }
+
+  function alignRouteMapLeft() {
+    try {
+      if (!map || typeof isMapVisible === 'function' && !isMapVisible()) return;
+      const panel = document.getElementById('route-steps');
+      const mapEl = document.getElementById('map');
+      if (!panel || !mapEl || panel.classList.contains('hidden') || panel.style.display === 'none') return;
+      const panelWidth = panel.getBoundingClientRect().width || 0;
+      const mapWidth = mapEl.getBoundingClientRect().width || 0;
+      if (!panelWidth || !mapWidth) return;
+      const offset = Math.min(Math.max(panelWidth * 0.55, 140), mapWidth * 0.30);
+      map.panBy([offset, 0], { animate: false });
+    } catch (error) {
+      console.warn('Alignement carte itinéraire impossible.', error);
+    }
+  }
+
+  function installRouteViewAlignment() {
+    if (typeof drawRoute !== 'function' || drawRoute.__wipAligned) return;
+    const oldDrawRoute = drawRoute;
+    const wrapped = async function drawRouteAlignedWip() {
+      const result = await oldDrawRoute.apply(this, arguments);
+      setTimeout(alignRouteMapLeft, 80);
+      setTimeout(alignRouteMapLeft, 240);
+      return result;
+    };
+    wrapped.__wipAligned = true;
+    window.drawRoute = wrapped;
+    try { drawRoute = wrapped; } catch (error) {}
   }
 
   function scheduleRouteRecalculation() {
     clearTimeout(routeRecalcTimer);
     routeRecalcTimer = setTimeout(() => {
       if (typeof calculateRouteFromVisiblePoints === 'function') calculateRouteFromVisiblePoints(true);
-    }, 260);
+    }, 220);
   }
 
   function installMultipleRouteRemoval() {
-    window.excludeRoutePoint = function excludeRoutePointWip(rowIndex) {
+    const toggleRoutePoint = function excludeRoutePointWip(rowIndex) {
       const set = excludedSet();
       if (set.has(rowIndex)) set.delete(rowIndex);
       else set.add(rowIndex);
@@ -259,51 +339,25 @@
       catch (error) {}
       scheduleRouteRecalculation();
     };
+    window.excludeRoutePoint = toggleRoutePoint;
+    try { excludeRoutePoint = toggleRoutePoint; } catch (error) {}
   }
 
-  function openAccordion(id) {
-    const panel = document.getElementById(id);
-    if (!panel) return;
-    panel.classList.remove('hidden');
-    panel.classList.add('block');
-    document.getElementById(`icon-${id}`)?.classList.add('rotate-180');
-  }
+  function restoreOldReleasePopup() {
+    const modal = document.getElementById('v18-release-modal');
+    if (!modal) return;
+    modal.querySelectorAll('.v23-release-shortcuts').forEach((element) => element.remove());
 
-  function focusNoveltyFilters() {
-    try { closeReleaseNotes?.(); } catch (error) {}
-    try { if (window.innerWidth < 768) toggleMobileFilters?.(true); } catch (error) {}
-    openAccordion('acc-flotte');
+    const openOldPopup = function openReleaseNotesWip() {
+      modal.querySelectorAll('.v23-release-shortcuts').forEach((element) => element.remove());
+      modal.classList.add('open');
+    };
+    window.openReleaseNotes = openOldPopup;
 
-    const button = document.getElementById('f-new-machine-toggle');
-    if (!button) return;
-    const box = button.closest('.grid.grid-cols-1.gap-2') || button.parentElement || button;
-    document.querySelectorAll('.wip-novelty-focus').forEach((element) => element.classList.remove('wip-novelty-focus'));
-    box.classList.add('wip-novelty-focus');
-    button.classList.add('wip-novelty-button-focus');
-    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
-
-    setTimeout(() => {
-      box.classList.remove('wip-novelty-focus');
-      button.classList.remove('wip-novelty-button-focus');
-    }, 7000);
-  }
-
-  function installNoveltyBehavior() {
     const noveltyButton = document.getElementById('v18-info-button');
     if (noveltyButton) {
-      noveltyButton.onclick = focusNoveltyFilters;
-      noveltyButton.title = 'Afficher la nouveauté dans les filtres';
-    }
-
-    const machineButton = document.getElementById('f-new-machine-toggle');
-    if (machineButton && !machineButton.dataset.wipNoveltyWrapped) {
-      machineButton.dataset.wipNoveltyWrapped = '1';
-      machineButton.addEventListener('click', () => {
-        const box = machineButton.closest('.grid.grid-cols-1.gap-2') || machineButton.parentElement;
-        if (!box) return;
-        box.classList.add('wip-novelty-focus');
-        setTimeout(() => box.classList.remove('wip-novelty-focus'), 3500);
-      });
+      noveltyButton.onclick = openOldPopup;
+      noveltyButton.title = 'Nouveautés WIP';
     }
   }
 
@@ -311,20 +365,21 @@
     return (globalData || []).filter((item) => depts.includes(item?._deptNorm));
   }
 
+  function terrainClientRows(depts) {
+    return terrainRows(depts).filter(isClient);
+  }
+
   function terrainStats(depts) {
     const grouped = new Map(depts.map((dept) => [dept, { dept, total: 0, clients: 0, prospects: 0, visits: 0, objective: 0 }]));
-
     terrainRows(depts).forEach((item) => {
       const stats = grouped.get(item._deptNorm);
       if (!stats) return;
       stats.total += 1;
-      const position = norm(item?.[COL.position] || '');
-      if (position === 'cl' || position.includes('client')) stats.clients += 1;
+      if (isClient(item)) stats.clients += 1;
       else stats.prospects += 1;
       try { stats.visits += getVisits2026(item); } catch (error) {}
       try { stats.objective += getObjectiveVisits(item); } catch (error) {}
     });
-
     return [...grouped.values()].sort((a, b) => a.dept.localeCompare(b.dept, 'fr', { numeric: true }));
   }
 
@@ -345,10 +400,58 @@
     }).join('');
   }
 
-  function addTerrainCompanyMarker(layer, item) {
-    if (!hasCoordinates(item)) return false;
-    L.marker([item._lat, item._lon], { icon: markerIcon(item) }).bindPopup(popupHtml(item)).addTo(layer);
-    return true;
+  function buildHeatCells(rows) {
+    const step = 0.12;
+    const cells = new Map();
+    rows.forEach((item) => {
+      if (!hasCoordinates(item)) return;
+      const latBucket = Math.round(item._lat / step);
+      const lonBucket = Math.round(item._lon / step);
+      const key = `${latBucket}:${lonBucket}`;
+      if (!cells.has(key)) cells.set(key, { lat: 0, lon: 0, count: 0 });
+      const cell = cells.get(key);
+      cell.lat += item._lat;
+      cell.lon += item._lon;
+      cell.count += 1;
+    });
+    return [...cells.values()].map((cell) => ({
+      lat: cell.lat / cell.count,
+      lon: cell.lon / cell.count,
+      count: cell.count
+    }));
+  }
+
+  function heatColor(intensity) {
+    const clamped = Math.max(0, Math.min(1, intensity));
+    const hue = Math.round(50 * (1 - clamped));
+    return `hsl(${hue} 96% 50%)`;
+  }
+
+  function redrawTerrainHeat(layer, rows) {
+    layer.clearLayers();
+    const cells = buildHeatCells(rows);
+    const maxCount = Math.max(1, ...cells.map((cell) => cell.count));
+
+    cells.forEach((cell) => {
+      const intensity = cell.count / maxCount;
+      const radius = 9000 + 22000 * Math.sqrt(intensity);
+      L.circle([cell.lat, cell.lon], {
+        radius: radius * 1.35,
+        stroke: false,
+        fillColor: heatColor(Math.max(0, intensity - 0.28)),
+        fillOpacity: 0.10 + intensity * 0.14,
+        interactive: false,
+        className: 'wip-heat-halo'
+      }).addTo(layer);
+      L.circle([cell.lat, cell.lon], {
+        radius,
+        stroke: false,
+        fillColor: heatColor(intensity),
+        fillOpacity: 0.30 + intensity * 0.38,
+        interactive: false,
+        className: 'wip-heat-core'
+      }).addTo(layer);
+    });
   }
 
   async function renderMonTerrainWip() {
@@ -365,10 +468,8 @@
     }
 
     const stats = terrainStats(depts);
-    const rows = terrainRows(depts);
+    const clients = terrainClientRows(depts);
     if (title) title.textContent = `Mon terrain — ${document.getElementById('active-user-name')?.textContent || 'PSSR'}`;
-
-    // La colonne droite contient uniquement les cartes des départements associés au PSSR.
     statsBox.innerHTML = terrainStatsHtml(stats);
 
     try {
@@ -382,48 +483,111 @@
     window.__terrainLeafletMap = terrainMap;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '&copy; OpenStreetMap' }).addTo(terrainMap);
 
-    const companyLayer = L.layerGroup().addTo(terrainMap);
-    rows.forEach((item) => addTerrainCompanyMarker(companyLayer, item));
-
+    let deptBounds = null;
     try {
       const response = await fetch('https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements.geojson', { cache: 'force-cache' });
       const geojson = await response.json();
       if (runId !== terrainRunId) return;
-
       const deptLayer = L.geoJSON(geojson, {
         filter: (feature) => depts.includes(String(feature.properties?.code || feature.properties?.CODE_DEPT || '').padStart(2, '0')),
-        style: () => ({ color: '#eab308', weight: 2, fillColor: '#facc15', fillOpacity: 0.12 }),
+        style: () => ({ color: '#eab308', weight: 2, fillColor: '#facc15', fillOpacity: 0.025 }),
         onEachFeature: (feature, layer) => {
           const code = String(feature.properties?.code || feature.properties?.CODE_DEPT || '').padStart(2, '0');
           const item = stats.find((entry) => entry.dept === code);
           layer.bindTooltip(`<b>Dépt ${esc(code)}</b><br>${item?.clients || 0} clients • ${item?.prospects || 0} prospects`, { sticky: true });
         }
       }).addTo(terrainMap);
-
-      if (deptLayer.getBounds?.().isValid()) terrainMap.fitBounds(deptLayer.getBounds(), { padding: [25, 25] });
+      if (deptLayer.getBounds?.().isValid()) {
+        deptBounds = deptLayer.getBounds();
+        terrainMap.fitBounds(deptBounds, { padding: [25, 25] });
+      }
     } catch (error) {
       console.warn('Contours départements indisponibles.', error);
     }
 
-    const missing = rows.filter((item) => !hasCoordinates(item) && buildAddressQuery(item));
+    const heatLayer = L.layerGroup().addTo(terrainMap);
+    redrawTerrainHeat(heatLayer, clients);
+
+    const missing = clients.filter((item) => !hasCoordinates(item) && buildAddressQuery(item));
     for (let index = 0; index < missing.length; index += 1) {
       if (runId !== terrainRunId || !document.getElementById('v18-terrain-modal')?.classList.contains('open')) break;
-      try {
-        const result = await geocodeItem(missing[index]);
-        if (result) addTerrainCompanyMarker(companyLayer, missing[index]);
-      } catch (error) {}
+      try { await geocodeItem(missing[index]); } catch (error) {}
+      if (index % 4 === 0 || index === missing.length - 1) redrawTerrainHeat(heatLayer, clients);
       await new Promise((resolve) => setTimeout(resolve, 80));
     }
+
+    if (deptBounds?.isValid()) terrainMap.fitBounds(deptBounds, { padding: [25, 25] });
   }
 
   function installTerrainOverride() {
     window.renderMonTerrainMap = renderMonTerrainWip;
+    try { renderMonTerrainMap = renderMonTerrainWip; } catch (error) {}
     window.openMonTerrain = function openMonTerrainWip() {
       const modal = document.getElementById('v18-terrain-modal');
       if (!modal) return;
       modal.classList.add('open');
       setTimeout(renderMonTerrainWip, 80);
     };
+  }
+
+  function resetControl(control) {
+    if (!control || control.disabled) return;
+    if (control.matches('input[type="checkbox"],input[type="radio"]')) {
+      control.checked = false;
+      return;
+    }
+    if (control.matches('input[type="range"]')) {
+      control.value = '0';
+      return;
+    }
+    if (control.id === 'f-ca-annee') {
+      control.value = 'total';
+      return;
+    }
+    if (control.tagName === 'SELECT') {
+      const emptyOption = [...control.options].find((option) => option.value === '');
+      if (emptyOption) control.value = '';
+      else control.selectedIndex = 0;
+      return;
+    }
+    control.value = '';
+  }
+
+  function resetEveryFilter() {
+    document.querySelectorAll('#filters-panel input,#filters-panel select,#filters-panel textarea').forEach(resetControl);
+    document.querySelectorAll('#filters-panel button[data-active]').forEach((button) => { button.dataset.active = 'false'; });
+
+    try { setNewMachineFilterActive(false); } catch (error) {}
+    try { setOldMachineFilterActive(false); } catch (error) {}
+    try { setWarrantyFilterActive(false); } catch (error) {}
+    try { clearPriorityCheckboxes(); } catch (error) {}
+
+    ['f-categorie', 'f-naf'].forEach((id) => {
+      const control = document.getElementById(id);
+      if (control) {
+        control.value = '';
+        try { control.dispatchEvent(new Event('change', { bubbles: true })); } catch (error) {}
+      }
+    });
+
+    try { top200UseActiveFilters = false; } catch (error) {}
+    try { top200Limit = 200; } catch (error) {}
+    try { top200VisitFilter = ''; } catch (error) {}
+    const limit = document.getElementById('top200-limit-select');
+    if (limit) limit.value = '200';
+
+    excludedSet().clear();
+    try { clearRoute(false); } catch (error) {}
+    try { setupCARange(); } catch (error) {}
+    try { invalidateTop200Ranks(); } catch (error) {}
+    try { updateTop200QuickFilters(); } catch (error) {}
+    try { updateTop200FilterButton(); } catch (error) {}
+    try { runFilter(); } catch (error) { console.error('Réinitialisation filtres impossible.', error); }
+  }
+
+  function installResetAllFilters() {
+    window.resetAllFilters = resetEveryFilter;
+    try { resetAllFilters = resetEveryFilter; } catch (error) {}
   }
 
   function injectStyles() {
@@ -434,37 +598,43 @@
       .wip-marker{width:24px;height:24px;border-radius:999px;box-sizing:border-box;box-shadow:0 7px 18px rgba(15,23,42,.28)}
       .wip-marker-standard{background:#eab308;border:3px solid #fff}
       .wip-marker-gold{background:radial-gradient(circle at 35% 30%,#fff7ae 0 18%,#ffd700 42%,#b7791f 100%);border:3px solid #fff7ae;box-shadow:0 0 0 3px rgba(255,215,0,.4),0 8px 20px rgba(180,120,0,.45)}
-      .wip-marker-new{background:#ef4444;border:4px solid #fff;box-shadow:0 0 0 4px rgba(220,38,38,.85),0 8px 22px rgba(220,38,38,.36)}
+      .wip-marker-new{background:#10b981;border:4px solid #fff;box-shadow:0 0 0 4px rgba(220,38,38,.88),0 8px 22px rgba(220,38,38,.36)}
       .wip-marker-excluded{background:#dc2626;border:4px solid #fff;box-shadow:0 0 0 4px rgba(127,29,29,.9),0 8px 22px rgba(127,29,29,.45)}
       .wip-marker-new-ring{width:32px;height:32px;border-radius:999px;border:4px solid #dc2626;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px rgba(220,38,38,.22)}
       .wip-marker-new-ring .wip-marker{width:20px;height:20px}
-      .wip-popup-badge{display:inline-flex;border-radius:999px;padding:2px 6px;font-size:9px;font-weight:900}.wip-popup-badge.gold{color:#78350f;background:#fef3c7;border:1px solid #f59e0b}.wip-popup-badge.new,.wip-popup-badge.excluded{color:#991b1b;background:#fef2f2;border:1px solid #ef4444}
-      .wip-route-add{border-radius:6px;padding:3px 6px;font-size:10px;font-weight:900;color:#166534;background:#f0fdf4;border:1px solid #86efac}
-      .wip-novelty-focus{outline:4px solid #dc2626!important;outline-offset:3px;border-color:#ef4444!important;box-shadow:0 0 0 8px rgba(220,38,38,.12),0 12px 34px rgba(220,38,38,.25)!important;animation:wipNoveltyPulse 1.1s ease-in-out infinite}.wip-novelty-button-focus{background:#fef2f2!important;border-color:#dc2626!important;color:#b91c1c!important}@keyframes wipNoveltyPulse{0%,100%{box-shadow:0 0 0 6px rgba(220,38,38,.10),0 12px 34px rgba(220,38,38,.18)}50%{box-shadow:0 0 0 11px rgba(220,38,38,.18),0 12px 40px rgba(220,38,38,.32)}}
+      .wip-map-badges{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:.35rem 0}
+      .wip-popup-badge{display:inline-flex;border-radius:999px;padding:2px 6px;font-size:9px;font-weight:900}.wip-popup-badge.gold{color:#78350f;background:#fef3c7;border:1px solid #f59e0b}.wip-popup-badge.excluded{color:#991b1b;background:#fef2f2;border:1px solid #ef4444}
+      .wip-route-add{width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:1000;line-height:1;color:#fff;background:#16a34a;border:1px solid #15803d;box-shadow:0 6px 14px rgba(22,163,74,.28)}
       .wip-terrain-dept-card{border:1px solid #e5e7eb;border-radius:14px;padding:12px;background:#fff}.dark .wip-terrain-dept-card{background:#020617;border-color:#1e293b}.wip-terrain-dept-title{display:flex;justify-content:space-between;gap:8px;font-weight:900;font-size:12px}.wip-terrain-dept-grid{margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px}
+      .wip-heat-halo,.wip-heat-core{filter:blur(4px);mix-blend-mode:multiply}
+      .dark .wip-heat-halo,.dark .wip-heat-core{mix-blend-mode:screen}
     `;
     document.head.appendChild(style);
   }
 
   function installFeaturePatch() {
-    addChristopherDepartments();
+    refreshPortfolioChoice();
     injectStyles();
     preserveExcludedDuringInternalClear();
+    installRouteCalculationFilter();
+    installRouteViewAlignment();
     installMultipleRouteRemoval();
     installMarkerRendering();
-    installNoveltyBehavior();
+    restoreOldReleasePopup();
     installTerrainOverride();
+    installResetAllFilters();
 
     try {
       if (typeof isMapVisible === 'function' && isMapVisible()) renderKnownMarkers(currentFilteredData || []);
     } catch (error) {}
   }
 
-  // Exécuté avant le premier choix PSSR pour que Christopher possède déjà 27 et 76.
   addChristopherDepartments();
+  if (document.readyState !== 'loading') refreshPortfolioChoice();
 
   document.addEventListener('DOMContentLoaded', () => {
-    [4200, 6000, 7800].forEach((delay) => setTimeout(installFeaturePatch, delay));
+    refreshPortfolioChoice();
+    [3600, 5000, 6800, 8200].forEach((delay) => setTimeout(installFeaturePatch, delay));
   });
-  [5000, 7000].forEach((delay) => setTimeout(installFeaturePatch, delay));
+  [4200, 6000, 7600].forEach((delay) => setTimeout(installFeaturePatch, delay));
 })();
