@@ -1,9 +1,9 @@
 (() => {
-  const PATCH_ID = 'wip-feedback-modal-auto-send-2026-07-10';
+  const PATCH_ID = 'wip-feedback-modal-mailto-2026-07-10';
   window.__WIP_FEEDBACK_PATCH__ = PATCH_ID;
 
-  const FEEDBACK_ENDPOINT = new URL('./api/feedback', document.baseURI).href;
-  let sending = false;
+  const RECIPIENT = 'sleconte@komatsu.fr';
+  const SUBJECT = 'DASHBOARD REVIEW';
 
   function feedbackModalHtml() {
     return `
@@ -45,7 +45,7 @@
       .dark .wip-feedback-dialog{background:#0f172a;color:#f8fafc;border-color:#334155}.wip-feedback-close{position:absolute;right:12px;top:10px;width:32px;height:32px;border-radius:999px;border:0;background:transparent;color:#64748b;font-size:24px;line-height:1;cursor:pointer}.wip-feedback-close:hover{background:#f1f5f9;color:#0f172a}.dark .wip-feedback-close:hover{background:#1e293b;color:#fff}
       .wip-feedback-kicker{font-size:9px;font-weight:1000;letter-spacing:.13em;text-transform:uppercase;color:#b45309}.wip-feedback-dialog h3{margin:5px 0 0;font-size:21px;font-weight:1000}.wip-feedback-help{margin:6px 0 13px;font-size:12px;line-height:1.45;color:#64748b}.dark .wip-feedback-help{color:#94a3b8}
       #wip-feedback-body{width:100%;min-height:170px;resize:vertical;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:14px;padding:13px 14px;font:inherit;font-size:13px;line-height:1.5;color:#0f172a;background:#fff;outline:none}#wip-feedback-body:focus{border-color:#eab308;box-shadow:0 0 0 3px rgba(234,179,8,.14)}.dark #wip-feedback-body{background:#020617;color:#f8fafc;border-color:#475569}
-      .wip-feedback-footer{margin-top:11px;display:flex;align-items:center;justify-content:space-between;gap:12px}#wip-feedback-counter{font-size:10px;color:#94a3b8}#wip-feedback-send{border:0;border-radius:11px;background:#0f172a;color:#fff;padding:10px 14px;font-size:11px;font-weight:1000;cursor:pointer}.dark #wip-feedback-send{background:#facc15;color:#422006}#wip-feedback-send:disabled{opacity:.55;cursor:wait}
+      .wip-feedback-footer{margin-top:11px;display:flex;align-items:center;justify-content:space-between;gap:12px}#wip-feedback-counter{font-size:10px;color:#94a3b8}#wip-feedback-send{border:0;border-radius:11px;background:#0f172a;color:#fff;padding:10px 14px;font-size:11px;font-weight:1000;cursor:pointer}.dark #wip-feedback-send{background:#facc15;color:#422006}
       .wip-feedback-error{min-height:17px;margin-top:7px;font-size:10px;font-weight:700;color:#dc2626}.wip-feedback-success{text-align:center;padding:20px 6px 6px}.wip-feedback-success-icon{width:52px;height:52px;margin:0 auto 12px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:#dcfce7;color:#15803d;font-size:26px;font-weight:1000}.wip-feedback-success-title{font-size:16px;font-weight:1000}.wip-feedback-success-message{margin-top:6px;font-size:13px;color:#475569}.dark .wip-feedback-success-message{color:#cbd5e1}.wip-feedback-done{margin-top:18px;border:0;border-radius:10px;padding:9px 14px;background:#0f172a;color:#fff;font-size:11px;font-weight:900;cursor:pointer}.dark .wip-feedback-done{background:#facc15;color:#422006}
     `;
     document.head.appendChild(style);
@@ -68,12 +68,9 @@
   function openFeedbackModal() {
     ensureModal();
     const modal = document.getElementById('wip-feedback-modal');
-    const formView = document.getElementById('wip-feedback-form-view');
-    const successView = document.getElementById('wip-feedback-success');
-    const errorBox = document.getElementById('wip-feedback-error');
-    formView.hidden = false;
-    successView.hidden = true;
-    errorBox.textContent = '';
+    document.getElementById('wip-feedback-form-view').hidden = false;
+    document.getElementById('wip-feedback-success').hidden = true;
+    document.getElementById('wip-feedback-error').textContent = '';
     modal.classList.add('open');
     modal.setAttribute('aria-hidden', 'false');
     setTimeout(() => document.getElementById('wip-feedback-body')?.focus(), 40);
@@ -81,15 +78,13 @@
 
   function closeFeedbackModal() {
     const modal = document.getElementById('wip-feedback-modal');
-    if (!modal || sending) return;
+    if (!modal) return;
     modal.classList.remove('open');
     modal.setAttribute('aria-hidden', 'true');
   }
 
-  async function submitFeedback() {
-    if (sending) return;
+  function submitFeedback() {
     const textarea = document.getElementById('wip-feedback-body');
-    const sendButton = document.getElementById('wip-feedback-send');
     const errorBox = document.getElementById('wip-feedback-error');
     const message = textarea.value.trim();
 
@@ -99,33 +94,18 @@
       return;
     }
 
-    sending = true;
     errorBox.textContent = '';
-    sendButton.disabled = true;
-    sendButton.textContent = 'Envoi…';
+    const body = `${message}\n\nPage : ${window.location.href}`;
+    const mailto = `mailto:${RECIPIENT}?subject=${encodeURIComponent(SUBJECT)}&body=${encodeURIComponent(body)}`;
 
-    try {
-      const response = await fetch(FEEDBACK_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: message, page: window.location.href })
-      });
+    document.getElementById('wip-feedback-form-view').hidden = true;
+    document.getElementById('wip-feedback-success').hidden = false;
+    textarea.value = '';
+    document.getElementById('wip-feedback-counter').textContent = '0 / 4000';
 
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.error || `Erreur ${response.status}`);
-
-      document.getElementById('wip-feedback-form-view').hidden = true;
-      document.getElementById('wip-feedback-success').hidden = false;
-      textarea.value = '';
-      document.getElementById('wip-feedback-counter').textContent = '0 / 4000';
-    } catch (error) {
-      console.error('Envoi feedback impossible.', error);
-      errorBox.textContent = 'Le feedback n’a pas pu être envoyé. Merci de réessayer.';
-    } finally {
-      sending = false;
-      sendButton.disabled = false;
-      sendButton.textContent = 'Envoyer mon feedback';
-    }
+    setTimeout(() => {
+      window.location.href = mailto;
+    }, 80);
   }
 
   function installFeedbackButton() {
