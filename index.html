@@ -5,319 +5,83 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard WIP — Version expérimentale</title>
   <style>
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #0f172a;
-      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-
-    #app-frame {
-      position: fixed;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      border: 0;
-      display: block;
-      background: #f8fafc;
-    }
-
-    #wip-warning {
-      position: fixed;
-      z-index: 20000;
-      top: 18px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: min(940px, calc(100vw - 32px));
-      pointer-events: none;
-      opacity: 1;
-      transition: opacity .28s ease, transform .28s ease;
-    }
-
-    #wip-warning.is-hidden {
-      opacity: 0;
-      transform: translate(-50%, -18px);
-      visibility: hidden;
-    }
-
-    .wip-card {
-      position: relative;
-      overflow: hidden;
-      border-radius: 18px;
-      border: 1px solid rgba(234, 179, 8, .55);
-      background: linear-gradient(135deg, rgba(15, 23, 42, .97), rgba(30, 41, 59, .96));
-      box-shadow: 0 18px 45px rgba(2, 6, 23, .34), 0 0 0 1px rgba(250, 204, 21, .08) inset;
-      color: #fff;
-      backdrop-filter: blur(14px);
-    }
-
-    .wip-card::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(110deg, transparent 20%, rgba(250, 204, 21, .11) 42%, transparent 62%);
-      transform: translateX(-120%);
-      animation: shimmer 4.2s ease-in-out infinite;
-      pointer-events: none;
-    }
-
-    .wip-content {
-      position: relative;
-      display: grid;
-      grid-template-columns: 128px 1fr;
-      gap: 16px;
-      align-items: center;
-      padding: 14px 16px 12px;
-    }
-
-    .wip-visual {
-      height: 76px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 14px;
-      background: linear-gradient(180deg, rgba(250,204,21,.16), rgba(250,204,21,.05));
-      border: 1px solid rgba(250,204,21,.2);
-      overflow: hidden;
-    }
-
-    .wip-visual svg {
-      width: 112px;
-      height: 66px;
-      animation: excavatorFloat 2.5s ease-in-out infinite;
-      filter: drop-shadow(0 8px 10px rgba(0,0,0,.28));
-    }
-
-    .wip-heading {
-      display: flex;
-      align-items: center;
-      gap: 9px;
-      margin-bottom: 7px;
-      min-width: 0;
-    }
-
-    .pulse-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: #facc15;
-      box-shadow: 0 0 0 0 rgba(250, 204, 21, .55);
-      animation: pulse 1.7s ease-out infinite;
-      flex: 0 0 auto;
-    }
-
-    .wip-title {
-      font-size: 14px;
-      font-weight: 900;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      color: #fde68a;
-      white-space: nowrap;
-    }
-
-    .wip-badge {
-      margin-left: auto;
-      padding: 5px 9px;
-      border-radius: 999px;
-      background: rgba(250, 204, 21, .14);
-      border: 1px solid rgba(250, 204, 21, .3);
-      color: #fef3c7;
-      font-size: 10px;
-      line-height: 1;
-      font-weight: 900;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      white-space: nowrap;
-    }
-
-    .marquee {
-      position: relative;
-      overflow: hidden;
-      border-radius: 10px;
-      background: rgba(2, 6, 23, .45);
-      border: 1px solid rgba(148, 163, 184, .18);
-      mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent);
-      -webkit-mask-image: linear-gradient(to right, transparent, black 4%, black 96%, transparent);
-    }
-
-    .marquee-track {
-      display: flex;
-      width: max-content;
-      animation: marquee 25s linear infinite;
-      will-change: transform;
-    }
-
-    .marquee-text {
-      flex: 0 0 auto;
-      padding: 9px 30px;
-      font-size: 12px;
-      line-height: 1.35;
-      font-weight: 700;
-      color: #e2e8f0;
-      white-space: nowrap;
-    }
-
-    .marquee-text strong {
-      color: #facc15;
-      font-weight: 950;
-    }
-
-    .hazard-line {
-      height: 5px;
-      background: repeating-linear-gradient(-45deg, #facc15 0 14px, #111827 14px 28px);
-      opacity: .95;
-    }
-
-    @keyframes marquee {
-      from { transform: translateX(0); }
-      to { transform: translateX(-50%); }
-    }
-
-    @keyframes shimmer {
-      0%, 45% { transform: translateX(-120%); }
-      70%, 100% { transform: translateX(120%); }
-    }
-
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(250, 204, 21, .55); }
-      70% { box-shadow: 0 0 0 10px rgba(250, 204, 21, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(250, 204, 21, 0); }
-    }
-
-    @keyframes excavatorFloat {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-3px) rotate(-.5deg); }
-    }
-
-    @media (max-width: 700px) {
-      #wip-warning {
-        top: 8px;
-        width: calc(100vw - 16px);
-      }
-      .wip-card { border-radius: 14px; }
-      .wip-content {
-        grid-template-columns: 64px 1fr;
-        gap: 9px;
-        padding: 9px 10px 8px;
-      }
-      .wip-visual { height: 54px; border-radius: 10px; }
-      .wip-visual svg { width: 62px; height: 44px; }
-      .wip-title { font-size: 11px; letter-spacing: .06em; }
-      .wip-badge { font-size: 8px; padding: 4px 6px; }
-      .marquee-text { font-size: 10px; padding: 7px 22px; }
-      .hazard-line { height: 4px; }
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      .marquee-track, .wip-card::before, .wip-visual svg, .pulse-dot { animation: none !important; }
-      .marquee-track { transform: none; }
-      .marquee-text:nth-child(2) { display: none; }
-      .marquee-text { white-space: normal; }
-    }
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0f172a;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    #app-frame{position:fixed;inset:0;width:100%;height:100%;border:0;display:block;background:#f8fafc}
+    #wip-warning{position:fixed;z-index:20000;top:18px;left:50%;transform:translateX(-50%);width:min(940px,calc(100vw - 32px));pointer-events:none;opacity:1;transition:opacity .28s ease,transform .28s ease}
+    #wip-warning.is-hidden{opacity:0;transform:translate(-50%,-18px);visibility:hidden}
+    .wip-card{overflow:hidden;border-radius:18px;border:1px solid rgba(234,179,8,.55);background:linear-gradient(135deg,rgba(15,23,42,.97),rgba(30,41,59,.96));box-shadow:0 18px 45px rgba(2,6,23,.34);color:#fff;backdrop-filter:blur(14px)}
+    .hazard-line{height:5px;background:repeating-linear-gradient(-45deg,#facc15 0 14px,#111827 14px 28px)}
+    .wip-content{display:grid;grid-template-columns:74px 1fr;gap:14px;align-items:center;padding:12px 15px}
+    .wip-visual{height:64px;display:flex;align-items:center;justify-content:center;border-radius:13px;background:linear-gradient(180deg,rgba(250,204,21,.16),rgba(250,204,21,.05));border:1px solid rgba(250,204,21,.2);font-size:38px}
+    .wip-heading{display:flex;align-items:center;gap:9px;margin-bottom:7px}.pulse-dot{width:10px;height:10px;border-radius:999px;background:#facc15;box-shadow:0 0 0 0 rgba(250,204,21,.55);animation:pulse 1.7s ease-out infinite}.wip-title{font-size:14px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:#fde68a}.wip-badge{margin-left:auto;padding:5px 9px;border-radius:999px;background:rgba(250,204,21,.14);border:1px solid rgba(250,204,21,.3);color:#fef3c7;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .marquee{overflow:hidden;border-radius:10px;background:rgba(2,6,23,.45);border:1px solid rgba(148,163,184,.18)}.marquee-track{display:flex;width:max-content;animation:marquee 25s linear infinite}.marquee-text{flex:0 0 auto;padding:8px 30px;font-size:12px;font-weight:700;color:#e2e8f0;white-space:nowrap}.marquee-text strong{color:#facc15}
+    @keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(250,204,21,.55)}70%{box-shadow:0 0 0 10px rgba(250,204,21,0)}100%{box-shadow:0 0 0 0 rgba(250,204,21,0)}}
+    @media(max-width:700px){#wip-warning{top:8px;width:calc(100vw - 16px)}.wip-card{border-radius:14px}.wip-content{grid-template-columns:48px 1fr;gap:8px;padding:8px 9px}.wip-visual{height:48px;font-size:28px}.wip-title{font-size:10px;letter-spacing:.05em}.wip-badge{font-size:7px;padding:4px 6px}.marquee-text{font-size:9px;padding:6px 20px}}
+    @media(prefers-reduced-motion:reduce){.marquee-track,.pulse-dot{animation:none!important}.marquee-text:nth-child(2){display:none}.marquee-text{white-space:normal}}
   </style>
 </head>
 <body>
   <iframe id="app-frame" title="Dashboard WIP"></iframe>
-
   <aside id="wip-warning" aria-live="polite" aria-label="Avertissement version expérimentale">
     <div class="wip-card">
       <div class="hazard-line"></div>
       <div class="wip-content">
-        <div class="wip-visual" aria-hidden="true">
-          <svg viewBox="0 0 180 100" role="img">
-            <g>
-              <ellipse cx="82" cy="86" rx="60" ry="7" fill="rgba(0,0,0,.22)"/>
-              <rect x="29" y="66" width="91" height="18" rx="9" fill="#111827"/>
-              <rect x="37" y="70" width="75" height="10" rx="5" fill="#475569"/>
-              <circle cx="50" cy="75" r="7" fill="#1f2937"/><circle cx="72" cy="75" r="7" fill="#1f2937"/><circle cx="94" cy="75" r="7" fill="#1f2937"/>
-              <path d="M47 63 56 39h38l13 24Z" fill="#facc15" stroke="#a16207" stroke-width="2"/>
-              <rect x="62" y="22" width="31" height="27" rx="4" fill="#facc15" stroke="#a16207" stroke-width="2"/>
-              <path d="M67 27h21v15H67z" fill="#1e3a5f"/>
-              <path d="M88 44 122 29 141 40" fill="none" stroke="#facc15" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M139 40 156 62" fill="none" stroke="#facc15" stroke-width="8" stroke-linecap="round"/>
-              <path d="M152 58 171 64 164 79 147 70Z" fill="#374151"/>
-              <text x="73" y="59" text-anchor="middle" font-size="7" font-weight="900" fill="#1d4ed8">KOMATSU</text>
-              <circle cx="152" cy="23" r="11" fill="#facc15" opacity=".95"/>
-              <path d="m152 16 6 11h-12Z" fill="#111827"/>
-            </g>
-          </svg>
-        </div>
+        <div class="wip-visual" aria-hidden="true">🏗️</div>
         <div>
-          <div class="wip-heading">
-            <span class="pulse-dot"></span>
-            <span class="wip-title">MAJ en cours de test</span>
-            <span class="wip-badge">Version expérimentale</span>
-          </div>
-          <div class="marquee">
-            <div class="marquee-track">
-              <div class="marquee-text">La version que vous êtes en train d’utiliser est <strong>EXPÉRIMENTALE</strong>. Elle prend en compte une grande partie des demandes faites pendant le séminaire. La version <strong>STABLE</strong> va être rétablie d’ici <strong>10 min maximum</strong>. Bonne journée !</div>
-              <div class="marquee-text" aria-hidden="true">La version que vous êtes en train d’utiliser est <strong>EXPÉRIMENTALE</strong>. Elle prend en compte une grande partie des demandes faites pendant le séminaire. La version <strong>STABLE</strong> va être rétablie d’ici <strong>10 min maximum</strong>. Bonne journée !</div>
-            </div>
-          </div>
+          <div class="wip-heading"><span class="pulse-dot"></span><span class="wip-title">MAJ en cours de test</span><span class="wip-badge">Version expérimentale</span></div>
+          <div class="marquee"><div class="marquee-track">
+            <div class="marquee-text">La version que vous êtes en train d’utiliser est <strong>EXPÉRIMENTALE</strong>. Elle prend en compte une grande partie des demandes faites pendant le séminaire.</div>
+            <div class="marquee-text" aria-hidden="true">La version que vous êtes en train d’utiliser est <strong>EXPÉRIMENTALE</strong>. Elle prend en compte une grande partie des demandes faites pendant le séminaire.</div>
+          </div></div>
         </div>
       </div>
       <div class="hazard-line"></div>
     </div>
   </aside>
-
   <script>
-    (() => {
-      const frame = document.getElementById('app-frame');
-      const warning = document.getElementById('wip-warning');
-      let timer = null;
-      let frameReady = false;
+    (()=>{
+      const frame=document.getElementById('app-frame');
+      const warning=document.getElementById('wip-warning');
+      let timer=null;
+      let frameReady=false;
 
-      function isPortfolioSelectionVisible() {
-        if (!frameReady) return true;
-        try {
-          const doc = frame.contentDocument;
-          const win = frame.contentWindow;
-          if (!doc || !win) return true;
-          const overlay = doc.getElementById('nominative-overlay');
-          if (!overlay) return false;
-          const style = win.getComputedStyle(overlay);
-          return style.display !== 'none' &&
-                 style.visibility !== 'hidden' &&
-                 style.opacity !== '0';
-        } catch (error) {
-          return true;
-        }
+      function isPortfolioSelectionVisible(){
+        if(!frameReady)return true;
+        try{
+          const doc=frame.contentDocument;
+          const win=frame.contentWindow;
+          const overlay=doc?.getElementById('nominative-overlay');
+          if(!overlay)return false;
+          const style=win.getComputedStyle(overlay);
+          return style.display!=='none'&&style.visibility!=='hidden'&&style.opacity!=='0';
+        }catch(error){return true;}
       }
 
-      function syncWarning() {
-        warning.classList.toggle('is-hidden', !isPortfolioSelectionVisible());
-      }
+      function syncWarning(){warning.classList.toggle('is-hidden',!isPortfolioSelectionVisible());}
 
-      frame.addEventListener('load', () => {
-        frameReady = true;
+      frame.addEventListener('load',()=>{
+        frameReady=true;
         syncWarning();
         clearInterval(timer);
-        timer = setInterval(syncWarning, 300);
+        timer=setInterval(syncWarning,300);
       });
 
-      async function bootDashboard() {
-        try {
-          const response = await fetch('./dashboard-wip.html', { cache: 'no-store' });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-          let html = await response.text();
-          const baseHref = new URL('./', window.location.href).href;
-          html = html.replace('<head>', `<head>\n<base href="${baseHref}">`);
-          html = html.replace(
-            '</body>',
-            '<script src="./wip-performance-patch.js"><\/script>\n</body>'
-          );
-
-          frame.srcdoc = html;
-        } catch (error) {
-          console.error('Chargement du dashboard WIP impossible.', error);
-          frame.src = './dashboard-wip.html';
+      async function bootDashboard(){
+        try{
+          const response=await fetch('./dashboard-wip.html',{cache:'no-store'});
+          if(!response.ok)throw new Error(`HTTP ${response.status}`);
+          let html=await response.text();
+          const baseHref=new URL('./',window.location.href).href;
+          html=html.replace('<head>',`<head>\n<base href="${baseHref}">`);
+          html=html.replace('</body>','<script src="./wip-performance-patch.js"><\/script>\n<script src="./wip-followup-patch.js"><\/script>\n</body>');
+          frame.srcdoc=html;
+        }catch(error){
+          console.error('Chargement du dashboard WIP impossible.',error);
+          frame.src='./dashboard-wip.html';
         }
       }
 
-      timer = setInterval(syncWarning, 300);
+      timer=setInterval(syncWarning,300);
       bootDashboard();
     })();
   </script>
