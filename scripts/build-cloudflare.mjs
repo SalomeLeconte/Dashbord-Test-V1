@@ -35,6 +35,7 @@ copyFileIfExists('wip-followup-patch.js');
 copyFileIfExists('wip-release-refine-patch.js');
 copyFileIfExists('wip-marker-novelty-green-patch.js');
 copyFileIfExists('wip-feedback-patch.js');
+copyFileIfExists('wip-stability-repair-patch.js');
 
 // Cloudflare Pages configuration files. They must be present in the output directory.
 copyFileIfExists('_headers');
