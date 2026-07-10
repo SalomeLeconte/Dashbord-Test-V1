@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-feedback-modal-mailto-2026-07-10';
+  const PATCH_ID = 'wip-feedback-modal-mailto-hover-labels-2026-07-10';
   window.__WIP_FEEDBACK_PATCH__ = PATCH_ID;
 
   const RECIPIENT = 'sleconte@komatsu.fr';
@@ -37,8 +37,11 @@
     const style = document.createElement('style');
     style.id = 'wip-feedback-style';
     style.textContent = `
-      #wip-feedback-button{width:34px!important;height:34px!important;min-width:34px!important;padding:0!important;border-radius:10px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important}
-      #wip-feedback-button svg{width:17px;height:17px;display:block}
+      #wip-feedback-button,#v18-info-button{width:34px!important;height:34px!important;min-width:34px!important;padding:0!important;border-radius:10px!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;position:relative!important;overflow:visible!important}
+      #wip-feedback-button svg,#v18-info-button svg{width:17px;height:17px;display:block;pointer-events:none}
+      [data-wip-hover-label]::after{content:attr(data-wip-hover-label);position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,5px);opacity:0;visibility:hidden;pointer-events:none;white-space:nowrap;z-index:130000;padding:6px 8px;border-radius:7px;background:#0f172a;color:#fff;font-size:10px;font-weight:800;line-height:1;box-shadow:0 8px 20px rgba(2,6,23,.2);transition:opacity .14s ease,transform .14s ease,visibility .14s ease}
+      [data-wip-hover-label]:hover::after,[data-wip-hover-label]:focus-visible::after{opacity:1;visibility:visible;transform:translate(-50%,0)}
+      .dark [data-wip-hover-label]::after{background:#f8fafc;color:#0f172a}
       .wip-feedback-modal{position:fixed;inset:0;z-index:120000;display:none;align-items:center;justify-content:center;padding:18px}
       .wip-feedback-modal.open{display:flex}.wip-feedback-backdrop{position:absolute;inset:0;background:rgba(2,6,23,.62);backdrop-filter:blur(4px)}
       .wip-feedback-dialog{position:relative;width:min(560px,calc(100vw - 28px));border-radius:20px;background:#fff;color:#0f172a;border:1px solid #e5e7eb;box-shadow:0 28px 80px rgba(2,6,23,.35);padding:22px}
@@ -108,9 +111,18 @@
     }, 80);
   }
 
+  function styleNoveltyButton(noveltyButton) {
+    noveltyButton.setAttribute('data-wip-hover-label', 'Nouveautés');
+    noveltyButton.setAttribute('aria-label', 'Nouveautés');
+    noveltyButton.removeAttribute('title');
+    noveltyButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M8.6 15.2A7 7 0 1 1 15.4 15.2c-.9.7-1.4 1.5-1.4 2.3h-4c0-.8-.5-1.6-1.4-2.3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
   function installFeedbackButton() {
     const noveltyButton = document.getElementById('v18-info-button');
     if (!noveltyButton) return;
+
+    styleNoveltyButton(noveltyButton);
 
     let button = document.getElementById('wip-feedback-button');
     if (!button) {
@@ -118,11 +130,15 @@
       button.id = 'wip-feedback-button';
       button.type = 'button';
       button.className = noveltyButton.className;
-      button.title = 'Suggérer une amélioration ou signaler un problème';
-      button.setAttribute('aria-label', 'Suggérer une amélioration ou signaler un problème');
+      button.setAttribute('data-wip-hover-label', 'Feedback');
+      button.setAttribute('aria-label', 'Feedback');
       button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.75 5.75h16.5v12.5H3.75z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m4.5 6.5 7.5 6 7.5-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       button.addEventListener('click', openFeedbackModal);
       noveltyButton.insertAdjacentElement('afterend', button);
+    } else {
+      button.setAttribute('data-wip-hover-label', 'Feedback');
+      button.setAttribute('aria-label', 'Feedback');
+      button.removeAttribute('title');
     }
   }
 
