@@ -40,6 +40,7 @@ copyFileIfExists('wip-route-ui-refine-patch.js');
 copyFileIfExists('wip-responsive-device-patch.js');
 copyFileIfExists('wip-map-terrain-search-patch.js');
 copyFileIfExists('wip-smart-route-sync-patch.js');
+copyFileIfExists('wip-route-sector-final-fix-patch.js');
 
 // Cloudflare Pages configuration files. They must be present in the output directory.
 copyFileIfExists('_headers');
