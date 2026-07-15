@@ -73,7 +73,7 @@
           let html=await response.text();
           const baseHref=new URL('./',window.location.href).href;
           html=html.replace('<head>',`<head>\n<base href="${baseHref}">`);
-          html=html.replace('</body>','<script src="./wip-performance-patch.js"><\/script>\n<script src="./wip-followup-patch.js"><\/script>\n<script src="./wip-release-refine-patch.js"><\/script>\n<script src="./wip-marker-novelty-green-patch.js"><\/script>\n<script src="./wip-feedback-patch.js"><\/script>\n<script src="./wip-stability-repair-patch.js"><\/script>\n<script src="./wip-route-ui-refine-patch.js"><\/script>\n<script src="./wip-responsive-device-patch.js"><\/script>\n<script src="./wip-map-terrain-search-patch.js"><\/script>\n<script src="./wip-smart-route-sync-patch.js"><\/script>\n<script src="./wip-route-sector-final-fix-patch.js"><\/script>\n</body>');
+          html=html.replace('</body>','<script src="./wip-performance-patch.js"><\/script>\n<script src="./wip-followup-patch.js"><\/script>\n<script src="./wip-release-refine-patch.js"><\/script>\n<script src="./wip-marker-novelty-green-patch.js"><\/script>\n<script src="./wip-feedback-patch.js"><\/script>\n<script src="./wip-stability-repair-patch.js"><\/script>\n<script src="./wip-route-ui-refine-patch.js"><\/script>\n<script src="./wip-responsive-device-patch.js"><\/script>\n<script src="./wip-map-terrain-search-patch.js"><\/script>\n<script src="./wip-smart-route-sync-patch.js"><\/script>\n<script src="./wip-route-sector-final-fix-patch.js"><\/script>\n<script src="./wip-route-status-compact-patch.js"><\/script>\n</body>');
           frame.srcdoc=html;
         }catch(error){
           console.error('Chargement du dashboard WIP impossible.',error);
