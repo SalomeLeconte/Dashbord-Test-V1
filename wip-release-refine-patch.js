@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-release-2026-08-07-final';
+  const PATCH_ID = 'wip-release-2026-08-07-final-clean';
   window.__WIP_RELEASE_REFINE_PATCH__ = PATCH_ID;
 
   const RELEASE_DATE = '07/08/2026';
@@ -48,15 +48,6 @@
 
   const RELEASE_FEATURES = [
     {
-      group: 'Données et affichage',
-      items: [
-        ['Nouveau data11.csv du 07/08/2026', 'Intégration du fichier data11.csv corrigé : séparateur CSV conforme, colonnes renommées, départements et villes disponibles.', 'data'],
-        ['Date de version figée', 'La version affichée reste au 07/08/2026 à 15:00 tant qu’une nouvelle mise à jour n’est pas demandée.', 'data'],
-        ['Bandeau WIP remplacé', 'Le grand bandeau expérimental est remplacé par un bandeau d’angle lisible sur ordinateur et tablette.', 'portfolio'],
-        ['Tri par CA Global dans Données', 'L’onglet Données est trié par défaut du plus gros CA Global vers le plus faible.', 'table']
-      ]
-    },
-    {
       group: 'Filtres et tableaux',
       items: [
         ['Filtres type Excel dans TOP 200', 'Ajout de menus rapides dans les en-têtes : client, localisation, CA, nombre de machines, visites 2026 et priorités.', 'top200'],
@@ -104,9 +95,7 @@
     {
       group: 'Nettoyage interface',
       items: [
-        ['Suppression des blocs temporaires', 'Les anciennes box “Cantons — in progress” et “Filtre non fonctionnel Undercarriage” sont masquées.', 'reset'],
-        ['Responsive iPhone / iPad', 'Ajustements d’affichage sur mobile, iPad portrait et iPad paysage.', 'portfolio'],
-        ['Feedback sans clignotement', 'Le bouton feedback reste accessible sans animation clignotante.', 'details']
+        ['Responsive iPhone / iPad', 'Ajustements d’affichage sur mobile, iPad portrait et iPad paysage.', 'portfolio']
       ]
     }
   ];
