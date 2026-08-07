@@ -24,13 +24,6 @@ Ce dashboard permet de :
 
 Cette date est volontairement figée jusqu’à demande de mise à jour.
 
-### Données et affichage
-
-- Intégration du nouveau `data11.csv` corrigé.
-- Correction des colonnes nécessaires au dashboard : séparateur CSV, noms de colonnes, départements et villes.
-- Affichage d’un bandeau d’angle discret `MAJ data + contenu 7 Août 15:00` sur ordinateur et tablette.
-- Tri par défaut de l’onglet **Données** du plus gros CA Global vers le plus faible.
-
 ### Filtres type Excel
 
 - Ajout de menus rapides dans les en-têtes de colonnes de l’onglet **TOP 200** :
@@ -68,7 +61,6 @@ Cette date est volontairement figée jusqu’à demande de mise à jour.
   - `CC` = priorité faible.
 - Filtres par type, classe, priorité, SMR, activité moyenne, travel EXCA % et travel hours.
 - Ajout d’un tableau undercarriage dans la fiche détail client.
-- Suppression de l’ancienne box temporaire `Filtre non fonctionnel`.
 
 ### Canton adaptatif
 
@@ -77,7 +69,6 @@ Cette date est volontairement figée jusqu’à demande de mise à jour.
 - Si une ville est saisie, la liste est réduite aux cantons cohérents autour de cette ville.
 - Option GPS **Cantons autour de moi** avec rayon 10 / 25 / 50 km.
 - Déduction automatique du canton depuis commune, département et coordonnées quand disponibles.
-- Suppression de l’ancien bloc temporaire `Cantons — in progress`.
 
 ### Cartographie et itinéraire
 
@@ -87,11 +78,9 @@ Cette date est volontairement figée jusqu’à demande de mise à jour.
 - Le bouton Effacer et les poubelles gèrent aussi les points bleus.
 - Simplification du statut itinéraire avec suppression de messages redondants.
 
-### Nettoyage interface et responsive
+### Responsive
 
-- Suppression des blocs temporaires visibles côté utilisateur.
 - Optimisations d’affichage ordinateur, tablette et mobile.
-- Feedback conservé sans animation clignotante.
 
 ---
 
