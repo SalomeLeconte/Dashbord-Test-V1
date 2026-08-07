@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-filter-placeholder-cleanup-2026-08-07';
+  const PATCH_ID = 'wip-filter-placeholder-cleanup-toggle-2026-08-07';
   if (window.__WIP_FILTER_PLACEHOLDER_CLEANUP_PATCH__ === PATCH_ID) return;
   window.__WIP_FILTER_PLACEHOLDER_CLEANUP_PATCH__ = PATCH_ID;
 
@@ -10,6 +10,8 @@
     .replace(/[—–]/g, '-')
     .replace(/\s+/g, ' ')
     .trim();
+
+  let activeColumnButtonKey = '';
 
   function visibleText(element) {
     return norm(element?.textContent || '');
@@ -88,6 +90,44 @@
     filters.slice(1).forEach((node) => node.remove());
   }
 
+  function columnButtonKey(button) {
+    if (!button) return '';
+    const table = button.dataset.table || button.getAttribute('data-table') || '';
+    const key = button.dataset.key || button.getAttribute('data-key') || '';
+    return table && key ? `${table}::${key}` : '';
+  }
+
+  function installColumnFilterToggle() {
+    if (document.documentElement.dataset.wipColumnFilterToggleInstalled === 'true') return;
+    document.documentElement.dataset.wipColumnFilterToggleInstalled = 'true';
+
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-table][data-key]');
+      if (!button) return;
+      const key = columnButtonKey(button);
+      const menu = document.getElementById('wip-column-filter-menu');
+
+      if (menu && key && activeColumnButtonKey === key) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+        menu.remove();
+        activeColumnButtonKey = '';
+        return;
+      }
+
+      window.setTimeout(() => {
+        const currentMenu = document.getElementById('wip-column-filter-menu');
+        activeColumnButtonKey = currentMenu ? key : '';
+      }, 0);
+    }, true);
+
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('button[data-table][data-key]')) return;
+      if (!event.target.closest('#wip-column-filter-menu')) activeColumnButtonKey = '';
+    }, true);
+  }
+
   function installStyle() {
     if (document.getElementById('wip-filter-placeholder-cleanup-style')) return;
     const style = document.createElement('style');
@@ -102,6 +142,7 @@
 
   function install() {
     installStyle();
+    installColumnFilterToggle();
     removeCantonInProgress();
     removeUndercarriagePlaceholder();
     moveUndercarriageFilterIntoSlot();
