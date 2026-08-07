@@ -1,6 +1,9 @@
 (() => {
-  const PATCH_ID = 'wip-release-interactions-only-2026-07-10';
+  const PATCH_ID = 'wip-release-2026-08-07-final';
   window.__WIP_RELEASE_REFINE_PATCH__ = PATCH_ID;
+
+  const RELEASE_DATE = '07/08/2026';
+  const RELEASE_TIME = '15:00';
 
   const esc = (value) => {
     try { return escapeHtml(value); }
@@ -43,73 +46,83 @@
     }
   }
 
-  const INTERACTIVE_FEATURES = [
+  const RELEASE_FEATURES = [
     {
-      group: 'Portefeuille et filtres',
+      group: 'Données et affichage',
       items: [
-        ['Changer de PSSR avec remise à zéro', 'Le changement de portefeuille remet les filtres et l’itinéraire à zéro avant d’afficher le nouveau PSSR.', 'portfolio'],
-        ['Recherche par numéro client Irium', 'Recherche directe d’un client à partir de son numéro Irium.', 'client-number'],
-        ['Filtre Cantons', 'Filtrage géographique sur les cantons du périmètre actif.', 'canton'],
-        ['Filtre Rang TOP PSSR', 'Limitation des résultats aux meilleurs rangs du portefeuille.', 'top-rank'],
-        ['Filtres parc machines', 'Filtres sur le volume de flotte, le modèle, le numéro de série et l’âge des machines.', 'fleet'],
-        ['Filtre fin de garantie', 'Affichage des clients concernés par une fin de garantie renseignée.', 'warranty'],
-        ['Filtre client éligible', 'Affichage des clients répondant aux règles d’éligibilité du dashboard.', 'eligible'],
-        ['Filtres de chiffre d’affaires', 'Année, cumul, CA Global, PDR, Service, seuils et paliers rapides.', 'ca'],
-        ['Secteur d’activité et NAF', 'Filtrage par catégorie d’activité et code NAF.', 'sector'],
-        ['Objectifs et visites 2026', 'Filtrage sur les objectifs, visites réalisées et visites restantes.', 'visits'],
-        ['Réinitialiser tous les filtres', 'Remise à zéro complète des filtres, toggles, critères TOP et états cartographiques.', 'reset']
+        ['Nouveau data11.csv du 07/08/2026', 'Intégration du fichier data11.csv corrigé : séparateur CSV conforme, colonnes renommées, départements et villes disponibles.', 'data'],
+        ['Date de version figée', 'La version affichée reste au 07/08/2026 à 15:00 tant qu’une nouvelle mise à jour n’est pas demandée.', 'data'],
+        ['Bandeau WIP remplacé', 'Le grand bandeau expérimental est remplacé par un bandeau d’angle lisible sur ordinateur et tablette.', 'portfolio'],
+        ['Tri par CA Global dans Données', 'L’onglet Données est trié par défaut du plus gros CA Global vers le plus faible.', 'table']
       ]
     },
     {
-      group: 'TOP et fiche entreprise',
+      group: 'Filtres et tableaux',
       items: [
-        ['TOP 200 enrichi', 'Accès aux contrôles de limite, filtres de visites et informations de préparation des tournées.', 'top200'],
-        ['Détails entreprise enrichis', 'Ouverture de la fiche complète : identité, contacts, CA, parc, CRM, opportunités et secteur.', 'details']
+        ['Filtres type Excel dans TOP 200', 'Ajout de menus rapides dans les en-têtes : client, localisation, CA, nombre de machines, visites 2026 et priorités.', 'top200'],
+        ['Filtres type Excel dans Données', 'Ajout de menus rapides dans l’onglet Données : client, localisation, indicateur financier et flotte identifiée.', 'table'],
+        ['Triangles ouvrables et refermables', 'Un clic ouvre le menu de colonne ; un deuxième clic sur le même triangle le referme.', 'table'],
+        ['Filtre secteur d’activité stabilisé', 'Le filtre secteur / NAF fonctionne comme un arbre de sélection et ne se referme plus de manière imprévisible.', 'sector']
+      ]
+    },
+    {
+      group: 'TOP 200 et priorisation',
+      items: [
+        ['TOP 200 recalculé côté dashboard', 'Le TOP 200 peut être recalculé à partir du CA, des clients éligibles et des machines récentes.', 'top200'],
+        ['Machines récentes restaurées', 'La détection des machines récentes utilise le flag NEW et le détail Machines récentes par client.', 'top200'],
+        ['Objectifs de visite 2026', 'Lecture améliorée des objectifs, visites déjà faites et reste à faire dans l’onglet TOP 200.', 'visits']
+      ]
+    },
+    {
+      group: 'Undercarriage',
+      items: [
+        ['Filtre Train de roulement', 'Le filtre undercarriage est intégré dans la section 7. UNDERCARRIAGE.', 'undercarriage'],
+        ['Classes AA à CC', 'Lecture des classes BULL, EXCA et MVM avec la bonne priorité : AA est le plus prioritaire, CC le plus faible.', 'undercarriage'],
+        ['Critères machine détaillés', 'Filtrage par type, classe, priorité, SMR, activité moyenne, travel EXCA % et travel hours.', 'undercarriage'],
+        ['Détail client enrichi', 'Ajout d’un tableau undercarriage par machine dans la fiche client.', 'details']
+      ]
+    },
+    {
+      group: 'Canton et géographie',
+      items: [
+        ['Filtre canton adaptatif', 'Liste des cantons adaptée selon le département sélectionné.', 'canton'],
+        ['Réduction par ville', 'Quand une ville est saisie, la liste canton est réduite aux cantons cohérents autour de cette ville.', 'canton'],
+        ['Cantons autour de moi', 'Option GPS avec rayon 10 / 25 / 50 km, utilisable uniquement en HTTPS.', 'canton'],
+        ['Référentiel communes-cantons', 'Déduction automatique du canton depuis commune, département et coordonnées quand disponibles.', 'canton']
       ]
     },
     {
       group: 'Cartographie et itinéraire',
       items: [
-        ['Cartographie générale', 'Affichage cartographique des entreprises correspondant aux filtres actifs.', 'map'],
-        ['Autoriser le GPS', 'Ajout de la position du navigateur pour préparer un départ, une arrivée ou un aller-retour.', 'gps'],
-        ['Calculer un itinéraire optimisé', 'Ordonnancement automatique des points visibles pour préparer la tournée.', 'route'],
-        ['Retirer puis rajouter des étapes', 'La poubelle retire plusieurs points de la tournée sans les supprimer de la carte ; le bouton + les réintègre et réoptimise.', 'route'],
-        ['Ouvrir la tournée dans Google Maps', 'Transfert de l’itinéraire calculé vers Google Maps.', 'gmaps']
+        ['Mon terrain plus lisible', 'Remplacement de la heat map peu lisible par une lecture départementale plus claire.', 'terrain'],
+        ['Recherche intelligente cartographique', 'Ajout d’un bouton + près de Google Maps pour rechercher un client du PSSR et l’ajouter en bleu sur la carte.', 'map'],
+        ['Points bleus dans l’itinéraire', 'Les clients ajoutés via recherche intelligente sont pris en compte dans l’itinéraire optimisé.', 'route'],
+        ['Suppression des points bleus', 'La poubelle et le bouton Effacer gèrent aussi les points ajoutés via la recherche intelligente.', 'route'],
+        ['Statut itinéraire simplifié', 'Le message “Clique sur Tracer itinéraire” a été retiré des statuts redondants.', 'route']
       ]
     },
     {
-      group: 'Mon terrain',
+      group: 'Nettoyage interface',
       items: [
-        ['Ouvrir Mon terrain', 'Affiche les départements du PSSR, la heat map de densité clients et les statistiques départementales.', 'terrain']
+        ['Suppression des blocs temporaires', 'Les anciennes box “Cantons — in progress” et “Filtre non fonctionnel Undercarriage” sont masquées.', 'reset'],
+        ['Responsive iPhone / iPad', 'Ajustements d’affichage sur mobile, iPad portrait et iPad paysage.', 'portfolio'],
+        ['Feedback sans clignotement', 'Le bouton feedback reste accessible sans animation clignotante.', 'details']
       ]
     }
   ];
 
-  const BACKGROUND_IMPROVEMENTS = [
-    'Chargement des données lourdes différé jusqu’à la sélection du portefeuille.',
-    'Affichage du tableau par lots de 200 lignes pour réduire le blocage initial.',
-    'Construction d’une seule vue DOM à la fois selon le format bureau ou mobile.',
-    'Cache de géocodage et mémorisation temporaire des échecs pour limiter les requêtes répétées.',
-    'Déduplication des informations répétées dans les fiches entreprise.',
-    'Mise en cache et optimisation des rendus cartographiques successifs.',
-    'Marqueurs TOP 10 en GOLD et signalement visuel des nouvelles machines.',
-    'Points retirés d’un itinéraire conservés sur la carte en rouge.',
-    'Recentrage automatique de la carte après recalcul de l’itinéraire.',
-    'Départements 27 et 76 ajoutés au portefeuille de Christopher Borrhomée et affichés dans l’ordre numérique.'
-  ];
-
   function releaseHtml() {
-    const interactiveCount = INTERACTIVE_FEATURES.reduce((sum, section) => sum + section.items.length, 0);
+    const featureCount = RELEASE_FEATURES.reduce((sum, section) => sum + section.items.length, 0);
     return `
-      <div class="wip-release-intro">
+      <div class="wip-release-intro wip-release-20260807">
         <div>
-          <div class="wip-release-kicker">Nouveautés WIP interactives</div>
-          <div class="wip-release-title">${interactiveCount} fonctionnalités à tester directement</div>
-          <div class="wip-release-sub">Clique sur une fonctionnalité pour fermer cette fenêtre et entourer son emplacement en rouge pendant 15 secondes.</div>
+          <div class="wip-release-kicker">Version ${esc(RELEASE_DATE)} — ${esc(RELEASE_TIME)}</div>
+          <div class="wip-release-title">${featureCount} nouveautés WIP à tester</div>
+          <div class="wip-release-sub">Cette date reste figée jusqu’à la prochaine demande de mise à jour. Les anciennes nouveautés ont été remplacées par cette version.</div>
         </div>
       </div>
       <div class="wip-release-sections">
-        ${INTERACTIVE_FEATURES.map((section) => `
+        ${RELEASE_FEATURES.map((section) => `
           <section class="wip-release-section">
             <h4>${esc(section.group)}</h4>
             <div class="wip-release-grid">
@@ -123,11 +136,7 @@
             </div>
           </section>
         `).join('')}
-      </div>
-      <section class="wip-background-improvements">
-        <div class="wip-background-title">Améliorations en arrière-plan</div>
-        <ul>${BACKGROUND_IMPROVEMENTS.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
-      </section>`;
+      </div>`;
   }
 
   function installReleasePopupRefinement() {
@@ -143,7 +152,7 @@
 
     renderBody();
 
-    const open = function openInteractiveReleaseNotes() {
+    const open = function openReleaseNotes20260807() {
       renderBody();
       modal.classList.add('open');
     };
@@ -154,7 +163,7 @@
     const button = document.getElementById('v18-info-button');
     if (button) {
       button.onclick = open;
-      button.title = 'Nouveautés WIP interactives';
+      button.title = `Nouveautés WIP ${RELEASE_DATE}`;
     }
   }
 
@@ -163,7 +172,10 @@
     const style = document.createElement('style');
     style.id = 'wip-release-refine-style';
     style.textContent = `
-      .wip-background-improvements{margin-top:18px;padding:12px 14px;border-top:1px solid #e5e7eb;background:#f8fafc;border-radius:12px}.dark .wip-background-improvements{background:#020617;border-color:#334155}.wip-background-title{font-size:9px;font-weight:1000;letter-spacing:.11em;text-transform:uppercase;color:#94a3b8;margin-bottom:7px}.wip-background-improvements ul{margin:0;padding-left:17px;display:grid;gap:4px}.wip-background-improvements li{font-size:9px;line-height:1.35;color:#64748b}.dark .wip-background-improvements li{color:#94a3b8}
+      .wip-release-20260807{border:1px solid rgba(234,179,8,.35);background:linear-gradient(135deg,rgba(250,204,21,.12),rgba(255,255,255,.96));border-radius:16px;padding:14px}.dark .wip-release-20260807{background:linear-gradient(135deg,rgba(250,204,21,.14),rgba(15,23,42,.96));border-color:rgba(234,179,8,.28)}
+      .wip-release-kicker{font-size:10px;font-weight:1000;letter-spacing:.12em;text-transform:uppercase;color:#b45309}.dark .wip-release-kicker{color:#facc15}
+      .wip-release-title{margin-top:4px;font-size:18px;font-weight:1000;color:#0f172a}.dark .wip-release-title{color:#f8fafc}
+      .wip-release-sub{margin-top:5px;font-size:11px;line-height:1.45;color:#64748b}.dark .wip-release-sub{color:#cbd5e1}
     `;
     document.head.appendChild(style);
   }
