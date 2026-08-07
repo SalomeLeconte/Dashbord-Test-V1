@@ -1,10 +1,9 @@
 (() => {
-  const PATCH_ID = 'wip-undercarriage-detail-ui-2026-08-07';
+  const PATCH_ID = 'wip-undercarriage-detail-ui-2026-08-07-v2';
   if (window.__WIP_UNDERCARRIAGE_DETAIL_UI_PATCH__ === PATCH_ID) return;
   window.__WIP_UNDERCARRIAGE_DETAIL_UI_PATCH__ = PATCH_ID;
 
   const SCORE = { AA: 100, AB: 85, BA: 80, AC: 60, BB: 55, CA: 50, BC: 30, CB: 25, CC: 10 };
-  const GROUP_LABEL = { AA: 'Très prioritaire', AB: 'Prioritaire', BA: 'Prioritaire', AC: 'À surveiller', BB: 'À surveiller', CA: 'À surveiller', BC: 'Faible', CB: 'Faible', CC: 'Faible' };
   const COLS = {
     smr: ['data22.Machines SMR par client', 'Machines SMR par client'],
     bull: ['data22.Class BULL par client', 'Class BULL par client'],
@@ -103,15 +102,6 @@
         travelHours,
         best,
         score,
-        priority: GROUP_LABEL[best] || '',
-        raw: {
-          smr: maps.smr.get(key) || '',
-          bull: maps.bull.get(key) || '',
-          exca: maps.exca.get(key) || '',
-          mvm: maps.mvm.get(key) || '',
-          travelPct: maps.travelPct.get(key) || '',
-          travelHours: maps.travelHours.get(key) || ''
-        },
         hasData: !!(smr || bull || exca || mvm || travelPct || travelHours)
       };
     }).filter((machine) => machine.hasData);
@@ -165,22 +155,12 @@
         <td>${fmtPct(machine.travelPct)}</td>
         <td>${fmtHours(machine.travelHours)}</td>
         <td>${esc(machine.best || '—')}</td>
-        <td>${esc(machine.priority || '—')}</td>
         <td>${Math.round(machine.score || 0)}</td>
       </tr>
     `).join('');
 
-    const raw = `
-      <div class="wip-uc-raw-grid">
-        <div><strong>SMR</strong><span>${esc(get(row, COLS.smr) || '—')}</span></div>
-        <div><strong>BULL</strong><span>${esc(get(row, COLS.bull) || '—')}</span></div>
-        <div><strong>EXCA</strong><span>${esc(get(row, COLS.exca) || '—')}</span></div>
-        <div><strong>MVM</strong><span>${esc(get(row, COLS.mvm) || '—')}</span></div>
-        <div><strong>Travel EXCA %</strong><span>${esc(get(row, COLS.travelPct) || '—')}</span></div>
-        <div><strong>Travel hours EXCA</strong><span>${esc(get(row, COLS.travelHours) || '—')}</span></div>
-      </div>`;
-
     return `
+      <div class="wip-uc-section-title">Données undercarriage par machine</div>
       <div class="wip-uc-modal-summary">
         <div><strong>${list.length}</strong><span>machine(s) avec données</span></div>
         <div><strong>${Math.round(row._undercarriageScore || 0)}</strong><span>score max</span></div>
@@ -188,11 +168,10 @@
       </div>
       <div class="wip-uc-modal-table-wrap">
         <table class="wip-uc-modal-table">
-          <thead><tr><th>Machine</th><th>SMR</th><th>BULL</th><th>EXCA</th><th>MVM</th><th>Travel %</th><th>Travel h</th><th>Classe</th><th>Priorité</th><th>Score</th></tr></thead>
+          <thead><tr><th>Machine</th><th>SMR</th><th>BULL</th><th>EXCA</th><th>MVM</th><th>Travel %</th><th>Travel h</th><th>Classe</th><th>Score</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
-      <details class="wip-uc-raw"><summary>Données sources CSV</summary>${raw}</details>
     `;
   }
 
@@ -207,7 +186,7 @@
       <div class="wip-uc-modal-card" role="dialog" aria-modal="true" aria-labelledby="wip-uc-modal-title">
         <div class="wip-uc-modal-head">
           <div>
-            <div class="wip-uc-modal-kicker">Undercarriage — détail machines</div>
+            <div class="wip-uc-modal-kicker">Undercarriage</div>
             <h3 id="wip-uc-modal-title">${esc(clientTitle(row))}</h3>
           </div>
           <button type="button" class="wip-uc-modal-close" data-close="true" aria-label="Fermer">×</button>
@@ -233,25 +212,9 @@
       badge.dataset.rowIndex = String(row._rowIndex ?? '');
       badge.setAttribute('role', 'button');
       badge.setAttribute('tabindex', '0');
-      badge.setAttribute('title', 'Voir le détail undercarriage');
+      badge.setAttribute('title', 'Voir uniquement les données undercarriage');
       badge.textContent = `Undercarriage • ${machines(row).length}`;
     });
-  }
-
-  function injectDetailsIntoExistingModal(row) {
-    const html = detailsHtml(row);
-    const candidates = [
-      '#details-modal .overflow-y-auto',
-      '#detail-modal .overflow-y-auto',
-      '[id*="detail" i] .overflow-y-auto',
-      '[role="dialog"] .overflow-y-auto',
-      '.modal.open .overflow-y-auto'
-    ];
-    const body = candidates.map((selector) => document.querySelector(selector)).find(Boolean);
-    if (!body) return false;
-    body.querySelector('#wip-undercarriage-details')?.remove();
-    body.insertAdjacentHTML('afterbegin', `<div id="wip-undercarriage-details" class="wip-uc-details-inline">${html}</div>`);
-    return true;
   }
 
   function handleBadgeClick(event) {
@@ -259,19 +222,10 @@
     if (!badge) return;
     event.preventDefault();
     event.stopPropagation();
+    event.stopImmediatePropagation();
 
     const row = findRowFromBadge(badge);
-    if (!row) return;
-
-    const detailButton = badge.parentElement?.querySelector?.('button[onclick^="openDetails("]');
-    if (detailButton) {
-      try { detailButton.click(); } catch (error) {}
-      window.setTimeout(() => {
-        if (!injectDetailsIntoExistingModal(row)) openUndercarriageModal(row);
-      }, 80);
-    } else {
-      openUndercarriageModal(row);
-    }
+    if (row) openUndercarriageModal(row);
   }
 
   function installStyles() {
@@ -303,11 +257,10 @@
       .wip-uc-modal-head h3{margin:0;font-size:18px;line-height:1.2;font-weight:1000;color:#111827}.dark .wip-uc-modal-head h3{color:#f8fafc}
       .wip-uc-modal-close{width:34px;height:34px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#334155;font-size:24px;line-height:1;cursor:pointer}.dark .wip-uc-modal-close{background:#0f172a;border-color:#334155;color:#f8fafc}
       .wip-uc-modal-body{padding:18px 20px;overflow:auto}.wip-uc-modal-empty{font-size:13px;color:#64748b;margin:0}
+      .wip-uc-section-title{font-size:11px;font-weight:1000;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin:0 0 12px}.dark .wip-uc-section-title{color:#94a3b8}
       .wip-uc-modal-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}.wip-uc-modal-summary div{border:1px solid #e5e7eb;border-radius:14px;padding:10px 12px;background:#f8fafc}.dark .wip-uc-modal-summary div{border-color:#334155;background:#0f172a}.wip-uc-modal-summary strong{display:block;font-size:19px;color:#111827}.dark .wip-uc-modal-summary strong{color:#f8fafc}.wip-uc-modal-summary span{display:block;margin-top:2px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}
       .wip-uc-modal-table-wrap{overflow:auto;border:1px solid #e5e7eb;border-radius:16px}.dark .wip-uc-modal-table-wrap{border-color:#334155}.wip-uc-modal-table{width:100%;border-collapse:collapse;font-size:12px}.wip-uc-modal-table th{position:sticky;top:0;background:#f8fafc;color:#64748b;font-size:10px;text-transform:uppercase;letter-spacing:.08em;text-align:left;padding:10px;border-bottom:1px solid #e5e7eb}.dark .wip-uc-modal-table th{background:#0f172a;border-color:#334155;color:#94a3b8}.wip-uc-modal-table td{padding:10px;border-bottom:1px solid #eef2f7;color:#334155;white-space:nowrap}.dark .wip-uc-modal-table td{border-color:#1e293b;color:#e2e8f0}
-      .wip-uc-raw{margin-top:14px;border:1px solid #e5e7eb;border-radius:14px;padding:10px 12px;background:#fff}.dark .wip-uc-raw{background:#020617;border-color:#334155}.wip-uc-raw summary{cursor:pointer;font-size:11px;font-weight:1000;text-transform:uppercase;letter-spacing:.08em;color:#64748b}.wip-uc-raw-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}.wip-uc-raw-grid div{min-width:0;border-radius:10px;background:#f8fafc;padding:8px}.dark .wip-uc-raw-grid div{background:#0f172a}.wip-uc-raw-grid strong{display:block;font-size:10px;color:#64748b;margin-bottom:4px}.wip-uc-raw-grid span{display:block;font-size:11px;color:#334155;word-break:break-word}.dark .wip-uc-raw-grid span{color:#e2e8f0}
-      .wip-uc-details-inline{margin-bottom:16px;border:1px solid #e5e7eb;border-left:4px solid #eab308;border-radius:18px;padding:14px;background:#fff}.dark .wip-uc-details-inline{background:#020617;border-color:#334155;border-left-color:#eab308}
-      @media(max-width:767px){.wip-uc-modal-summary{grid-template-columns:1fr}.wip-uc-raw-grid{grid-template-columns:1fr}.wip-uc-modal-card{width:calc(100vw - 16px);max-height:88vh}.wip-uc-modal-head,.wip-uc-modal-body{padding:14px}}
+      @media(max-width:767px){.wip-uc-modal-summary{grid-template-columns:1fr}.wip-uc-modal-card{width:calc(100vw - 16px);max-height:88vh}.wip-uc-modal-head,.wip-uc-modal-body{padding:14px}}
     `;
     document.head.appendChild(style);
   }
