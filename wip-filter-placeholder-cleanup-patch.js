@@ -1,9 +1,11 @@
 (() => {
-  const PATCH_ID = 'wip-filter-placeholder-cleanup-toggle-2026-08-07-v3';
+  const PATCH_ID = 'wip-filter-placeholder-cleanup-toggle-2026-08-07-v4';
   if (window.__WIP_FILTER_PLACEHOLDER_CLEANUP_PATCH__ === PATCH_ID) return;
   window.__WIP_FILTER_PLACEHOLDER_CLEANUP_PATCH__ = PATCH_ID;
 
   const FILTER_ID = 'wip-undercarriage-filter';
+  const ACCORDION_ID = 'wip-undercarriage-integrated-accordion';
+  const BODY_ID = 'wip-undercarriage-integrated-body';
 
   const norm = (value) => String(value ?? '')
     .normalize('NFD')
@@ -49,94 +51,102 @@
     if (box) box.remove();
   }
 
-  function findUndercarriageHeader() {
-    return [...document.querySelectorAll('button, summary, h2, h3, h4, label, div, section, details')]
-      .filter((node) => node.id !== FILTER_ID && !node.closest(`#${FILTER_ID}`))
-      .find((node) => {
-        const text = visibleText(node);
-        return text === '7. undercarriage'
-          || text.startsWith('7. undercarriage ')
-          || text.includes('7. undercarriage');
-      }) || null;
+  function textLooksLikeUndercarriageHeader(text) {
+    return text === '7. undercarriage'
+      || text === '7 undercarriage'
+      || text.startsWith('7. undercarriage ')
+      || text.includes('7. undercarriage');
   }
 
-  function isLikelyEmptySectionBody(element) {
-    if (!element || element.id === FILTER_ID || element.closest(`#${FILTER_ID}`)) return false;
-    const text = visibleText(element);
-    if (text.includes('train de roulement') || text.includes('undercarriage') || text.includes('cantons')) return false;
-    if (text.length > 220) return false;
-    const cls = String(element.className || '');
-    const rect = element.getBoundingClientRect?.();
-    const hasBoxLook = /rounded|border|bg-|p-|space|grid|overflow/i.test(cls);
-    return hasBoxLook || (rect && rect.height >= 18 && rect.height <= 260);
+  function findUndercarriageHeaderNode() {
+    const nodes = [...document.querySelectorAll('button, summary, h2, h3, h4, label, div, section')]
+      .filter((node) => node.id !== FILTER_ID
+        && node.id !== ACCORDION_ID
+        && !node.closest(`#${FILTER_ID}`)
+        && !node.closest(`#${ACCORDION_ID}`));
+
+    return nodes
+      .filter((node) => textLooksLikeUndercarriageHeader(visibleText(node)))
+      .sort((a, b) => (a.textContent || '').length - (b.textContent || '').length)[0] || null;
   }
 
-  function closestStableRoot(header) {
-    let current = header;
-    let best = header.parentElement || header;
-    for (let i = 0; i < 8 && current?.parentElement; i += 1) {
+  function visualHeaderBlock(node) {
+    if (!node) return null;
+    const direct = node.closest('button, summary');
+    if (direct && direct.id !== FILTER_ID && !direct.closest(`#${FILTER_ID}`)) return direct;
+
+    let current = node;
+    let best = node;
+    for (let i = 0; i < 6 && current?.parentElement; i += 1) {
       const parent = current.parentElement;
+      if (parent.id === FILTER_ID || parent.closest(`#${FILTER_ID}`)) break;
       const text = visibleText(parent);
-      if (text.includes('7. undercarriage') && text.length < 7000 && !parent.closest(`#${FILTER_ID}`)) best = parent;
+      const rect = parent.getBoundingClientRect?.();
+      const cls = String(parent.className || '');
+      const looksLikeHeader = textLooksLikeUndercarriageHeader(text)
+        && (rect ? rect.height >= 28 && rect.height <= 90 : true)
+        && (/rounded|border|accordion|summary|cursor|flex|items/i.test(cls) || rect?.width > 180);
+      if (looksLikeHeader) best = parent;
       current = parent;
     }
     return best;
   }
 
-  function nextSiblingBodyAfter(element) {
-    let sibling = element?.nextElementSibling || null;
-    let guard = 0;
-    while (sibling && guard < 8) {
-      if (isLikelyEmptySectionBody(sibling)) return sibling;
-      const text = visibleText(sibling);
-      if (text.includes('train de roulement') || text.includes('cantons - in progress')) break;
-      sibling = sibling.nextElementSibling;
-      guard += 1;
-    }
-    return null;
+  function hideLooseEmptyBodiesAround(headerBlock) {
+    if (!headerBlock) return;
+    const roots = [headerBlock, headerBlock.parentElement, headerBlock.parentElement?.parentElement].filter(Boolean);
+    roots.forEach((root) => {
+      let sibling = root.nextElementSibling;
+      let guard = 0;
+      while (sibling && guard < 4) {
+        const text = visibleText(sibling);
+        const containsFilter = !!sibling.querySelector?.(`#${FILTER_ID}`);
+        const containsAccordion = !!sibling.querySelector?.(`#${ACCORDION_ID}`);
+        const cls = String(sibling.className || '');
+        const rect = sibling.getBoundingClientRect?.();
+        const isEmptyBody = !containsFilter
+          && !containsAccordion
+          && text.length < 80
+          && (/rounded|border|bg-|p-|space|overflow/i.test(cls) || (rect && rect.height >= 16 && rect.height <= 220));
+        if (isEmptyBody) {
+          sibling.classList.add('wip-hidden-undercarriage-orphan');
+          sibling.setAttribute('aria-hidden', 'true');
+        }
+        if (text.includes('train de roulement') || text.includes('cantons - in progress')) break;
+        sibling = sibling.nextElementSibling;
+        guard += 1;
+      }
+    });
   }
 
-  function findUndercarriageSlot() {
-    const header = findUndercarriageHeader();
-    if (!header) return null;
+  function createIntegratedAccordion(referenceNode) {
+    let accordion = document.getElementById(ACCORDION_ID);
+    if (accordion) return accordion;
 
-    const nativeDetails = header.closest('details');
-    if (nativeDetails && nativeDetails.id !== FILTER_ID) return nativeDetails;
+    accordion = document.createElement('details');
+    accordion.id = ACCORDION_ID;
+    accordion.className = 'wip-undercarriage-integrated-accordion';
+    accordion.innerHTML = `
+      <summary class="wip-undercarriage-integrated-summary">
+        <span>7. UNDERCARRIAGE</span>
+        <span class="wip-undercarriage-integrated-chevron" aria-hidden="true">⌄</span>
+      </summary>
+      <div id="${BODY_ID}" class="wip-undercarriage-integrated-body"></div>
+    `;
 
-    const anchors = [
-      header.closest('button'),
-      header.closest('summary'),
-      header,
-      header.parentElement,
-      header.parentElement?.parentElement,
-      header.parentElement?.parentElement?.parentElement
-    ].filter(Boolean);
-
-    for (const anchor of anchors) {
-      const body = nextSiblingBodyAfter(anchor);
-      if (body) return body;
-    }
-
-    const root = closestStableRoot(header);
-    const descendants = [...root.querySelectorAll('div, section, fieldset')]
-      .filter((node) => node !== root && isLikelyEmptySectionBody(node))
-      .filter((node) => header.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING);
-    if (descendants.length) {
-      return descendants.sort((a, b) => {
-        const at = (a.textContent || '').length;
-        const bt = (b.textContent || '').length;
-        return at - bt;
-      })[0];
-    }
-
-    const fallback = document.createElement('div');
-    fallback.className = 'wip-undercarriage-created-slot';
-    const anchor = header.closest('button') || header;
-    anchor.insertAdjacentElement('afterend', fallback);
-    return fallback;
+    if (referenceNode?.parentNode) referenceNode.parentNode.insertBefore(accordion, referenceNode);
+    else (document.getElementById('filters-panel') || document.querySelector('aside') || document.body).appendChild(accordion);
+    return accordion;
   }
 
-  function openAndFlattenUndercarriageFilter(filter) {
+  function hideOriginalHeader(headerBlock) {
+    if (!headerBlock || headerBlock.closest(`#${ACCORDION_ID}`)) return;
+    headerBlock.classList.add('wip-hidden-original-undercarriage-header');
+    headerBlock.setAttribute('aria-hidden', 'true');
+    hideLooseEmptyBodiesAround(headerBlock);
+  }
+
+  function flattenFilter(filter) {
     if (!filter) return;
     if (filter.tagName === 'DETAILS') filter.open = true;
     filter.classList.add('wip-undercarriage-active-filter', 'wip-undercarriage-inline-content');
@@ -144,18 +154,36 @@
     filter.querySelector(':scope > summary')?.classList.add('wip-hidden-undercarriage-summary');
   }
 
-  function moveUndercarriageFilterIntoSlot() {
+  function removeExternalUndercarriageShells(keepFilter) {
+    [...document.querySelectorAll('details, section, div')].forEach((node) => {
+      if (node.id === ACCORDION_ID || node.id === FILTER_ID || node.contains(keepFilter)) return;
+      if (node.closest(`#${ACCORDION_ID}`) || node.closest(`#${FILTER_ID}`)) return;
+      const text = visibleText(node);
+      if (text.includes('train de roulement / undercarriage') && text.length < 260) {
+        node.classList.add('wip-hidden-undercarriage-orphan');
+        node.setAttribute('aria-hidden', 'true');
+      }
+    });
+  }
+
+  function integrateUndercarriageFilter() {
     const filter = document.getElementById(FILTER_ID);
     if (!filter) return;
 
     removeUndercarriagePlaceholder();
-    const slot = findUndercarriageSlot();
-    openAndFlattenUndercarriageFilter(filter);
 
-    if (!slot || slot.contains(filter)) return;
-    slot.classList.add('wip-undercarriage-section-body-filled');
-    slot.appendChild(filter);
+    const headerNode = findUndercarriageHeaderNode();
+    const headerBlock = visualHeaderBlock(headerNode);
+    const accordion = createIntegratedAccordion(headerBlock || filter);
+    const body = accordion.querySelector(`#${BODY_ID}`);
+    if (!body) return;
+
+    flattenFilter(filter);
+    if (!body.contains(filter)) body.appendChild(filter);
     filter.dataset.wipMovedIntoSection = 'true';
+
+    hideOriginalHeader(headerBlock);
+    removeExternalUndercarriageShells(filter);
   }
 
   function cleanupDuplicateStandaloneUndercarriage() {
@@ -207,10 +235,18 @@
     const style = document.createElement('style');
     style.id = 'wip-filter-placeholder-cleanup-style';
     style.textContent = `
+      .wip-hidden-original-undercarriage-header,
+      .wip-hidden-undercarriage-orphan,
       .wip-hidden-undercarriage-summary{display:none!important}
-      .wip-undercarriage-section-body-filled{padding:0!important;border-color:#fed7aa!important;background:#fff7ed!important;overflow:hidden!important}
-      .dark .wip-undercarriage-section-body-filled{background:rgba(154,52,18,.08)!important;border-color:rgba(251,146,60,.28)!important}
-      .wip-undercarriage-created-slot{margin-top:10px;border:1px solid #fed7aa;border-radius:16px;background:#fff7ed;padding:0;overflow:hidden}
+      .wip-undercarriage-integrated-accordion{border:1px solid #fed7aa!important;border-left:4px solid #f59e0b!important;border-radius:16px!important;background:#fffdf7!important;overflow:hidden!important;margin:0 0 12px!important}
+      .dark .wip-undercarriage-integrated-accordion{background:rgba(15,23,42,.92)!important;border-color:rgba(251,146,60,.35)!important}
+      .wip-undercarriage-integrated-summary{list-style:none!important;cursor:pointer!important;min-height:46px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;padding:0 14px!important;font-size:11px!important;font-weight:1000!important;letter-spacing:.055em!important;text-transform:uppercase!important;color:#111827!important;user-select:none!important}
+      .dark .wip-undercarriage-integrated-summary{color:#f8fafc!important}
+      .wip-undercarriage-integrated-summary::-webkit-details-marker{display:none!important}
+      .wip-undercarriage-integrated-chevron{font-size:16px!important;line-height:1!important;color:#94a3b8!important;transition:transform .18s ease!important}
+      .wip-undercarriage-integrated-accordion[open] .wip-undercarriage-integrated-chevron{transform:rotate(180deg)!important}
+      .wip-undercarriage-integrated-body{border-top:1px solid #fed7aa!important;background:#fff7ed!important;padding:0!important}
+      .dark .wip-undercarriage-integrated-body{background:rgba(154,52,18,.08)!important;border-color:rgba(251,146,60,.28)!important}
       .wip-undercarriage-active-filter{border:0!important;background:transparent!important;box-shadow:none!important}
       .dark .wip-undercarriage-active-filter{background:transparent!important}
       .wip-undercarriage-inline-content{display:block!important;margin:0!important;border-radius:0!important;padding:12px!important}
@@ -224,8 +260,7 @@
     installStyle();
     installColumnFilterToggle();
     removeCantonInProgress();
-    removeUndercarriagePlaceholder();
-    moveUndercarriageFilterIntoSlot();
+    integrateUndercarriageFilter();
     cleanupDuplicateStandaloneUndercarriage();
   }
 
