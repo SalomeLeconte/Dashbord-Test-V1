@@ -1,7 +1,9 @@
 (() => {
-  const PATCH_ID = 'wip-filter-placeholder-cleanup-toggle-2026-08-07-v2';
+  const PATCH_ID = 'wip-filter-placeholder-cleanup-toggle-2026-08-07-v3';
   if (window.__WIP_FILTER_PLACEHOLDER_CLEANUP_PATCH__ === PATCH_ID) return;
   window.__WIP_FILTER_PLACEHOLDER_CLEANUP_PATCH__ = PATCH_ID;
+
+  const FILTER_ID = 'wip-undercarriage-filter';
 
   const norm = (value) => String(value ?? '')
     .normalize('NFD')
@@ -47,29 +49,91 @@
     if (box) box.remove();
   }
 
-  function findUndercarriageSlot() {
-    const nodes = [...document.querySelectorAll('button, summary, h2, h3, h4, label, div, section, details')]
-      .filter((node) => node.id !== 'wip-undercarriage-filter' && !node.closest('#wip-undercarriage-filter'));
+  function findUndercarriageHeader() {
+    return [...document.querySelectorAll('button, summary, h2, h3, h4, label, div, section, details')]
+      .filter((node) => node.id !== FILTER_ID && !node.closest(`#${FILTER_ID}`))
+      .find((node) => {
+        const text = visibleText(node);
+        return text === '7. undercarriage'
+          || text.startsWith('7. undercarriage ')
+          || text.includes('7. undercarriage');
+      }) || null;
+  }
 
-    const header = nodes.find((node) => {
-      const text = visibleText(node);
-      return text === '7. undercarriage'
-        || text.startsWith('7. undercarriage ')
-        || text.includes('7. undercarriage');
-    });
-    if (!header) return null;
+  function isLikelyEmptySectionBody(element) {
+    if (!element || element.id === FILTER_ID || element.closest(`#${FILTER_ID}`)) return false;
+    const text = visibleText(element);
+    if (text.includes('train de roulement') || text.includes('undercarriage') || text.includes('cantons')) return false;
+    if (text.length > 220) return false;
+    const cls = String(element.className || '');
+    const rect = element.getBoundingClientRect?.();
+    const hasBoxLook = /rounded|border|bg-|p-|space|grid|overflow/i.test(cls);
+    return hasBoxLook || (rect && rect.height >= 18 && rect.height <= 260);
+  }
 
-    const details = header.closest('details');
-    if (details && details.id !== 'wip-undercarriage-filter') return details;
-
+  function closestStableRoot(header) {
     let current = header;
-    for (let i = 0; i < 9 && current?.parentElement; i += 1) {
+    let best = header.parentElement || header;
+    for (let i = 0; i < 8 && current?.parentElement; i += 1) {
       const parent = current.parentElement;
       const text = visibleText(parent);
-      if (text.includes('7. undercarriage') && text.length < 6000 && parent.id !== 'wip-undercarriage-filter') return parent;
+      if (text.includes('7. undercarriage') && text.length < 7000 && !parent.closest(`#${FILTER_ID}`)) best = parent;
       current = parent;
     }
-    return header.parentElement || header;
+    return best;
+  }
+
+  function nextSiblingBodyAfter(element) {
+    let sibling = element?.nextElementSibling || null;
+    let guard = 0;
+    while (sibling && guard < 8) {
+      if (isLikelyEmptySectionBody(sibling)) return sibling;
+      const text = visibleText(sibling);
+      if (text.includes('train de roulement') || text.includes('cantons - in progress')) break;
+      sibling = sibling.nextElementSibling;
+      guard += 1;
+    }
+    return null;
+  }
+
+  function findUndercarriageSlot() {
+    const header = findUndercarriageHeader();
+    if (!header) return null;
+
+    const nativeDetails = header.closest('details');
+    if (nativeDetails && nativeDetails.id !== FILTER_ID) return nativeDetails;
+
+    const anchors = [
+      header.closest('button'),
+      header.closest('summary'),
+      header,
+      header.parentElement,
+      header.parentElement?.parentElement,
+      header.parentElement?.parentElement?.parentElement
+    ].filter(Boolean);
+
+    for (const anchor of anchors) {
+      const body = nextSiblingBodyAfter(anchor);
+      if (body) return body;
+    }
+
+    const root = closestStableRoot(header);
+    const descendants = [...root.querySelectorAll('div, section, fieldset')]
+      .filter((node) => node !== root && isLikelyEmptySectionBody(node))
+      .filter((node) => header.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_FOLLOWING);
+    if (descendants.length) {
+      return descendants.sort((a, b) => {
+        const at = (a.textContent || '').length;
+        const bt = (b.textContent || '').length;
+        return at - bt;
+      })[0];
+    }
+
+    const fallback = document.createElement('div');
+    fallback.className = 'wip-undercarriage-created-slot';
+    const anchor = header.closest('button') || header;
+    anchor.insertAdjacentElement('afterend', fallback);
+    return fallback;
   }
 
   function openAndFlattenUndercarriageFilter(filter) {
@@ -81,20 +145,21 @@
   }
 
   function moveUndercarriageFilterIntoSlot() {
-    const filter = document.getElementById('wip-undercarriage-filter');
+    const filter = document.getElementById(FILTER_ID);
     if (!filter) return;
 
     removeUndercarriagePlaceholder();
     const slot = findUndercarriageSlot();
     openAndFlattenUndercarriageFilter(filter);
 
-    if (!slot) return;
-    if (!slot.contains(filter)) slot.appendChild(filter);
+    if (!slot || slot.contains(filter)) return;
+    slot.classList.add('wip-undercarriage-section-body-filled');
+    slot.appendChild(filter);
     filter.dataset.wipMovedIntoSection = 'true';
   }
 
   function cleanupDuplicateStandaloneUndercarriage() {
-    const filters = [...document.querySelectorAll('#wip-undercarriage-filter')];
+    const filters = [...document.querySelectorAll(`#${FILTER_ID}`)];
     if (filters.length <= 1) return;
     filters.slice(1).forEach((node) => node.remove());
   }
@@ -143,9 +208,12 @@
     style.id = 'wip-filter-placeholder-cleanup-style';
     style.textContent = `
       .wip-hidden-undercarriage-summary{display:none!important}
-      .wip-undercarriage-active-filter{border-color:#f59e0b!important;background:#fff!important}
-      .dark .wip-undercarriage-active-filter{background:rgba(15,23,42,.92)!important}
-      .wip-undercarriage-inline-content{display:block!important;margin-top:12px!important;border-radius:16px!important;border-width:1px!important;padding:12px!important}
+      .wip-undercarriage-section-body-filled{padding:0!important;border-color:#fed7aa!important;background:#fff7ed!important;overflow:hidden!important}
+      .dark .wip-undercarriage-section-body-filled{background:rgba(154,52,18,.08)!important;border-color:rgba(251,146,60,.28)!important}
+      .wip-undercarriage-created-slot{margin-top:10px;border:1px solid #fed7aa;border-radius:16px;background:#fff7ed;padding:0;overflow:hidden}
+      .wip-undercarriage-active-filter{border:0!important;background:transparent!important;box-shadow:none!important}
+      .dark .wip-undercarriage-active-filter{background:transparent!important}
+      .wip-undercarriage-inline-content{display:block!important;margin:0!important;border-radius:0!important;padding:12px!important}
       .wip-undercarriage-inline-content>div{margin-top:0!important}
       .wip-undercarriage-inline-content>summary{display:none!important}
     `;
