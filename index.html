@@ -21,13 +21,16 @@
     (()=>{
       const frame=document.getElementById('app-frame');
       const ribbon=document.getElementById('wip-corner-ribbon');
+      const ribbonStartedAt=Date.now();
+      const MAX_RIBBON_MS=30000;
       let frameReady=false;
       let ribbonTimer=null;
 
       function isDesktop(){return window.matchMedia('(min-width:1024px)').matches;}
+      function ribbonTimeAllowed(){return Date.now()-ribbonStartedAt<=MAX_RIBBON_MS;}
 
       function isPortfolioSelectionVisible(){
-        if(!isDesktop()||!frameReady)return false;
+        if(!isDesktop()||!frameReady||!ribbonTimeAllowed())return false;
         try{
           const doc=frame.contentDocument;
           const win=frame.contentWindow;
@@ -38,13 +41,18 @@
         }catch(error){return false;}
       }
 
-      function syncRibbon(){ribbon?.classList.toggle('is-hidden',!isPortfolioSelectionVisible());}
+      function syncRibbon(){
+        const show=isPortfolioSelectionVisible();
+        ribbon?.classList.toggle('is-hidden',!show);
+        if(!show&&Date.now()-ribbonStartedAt>MAX_RIBBON_MS){clearInterval(ribbonTimer);ribbonTimer=null;}
+      }
 
       frame.addEventListener('load',()=>{
         frameReady=true;
         syncRibbon();
         clearInterval(ribbonTimer);
         ribbonTimer=setInterval(syncRibbon,300);
+        window.setTimeout(syncRibbon,MAX_RIBBON_MS+100);
       });
       window.addEventListener('resize',syncRibbon);
 
