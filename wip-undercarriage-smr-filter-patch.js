@@ -162,12 +162,12 @@
     document.querySelectorAll('.wip-uc-badge').forEach((badge) => {
       let row = null;
       const explicit = Number(badge.dataset.rowIndex || NaN);
-      if (Number.isFinite(explicit)) row = (window.globalData || []).find((item) => Number(item?._rowIndex) === explicit) || null;
+      if (Number.isFinite(explicit)) row = window.__wipRowByIndex?.(explicit) || null;
       if (!row) {
         const button = badge.parentElement?.querySelector?.('button[onclick^="openDetails("]')
           || badge.closest?.('tr, .mobile-card, div')?.querySelector?.('button[onclick^="openDetails("]');
         const match = String(button?.getAttribute('onclick') || '').match(/openDetails\((\d+)\)/);
-        row = match ? (window.globalData || []).find((item) => Number(item?._rowIndex) === Number(match[1])) : null;
+        row = match ? window.__wipRowByIndex?.(Number(match[1])) || null : null;
       }
       const list = row ? machines(row) : [];
       if (!row || !list.length) {
@@ -210,6 +210,7 @@
   }
 
   function wrapRunFilter() {
+    if (window.__WIP_UNDERCARRIAGE_SMR_RUN_FILTER_WRAPPED__) return;
     const current = window.runFilter;
     if (typeof current !== 'function' || current.__wipUcSmrSimplified) return;
     const wrapped = function runFilterWithSimplifiedUndercarriage(...args) {
@@ -221,9 +222,11 @@
     wrapped.__wipUcSmrSimplified = true;
     window.runFilter = wrapped;
     try { runFilter = wrapped; } catch (error) {}
+    window.__WIP_UNDERCARRIAGE_SMR_RUN_FILTER_WRAPPED__ = true;
   }
 
   function wrapTop200() {
+    if (window.__WIP_UNDERCARRIAGE_SMR_TOP200_WRAPPED__) return;
     const current = window.getTop200Data;
     if (typeof current !== 'function' || current.__wipUcSmrSimplified) return;
     const wrapped = function getTop200DataWithSimplifiedUndercarriage(...args) {
@@ -233,6 +236,7 @@
     wrapped.__wipUcSmrSimplified = true;
     window.getTop200Data = wrapped;
     try { getTop200Data = wrapped; } catch (error) {}
+    window.__WIP_UNDERCARRIAGE_SMR_TOP200_WRAPPED__ = true;
   }
 
   function install() {
@@ -245,7 +249,7 @@
   }
 
   install();
-  document.addEventListener('DOMContentLoaded', () => [80, 250, 700, 1400, 2600, 5200, 9000, 14000].forEach((delay) => setTimeout(install, delay)));
-  [120, 450, 1000, 2200, 4200, 7600, 12000, 18000].forEach((delay) => setTimeout(install, delay));
-  try { new MutationObserver(() => setTimeout(install, 0)).observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('dashboard:data-ready', () => window.setTimeout(install, 0));
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  setTimeout(install, 2000);
 })();

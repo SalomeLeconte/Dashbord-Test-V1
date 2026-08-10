@@ -116,6 +116,7 @@
   function resetAll() {
     Object.assign(state.data, { clientText: '', clientKind: '', locText: '', caSort: DEFAULT_DATA_SORT, caMin: 0, nbFilter: '', nbSort: '', priority: '' });
     Object.assign(state.top, { clientText: '', clientKind: '', locText: '', caSort: '', caMin: 0, nbFilter: '', nbSort: '', visitsFilter: '', visitsSort: '', priority: '' });
+    window.__wipGridTransformVersion = Number(window.__wipGridTransformVersion || 0) + 1;
   }
   function active(table, key) {
     const s = state[table];
@@ -141,6 +142,7 @@
   }
 
   function refresh() {
+    window.__wipGridTransformVersion = Number(window.__wipGridTransformVersion || 0) + 1;
     try { if (typeof renderTop200 === 'function') renderTop200(); } catch(e) {}
     try { if (typeof renderGrid === 'function') renderGrid(currentFilteredData || globalData || []); } catch(e) {}
     updateBadges();
@@ -225,7 +227,11 @@
     try { if (name === 'renderGrid') renderGrid = next; if (name === 'getTop200Data') getTop200Data = next; if (name === 'updateDataTabLabel') updateDataTabLabel = next; if (name === 'selectSector') selectSector = next; if (name === 'resetSectorFilter') resetSectorFilter = next; if (name === 'resetFilterControlsOnly') resetFilterControlsOnly = next; } catch(e) {}
   }
   function installWraps() {
-    wrap('renderGrid', (old, args) => old.call(this, apply(args[0], 'data'), ...args.slice(1)));
+    if (window.renderGrid?.__wipPerformanceGridLimit) {
+      window.__wipRegisterGridDataTransform?.('excel-column-filters', rows => apply(rows, 'data'));
+    } else {
+      wrap('renderGrid', (old, args) => old.call(this, apply(args[0], 'data'), ...args.slice(1)));
+    }
     wrap('getTop200Data', (old, args) => apply(old.apply(this, args), 'top'));
     wrap('updateDataTabLabel', () => setCsvDateLabel());
     wrap('selectSector', (old, args) => { resetAll(); const r = old.apply(this, args); setCsvDateLabel(); setTimeout(() => { installHeaders(); updateBadges(); }, 80); return r; });

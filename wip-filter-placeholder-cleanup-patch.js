@@ -265,11 +265,7 @@
   }
 
   install();
-  document.addEventListener('DOMContentLoaded', () => {
-    [80, 250, 600, 1200, 2400, 4200, 7000, 10500, 14000, 18000].forEach((delay) => window.setTimeout(install, delay));
-  });
-  [120, 450, 900, 1800, 3200, 5600, 8600, 12500, 16500].forEach((delay) => window.setTimeout(install, delay));
-
-  const observer = new MutationObserver(() => window.setTimeout(install, 0));
-  try { observer.observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', () => window.setTimeout(install, 0));
+  window.setTimeout(install, 2000);
 })();

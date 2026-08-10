@@ -21,16 +21,34 @@
 
   exposeRuntimeState('globalData', () => globalData, value => { globalData = value; });
   exposeRuntimeState('currentFilteredData', () => currentFilteredData, value => { currentFilteredData = value; });
+  window.__wipRowByIndex = index => {
+    const numericIndex = Number(index);
+    if (!Number.isInteger(numericIndex) || numericIndex < 0) return null;
+    const rows = Array.isArray(window.globalData) ? window.globalData : [];
+    const direct = rows[numericIndex];
+    if (Number(direct?._rowIndex) === numericIndex) return direct;
+    return rows.find(row => Number(row?._rowIndex) === numericIndex) || null;
+  };
+  const gridDataTransforms = window.__wipGridDataTransforms instanceof Map
+    ? window.__wipGridDataTransforms
+    : new Map();
+  window.__wipGridDataTransforms = gridDataTransforms;
+  window.__wipRegisterGridDataTransform = (key, transform) => {
+    if (!key || typeof transform !== 'function') return;
+    gridDataTransforms.set(String(key), transform);
+  };
 
   const originalLoadCSVData = window.loadCSVData;
   const originalSelectSector = window.selectSector;
   const originalBypassSelection = window.bypassSelection;
-  const originalRenderGrid = window.renderGrid;
+  let activeRenderGrid = window.renderGrid;
 
   let dataLoadStarted = false;
   let dataLoadPromise = null;
   let visibleRowLimit = ROW_BATCH_SIZE;
+  let lastGridSource = null;
   let lastGridData = null;
+  let lastGridTransformVersion = -1;
 
   function hasLoadedData() {
     try { return Array.isArray(globalData) && globalData.length > 0; }
@@ -77,7 +95,7 @@
       tableView.appendChild(wrapper);
       wrapper.querySelector('#grid-load-more')?.addEventListener('click', () => {
         visibleRowLimit += ROW_BATCH_SIZE;
-        if (Array.isArray(lastGridData)) window.renderGrid(lastGridData);
+        if (Array.isArray(lastGridSource)) window.renderGrid(lastGridSource);
       });
     }
 
@@ -118,35 +136,76 @@
     if (!dataLoadStarted) startDataLoad();
   });
 
+  function optimizedRenderGrid(data) {
+    const sourceData = Array.isArray(data) ? data : [];
+    let safeData = sourceData;
+    try {
+      gridDataTransforms.forEach(transform => {
+        const transformed = transform(safeData);
+        if (Array.isArray(transformed)) safeData = transformed;
+      });
+      if (!gridDataTransforms.size && typeof window.__wipTransformGridData === 'function') {
+        const transformed = window.__wipTransformGridData(safeData);
+        if (Array.isArray(transformed)) safeData = transformed;
+      }
+    } catch (error) {
+      console.warn('Préparation du tableau impossible.', error);
+    }
+    const transformVersion = Number(window.__wipGridTransformVersion || 0);
+    if (sourceData !== lastGridSource || transformVersion !== lastGridTransformVersion) {
+      visibleRowLimit = ROW_BATCH_SIZE;
+      lastGridSource = sourceData;
+      lastGridTransformVersion = transformVersion;
+    }
+    lastGridData = safeData;
+
+    const visibleData = safeData.slice(0, visibleRowLimit);
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+
+    if (isMobile) {
+      window.renderMobileGridCards?.(visibleData);
+      const tbody = document.getElementById('grid-tbody');
+      if (tbody) tbody.innerHTML = '';
+    } else if (typeof activeRenderGrid === 'function') {
+      const originalMobileRenderer = window.renderMobileGridCards;
+      window.renderMobileGridCards = () => {};
+      try { activeRenderGrid(visibleData); }
+      finally { window.renderMobileGridCards = originalMobileRenderer; }
+    }
+
+    updateLoadMoreControl(safeData.length);
+    document.dispatchEvent(new CustomEvent('dashboard:grid-rendered', {
+      detail: { visibleRows: visibleData.length, totalRows: safeData.length }
+    }));
+  }
+  optimizedRenderGrid.__wipPerformanceGridLimit = true;
+
+  function installRenderGridInterceptor() {
+    if (typeof activeRenderGrid !== 'function') return;
+    try {
+      const descriptor = Object.getOwnPropertyDescriptor(window, 'renderGrid');
+      if (descriptor?.get?.__wipPerformanceGridInterceptor) return;
+      const getter = () => optimizedRenderGrid;
+      getter.__wipPerformanceGridInterceptor = true;
+      Object.defineProperty(window, 'renderGrid', {
+        configurable: true,
+        enumerable: descriptor?.enumerable ?? true,
+        get: getter,
+        set(value) {
+          if (typeof value === 'function' && value !== optimizedRenderGrid) activeRenderGrid = value;
+        }
+      });
+    } catch (error) {
+      console.warn('Limiteur de rendu du tableau indisponible.', error);
+      window.renderGrid = optimizedRenderGrid;
+    }
+  }
+
+  installRenderGridInterceptor();
+
   // Le parsing est réalisé dans un Worker : le téléchargement peut donc démarrer
   // immédiatement sans bloquer la sélection du portefeuille ni l'interface.
   startDataLoad();
-
-  if (typeof originalRenderGrid === 'function') {
-    window.renderGrid = function optimizedRenderGrid(data) {
-      const safeData = Array.isArray(data) ? data : [];
-      if (safeData !== lastGridData) {
-        visibleRowLimit = ROW_BATCH_SIZE;
-        lastGridData = safeData;
-      }
-
-      const visibleData = safeData.slice(0, visibleRowLimit);
-      const isMobile = window.matchMedia('(max-width: 767px)').matches;
-
-      if (isMobile) {
-        window.renderMobileGridCards?.(visibleData);
-        const tbody = document.getElementById('grid-tbody');
-        if (tbody) tbody.innerHTML = '';
-      } else {
-        const originalMobileRenderer = window.renderMobileGridCards;
-        window.renderMobileGridCards = () => {};
-        try { originalRenderGrid(visibleData); }
-        finally { window.renderMobileGridCards = originalMobileRenderer; }
-      }
-
-      updateLoadMoreControl(safeData.length);
-    };
-  }
 })();
 
 (() => {

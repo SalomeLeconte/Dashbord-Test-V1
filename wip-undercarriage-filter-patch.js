@@ -188,7 +188,7 @@
     document.querySelectorAll('button[onclick^="openDetails("]').forEach(button => {
       const m = String(button.getAttribute('onclick') || '').match(/openDetails\((\d+)\)/);
       const rowIndex = m ? Number(m[1]) : NaN;
-      const row = Number.isFinite(rowIndex) ? (globalData || []).find(item => item._rowIndex === rowIndex) : null;
+      const row = Number.isFinite(rowIndex) ? window.__wipRowByIndex?.(rowIndex) || null : null;
       if (!row || !machines(row).length || button.parentElement?.querySelector('.wip-uc-badge')) return;
       const badge = document.createElement('span');
       badge.className = 'wip-uc-badge';
@@ -231,7 +231,7 @@
       openDetails = function(rowIndex, ...args) {
         const result = original.call(this, rowIndex, ...args);
         try {
-          const row = (globalData || []).find(item => item._rowIndex === rowIndex);
+          const row = window.__wipRowByIndex?.(rowIndex) || null;
           const body = document.querySelector('#details-modal .p-5.overflow-y-auto');
           if (row && body && !document.getElementById('wip-undercarriage-details')) {
             const html = details(row);
@@ -247,9 +247,10 @@
     installStyle();
     installUi();
     patchFunctions();
-    try { (globalData || []).forEach(machines); } catch (e) {}
     window.setTimeout(addBadges, 150);
   }
-  document.addEventListener('DOMContentLoaded', () => [100, 400, 1000, 2500].forEach(delay => setTimeout(install, delay)));
-  [100, 400, 1000, 2500, 6000].forEach(delay => setTimeout(install, delay));
+  install();
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', install, { once: true });
+  window.setTimeout(install, 2000);
 })();

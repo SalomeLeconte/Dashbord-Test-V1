@@ -26,16 +26,34 @@
 
   exposeRuntimeState('globalData', () => globalData, value => { globalData = value; });
   exposeRuntimeState('currentFilteredData', () => currentFilteredData, value => { currentFilteredData = value; });
+  window.__wipRowByIndex = index => {
+    const numericIndex = Number(index);
+    if (!Number.isInteger(numericIndex) || numericIndex < 0) return null;
+    const rows = Array.isArray(window.globalData) ? window.globalData : [];
+    const direct = rows[numericIndex];
+    if (Number(direct?._rowIndex) === numericIndex) return direct;
+    return rows.find(row => Number(row?._rowIndex) === numericIndex) || null;
+  };
+  const gridDataTransforms = window.__wipGridDataTransforms instanceof Map
+    ? window.__wipGridDataTransforms
+    : new Map();
+  window.__wipGridDataTransforms = gridDataTransforms;
+  window.__wipRegisterGridDataTransform = (key, transform) => {
+    if (!key || typeof transform !== 'function') return;
+    gridDataTransforms.set(String(key), transform);
+  };
 
   const originalLoadCSVData = window.loadCSVData;
   const originalSelectSector = window.selectSector;
   const originalBypassSelection = window.bypassSelection;
-  const originalRenderGrid = window.renderGrid;
+  let activeRenderGrid = window.renderGrid;
 
   let dataLoadStarted = false;
   let dataLoadPromise = null;
   let visibleRowLimit = ROW_BATCH_SIZE;
+  let lastGridSource = null;
   let lastGridData = null;
+  let lastGridTransformVersion = -1;
 
   function hasLoadedData() {
     try { return Array.isArray(globalData) && globalData.length > 0; }
@@ -82,7 +100,7 @@
       tableView.appendChild(wrapper);
       wrapper.querySelector('#grid-load-more')?.addEventListener('click', () => {
         visibleRowLimit += ROW_BATCH_SIZE;
-        if (Array.isArray(lastGridData)) window.renderGrid(lastGridData);
+        if (Array.isArray(lastGridSource)) window.renderGrid(lastGridSource);
       });
     }
 
@@ -123,35 +141,76 @@
     if (!dataLoadStarted) startDataLoad();
   });
 
+  function optimizedRenderGrid(data) {
+    const sourceData = Array.isArray(data) ? data : [];
+    let safeData = sourceData;
+    try {
+      gridDataTransforms.forEach(transform => {
+        const transformed = transform(safeData);
+        if (Array.isArray(transformed)) safeData = transformed;
+      });
+      if (!gridDataTransforms.size && typeof window.__wipTransformGridData === 'function') {
+        const transformed = window.__wipTransformGridData(safeData);
+        if (Array.isArray(transformed)) safeData = transformed;
+      }
+    } catch (error) {
+      console.warn('Préparation du tableau impossible.', error);
+    }
+    const transformVersion = Number(window.__wipGridTransformVersion || 0);
+    if (sourceData !== lastGridSource || transformVersion !== lastGridTransformVersion) {
+      visibleRowLimit = ROW_BATCH_SIZE;
+      lastGridSource = sourceData;
+      lastGridTransformVersion = transformVersion;
+    }
+    lastGridData = safeData;
+
+    const visibleData = safeData.slice(0, visibleRowLimit);
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+
+    if (isMobile) {
+      window.renderMobileGridCards?.(visibleData);
+      const tbody = document.getElementById('grid-tbody');
+      if (tbody) tbody.innerHTML = '';
+    } else if (typeof activeRenderGrid === 'function') {
+      const originalMobileRenderer = window.renderMobileGridCards;
+      window.renderMobileGridCards = () => {};
+      try { activeRenderGrid(visibleData); }
+      finally { window.renderMobileGridCards = originalMobileRenderer; }
+    }
+
+    updateLoadMoreControl(safeData.length);
+    document.dispatchEvent(new CustomEvent('dashboard:grid-rendered', {
+      detail: { visibleRows: visibleData.length, totalRows: safeData.length }
+    }));
+  }
+  optimizedRenderGrid.__wipPerformanceGridLimit = true;
+
+  function installRenderGridInterceptor() {
+    if (typeof activeRenderGrid !== 'function') return;
+    try {
+      const descriptor = Object.getOwnPropertyDescriptor(window, 'renderGrid');
+      if (descriptor?.get?.__wipPerformanceGridInterceptor) return;
+      const getter = () => optimizedRenderGrid;
+      getter.__wipPerformanceGridInterceptor = true;
+      Object.defineProperty(window, 'renderGrid', {
+        configurable: true,
+        enumerable: descriptor?.enumerable ?? true,
+        get: getter,
+        set(value) {
+          if (typeof value === 'function' && value !== optimizedRenderGrid) activeRenderGrid = value;
+        }
+      });
+    } catch (error) {
+      console.warn('Limiteur de rendu du tableau indisponible.', error);
+      window.renderGrid = optimizedRenderGrid;
+    }
+  }
+
+  installRenderGridInterceptor();
+
   // Le parsing est réalisé dans un Worker : le téléchargement peut donc démarrer
   // immédiatement sans bloquer la sélection du portefeuille ni l'interface.
   startDataLoad();
-
-  if (typeof originalRenderGrid === 'function') {
-    window.renderGrid = function optimizedRenderGrid(data) {
-      const safeData = Array.isArray(data) ? data : [];
-      if (safeData !== lastGridData) {
-        visibleRowLimit = ROW_BATCH_SIZE;
-        lastGridData = safeData;
-      }
-
-      const visibleData = safeData.slice(0, visibleRowLimit);
-      const isMobile = window.matchMedia('(max-width: 767px)').matches;
-
-      if (isMobile) {
-        window.renderMobileGridCards?.(visibleData);
-        const tbody = document.getElementById('grid-tbody');
-        if (tbody) tbody.innerHTML = '';
-      } else {
-        const originalMobileRenderer = window.renderMobileGridCards;
-        window.renderMobileGridCards = () => {};
-        try { originalRenderGrid(visibleData); }
-        finally { window.renderMobileGridCards = originalMobileRenderer; }
-      }
-
-      updateLoadMoreControl(safeData.length);
-    };
-  }
 })();
 
 (() => {
@@ -3750,6 +3809,7 @@
   function resetAll() {
     Object.assign(state.data, { clientText: '', clientKind: '', locText: '', caSort: DEFAULT_DATA_SORT, caMin: 0, nbFilter: '', nbSort: '', priority: '' });
     Object.assign(state.top, { clientText: '', clientKind: '', locText: '', caSort: '', caMin: 0, nbFilter: '', nbSort: '', visitsFilter: '', visitsSort: '', priority: '' });
+    window.__wipGridTransformVersion = Number(window.__wipGridTransformVersion || 0) + 1;
   }
   function active(table, key) {
     const s = state[table];
@@ -3775,6 +3835,7 @@
   }
 
   function refresh() {
+    window.__wipGridTransformVersion = Number(window.__wipGridTransformVersion || 0) + 1;
     try { if (typeof renderTop200 === 'function') renderTop200(); } catch(e) {}
     try { if (typeof renderGrid === 'function') renderGrid(currentFilteredData || globalData || []); } catch(e) {}
     updateBadges();
@@ -3859,7 +3920,11 @@
     try { if (name === 'renderGrid') renderGrid = next; if (name === 'getTop200Data') getTop200Data = next; if (name === 'updateDataTabLabel') updateDataTabLabel = next; if (name === 'selectSector') selectSector = next; if (name === 'resetSectorFilter') resetSectorFilter = next; if (name === 'resetFilterControlsOnly') resetFilterControlsOnly = next; } catch(e) {}
   }
   function installWraps() {
-    wrap('renderGrid', (old, args) => old.call(this, apply(args[0], 'data'), ...args.slice(1)));
+    if (window.renderGrid?.__wipPerformanceGridLimit) {
+      window.__wipRegisterGridDataTransform?.('excel-column-filters', rows => apply(rows, 'data'));
+    } else {
+      wrap('renderGrid', (old, args) => old.call(this, apply(args[0], 'data'), ...args.slice(1)));
+    }
     wrap('getTop200Data', (old, args) => apply(old.apply(this, args), 'top'));
     wrap('updateDataTabLabel', () => setCsvDateLabel());
     wrap('selectSector', (old, args) => { resetAll(); const r = old.apply(this, args); setCsvDateLabel(); setTimeout(() => { installHeaders(); updateBadges(); }, 80); return r; });
@@ -4069,7 +4134,7 @@
     document.querySelectorAll('button[onclick^="openDetails("]').forEach(button => {
       const m = String(button.getAttribute('onclick') || '').match(/openDetails\((\d+)\)/);
       const rowIndex = m ? Number(m[1]) : NaN;
-      const row = Number.isFinite(rowIndex) ? (globalData || []).find(item => item._rowIndex === rowIndex) : null;
+      const row = Number.isFinite(rowIndex) ? window.__wipRowByIndex?.(rowIndex) || null : null;
       if (!row || !machines(row).length || button.parentElement?.querySelector('.wip-uc-badge')) return;
       const badge = document.createElement('span');
       badge.className = 'wip-uc-badge';
@@ -4112,7 +4177,7 @@
       openDetails = function(rowIndex, ...args) {
         const result = original.call(this, rowIndex, ...args);
         try {
-          const row = (globalData || []).find(item => item._rowIndex === rowIndex);
+          const row = window.__wipRowByIndex?.(rowIndex) || null;
           const body = document.querySelector('#details-modal .p-5.overflow-y-auto');
           if (row && body && !document.getElementById('wip-undercarriage-details')) {
             const html = details(row);
@@ -4128,11 +4193,12 @@
     installStyle();
     installUi();
     patchFunctions();
-    try { (globalData || []).forEach(machines); } catch (e) {}
     window.setTimeout(addBadges, 150);
   }
-  document.addEventListener('DOMContentLoaded', () => [100, 400, 1000, 2500].forEach(delay => setTimeout(install, delay)));
-  [100, 400, 1000, 2500, 6000].forEach(delay => setTimeout(install, delay));
+  install();
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', install, { once: true });
+  window.setTimeout(install, 2000);
 })();
 ;
 
@@ -4798,13 +4864,9 @@
   }
 
   install();
-  document.addEventListener('DOMContentLoaded', () => {
-    [80, 250, 600, 1200, 2400, 4200, 7000, 10500, 14000, 18000].forEach((delay) => window.setTimeout(install, delay));
-  });
-  [120, 450, 900, 1800, 3200, 5600, 8600, 12500, 16500].forEach((delay) => window.setTimeout(install, delay));
-
-  const observer = new MutationObserver(() => window.setTimeout(install, 0));
-  try { observer.observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', () => window.setTimeout(install, 0));
+  window.setTimeout(install, 2000);
 })();
 ;
 
@@ -4931,8 +4993,10 @@
 
   function dedupeCurrentFilteredData() {
     try {
-      if (Array.isArray(currentFilteredData)) currentFilteredData = dedupeRows(currentFilteredData);
-      if (Array.isArray(window.currentFilteredData)) window.currentFilteredData = dedupeRows(window.currentFilteredData);
+      if (Array.isArray(currentFilteredData)) {
+        currentFilteredData = dedupeRows(currentFilteredData);
+        window.currentFilteredData = currentFilteredData;
+      }
     } catch (error) {}
   }
 
@@ -4984,16 +5048,20 @@
   function install() {
     wrapRunFilter();
     wrapRenderTop200();
-    ['renderGrid', 'renderMobileGridCards', 'renderMap', 'renderKnownMarkers'].forEach(wrapArrayRenderer);
+    if (window.renderGrid?.__wipPerformanceGridLimit) {
+      window.__wipRegisterGridDataTransform?.('siret-dedupe', dedupeRows);
+    } else {
+      wrapArrayRenderer('renderGrid');
+    }
+    ['renderMobileGridCards', 'renderMap', 'renderKnownMarkers'].forEach(wrapArrayRenderer);
     ['calculateRouteFromVisiblePoints', 'prepareRoutePointsForChoice'].forEach(wrapRouteFunction);
     dedupeCurrentFilteredData();
   }
 
   install();
-  document.addEventListener('DOMContentLoaded', () => {
-    [100, 400, 900, 1600, 2600, 4200, 6800, 9800, 13200, 17000].forEach((delay) => window.setTimeout(install, delay));
-  });
-  [250, 700, 1300, 2200, 3600, 5600, 8200, 11600, 15400].forEach((delay) => window.setTimeout(install, delay));
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', install, { once: true });
+  window.setTimeout(install, 2000);
 })();
 ;
 
@@ -5114,7 +5182,7 @@
 
   function findRowFromBadge(badge) {
     const explicit = Number(badge?.dataset?.rowIndex || NaN);
-    if (Number.isFinite(explicit)) return (globalData || []).find((row) => Number(row?._rowIndex) === explicit) || null;
+    if (Number.isFinite(explicit)) return window.__wipRowByIndex?.(explicit) || null;
 
     const detailButton = badge?.parentElement?.querySelector?.('button[onclick^="openDetails("]')
       || badge?.closest?.('tr, .mobile-card, div')?.querySelector?.('button[onclick^="openDetails("]');
@@ -5122,7 +5190,7 @@
     const rowIndex = match ? Number(match[1]) : NaN;
     if (!Number.isFinite(rowIndex)) return null;
     badge.dataset.rowIndex = String(rowIndex);
-    return (globalData || []).find((row) => Number(row?._rowIndex) === rowIndex) || null;
+    return window.__wipRowByIndex?.(rowIndex) || null;
   }
 
   function clientTitle(row) {
@@ -5276,9 +5344,9 @@
   }, true);
 
   install();
-  document.addEventListener('DOMContentLoaded', () => [150, 500, 1200, 2500, 5000, 9000].forEach((delay) => setTimeout(install, delay)));
-  [150, 500, 1200, 2500, 5000, 9000, 14000].forEach((delay) => setTimeout(install, delay));
-  try { new MutationObserver(() => setTimeout(install, 0)).observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', () => setTimeout(install, 0));
+  setTimeout(install, 2000);
 })();
 ;
 
@@ -5601,7 +5669,7 @@
 
   function rowFromBadge(badge) {
     const explicit = Number(badge?.dataset?.rowIndex || NaN);
-    if (Number.isFinite(explicit)) return (globalData || []).find((row) => Number(row?._rowIndex) === explicit) || null;
+    if (Number.isFinite(explicit)) return window.__wipRowByIndex?.(explicit) || null;
 
     const detailButton = badge?.parentElement?.querySelector?.('button[onclick^="openDetails("]')
       || badge?.closest?.('tr, .mobile-card, div')?.querySelector?.('button[onclick^="openDetails("]');
@@ -5609,7 +5677,7 @@
     const rowIndex = match ? Number(match[1]) : NaN;
     if (!Number.isFinite(rowIndex)) return null;
     badge.dataset.rowIndex = String(rowIndex);
-    return (globalData || []).find((row) => Number(row?._rowIndex) === rowIndex) || null;
+    return window.__wipRowByIndex?.(rowIndex) || null;
   }
 
   function titleFor(row) {
@@ -5772,9 +5840,9 @@
   }, true);
 
   install();
-  document.addEventListener('DOMContentLoaded', () => [150, 500, 1200, 2500, 5000, 9000].forEach((delay) => setTimeout(install, delay)));
-  [150, 500, 1200, 2500, 5000, 9000, 14000].forEach((delay) => setTimeout(install, delay));
-  try { new MutationObserver(() => setTimeout(install, 0)).observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', () => setTimeout(install, 0));
+  setTimeout(install, 2000);
 })();
 ;
 
@@ -5804,20 +5872,16 @@
   }
 
   function removeObsoleteCantonNotes() {
-    document.querySelectorAll('p,small,span,div').forEach((element) => {
+    const root = document.getElementById('filters-panel') || document.querySelector('aside') || document;
+    root.querySelectorAll('p,small,span,div').forEach((element) => {
       if (isObsoleteCantonNote(element)) element.remove();
     });
   }
 
   removeObsoleteCantonNotes();
-  document.addEventListener('DOMContentLoaded', () => {
-    [80, 250, 600, 1200, 2400, 5000, 9000].forEach((delay) => window.setTimeout(removeObsoleteCantonNotes, delay));
-  });
-  [120, 450, 900, 1800, 3600, 7200, 12000].forEach((delay) => window.setTimeout(removeObsoleteCantonNotes, delay));
-  try {
-    new MutationObserver(() => window.setTimeout(removeObsoleteCantonNotes, 0))
-      .observe(document.documentElement, { childList: true, subtree: true });
-  } catch (error) {}
+  document.addEventListener('dashboard:data-ready', () => window.setTimeout(removeObsoleteCantonNotes, 0));
+  document.addEventListener('DOMContentLoaded', removeObsoleteCantonNotes, { once: true });
+  window.setTimeout(removeObsoleteCantonNotes, 2000);
 })();
 ;
 
@@ -5962,6 +6026,9 @@
 
   function buildUndercarriageMachines(row) {
     if (!row) return [];
+    if (row._wipUndercarriageModelRulesApplied && Array.isArray(row._undercarriageMachines)) {
+      return row._undercarriageMachines;
+    }
     const maps = {
       smr: entryMap(get(row, COLS.smr)),
       bull: entryMap(get(row, COLS.bull)),
@@ -6127,21 +6194,19 @@
 
   function runFullRefresh() {
     syncState();
-    refreshRows();
     try { if (typeof runFilter === 'function') runFilter(); }
     catch (error) { console.warn('Undercarriage refresh failed', error); }
-    setTimeout(() => { refreshRows(); updateBadges(); }, 120);
+    setTimeout(updateBadges, 120);
   }
 
   function patchRunFilter() {
+    if (window.__WIP_FINAL_UNDERCARRIAGE_RUN_FILTER_WRAPPED__) return;
     const current = window.runFilter;
     if (typeof current !== 'function' || current.__wipFinalUndercarriageRules) return;
     const wrapped = function runFilterWithFinalUndercarriageRules(...args) {
       syncState();
-      refreshRows();
       const result = current.apply(this, args);
       try {
-        refreshRows();
         if (finalActive() && Array.isArray(window.currentFilteredData)) {
           window.currentFilteredData = applyFinal(window.currentFilteredData);
           try { currentFilteredData = window.currentFilteredData; } catch (error) {}
@@ -6155,20 +6220,22 @@
     wrapped.__wipFinalUndercarriageRules = true;
     window.runFilter = wrapped;
     try { runFilter = wrapped; } catch (error) {}
+    window.__WIP_FINAL_UNDERCARRIAGE_RUN_FILTER_WRAPPED__ = true;
   }
 
   function patchTop200() {
+    if (window.__WIP_FINAL_UNDERCARRIAGE_TOP200_WRAPPED__) return;
     const current = window.getTop200Data;
     if (typeof current !== 'function' || current.__wipFinalUndercarriageTop200) return;
     const wrapped = function getTop200DataWithFinalUndercarriageRules(...args) {
       const rows = current.apply(this, args);
       syncState();
-      refreshRows();
       return finalActive() ? applyFinal(rows) : rows;
     };
     wrapped.__wipFinalUndercarriageTop200 = true;
     window.getTop200Data = wrapped;
     try { getTop200Data = wrapped; } catch (error) {}
+    window.__WIP_FINAL_UNDERCARRIAGE_TOP200_WRAPPED__ = true;
   }
 
   function updateBadges() {
@@ -6176,7 +6243,7 @@
     buttons.forEach((button) => {
       const match = String(button.getAttribute('onclick') || '').match(/openDetails\((\d+)\)/);
       const rowIndex = match ? Number(match[1]) : NaN;
-      const row = Number.isFinite(rowIndex) ? (window.globalData || []).find((item) => Number(item?._rowIndex) === rowIndex) : null;
+      const row = Number.isFinite(rowIndex) ? window.__wipRowByIndex?.(rowIndex) || null : null;
       const list = row ? buildUndercarriageMachines(row) : [];
       const existing = button.parentElement?.querySelector('.wip-uc-badge');
       if (!row || !list.length) {
@@ -6232,16 +6299,15 @@
     installStyles();
     patchRunFilter();
     patchTop200();
-    refreshRows();
     updateFilterUi();
     installEvents();
     updateBadges();
   }
 
   install();
-  document.addEventListener('DOMContentLoaded', () => [100, 400, 900, 1800, 3500, 6500, 10000, 15000].forEach((delay) => setTimeout(install, delay)));
-  [150, 550, 1200, 2400, 4800, 8000, 12000, 18000].forEach((delay) => setTimeout(install, delay));
-  try { new MutationObserver(() => setTimeout(install, 0)).observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('dashboard:data-ready', () => window.setTimeout(install, 0));
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  setTimeout(install, 2000);
 })();
 ;
 
@@ -6410,12 +6476,12 @@
     document.querySelectorAll('.wip-uc-badge').forEach((badge) => {
       let row = null;
       const explicit = Number(badge.dataset.rowIndex || NaN);
-      if (Number.isFinite(explicit)) row = (window.globalData || []).find((item) => Number(item?._rowIndex) === explicit) || null;
+      if (Number.isFinite(explicit)) row = window.__wipRowByIndex?.(explicit) || null;
       if (!row) {
         const button = badge.parentElement?.querySelector?.('button[onclick^="openDetails("]')
           || badge.closest?.('tr, .mobile-card, div')?.querySelector?.('button[onclick^="openDetails("]');
         const match = String(button?.getAttribute('onclick') || '').match(/openDetails\((\d+)\)/);
-        row = match ? (window.globalData || []).find((item) => Number(item?._rowIndex) === Number(match[1])) : null;
+        row = match ? window.__wipRowByIndex?.(Number(match[1])) || null : null;
       }
       const list = row ? machines(row) : [];
       if (!row || !list.length) {
@@ -6458,6 +6524,7 @@
   }
 
   function wrapRunFilter() {
+    if (window.__WIP_UNDERCARRIAGE_SMR_RUN_FILTER_WRAPPED__) return;
     const current = window.runFilter;
     if (typeof current !== 'function' || current.__wipUcSmrSimplified) return;
     const wrapped = function runFilterWithSimplifiedUndercarriage(...args) {
@@ -6469,9 +6536,11 @@
     wrapped.__wipUcSmrSimplified = true;
     window.runFilter = wrapped;
     try { runFilter = wrapped; } catch (error) {}
+    window.__WIP_UNDERCARRIAGE_SMR_RUN_FILTER_WRAPPED__ = true;
   }
 
   function wrapTop200() {
+    if (window.__WIP_UNDERCARRIAGE_SMR_TOP200_WRAPPED__) return;
     const current = window.getTop200Data;
     if (typeof current !== 'function' || current.__wipUcSmrSimplified) return;
     const wrapped = function getTop200DataWithSimplifiedUndercarriage(...args) {
@@ -6481,6 +6550,7 @@
     wrapped.__wipUcSmrSimplified = true;
     window.getTop200Data = wrapped;
     try { getTop200Data = wrapped; } catch (error) {}
+    window.__WIP_UNDERCARRIAGE_SMR_TOP200_WRAPPED__ = true;
   }
 
   function install() {
@@ -6493,9 +6563,9 @@
   }
 
   install();
-  document.addEventListener('DOMContentLoaded', () => [80, 250, 700, 1400, 2600, 5200, 9000, 14000].forEach((delay) => setTimeout(install, delay)));
-  [120, 450, 1000, 2200, 4200, 7600, 12000, 18000].forEach((delay) => setTimeout(install, delay));
-  try { new MutationObserver(() => setTimeout(install, 0)).observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('dashboard:data-ready', () => window.setTimeout(install, 0));
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  setTimeout(install, 2000);
 })();
 ;
 
@@ -6769,8 +6839,9 @@
 
   window.__wipSyncUndercarriageSelects = syncAll;
   install();
-  document.addEventListener('DOMContentLoaded', install);
-  [80, 200, 500, 1000, 2000, 4000, 7000, 11000].forEach((delay) => window.setTimeout(install, delay));
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', queueSync);
+  window.setTimeout(install, 2000);
   try {
     new MutationObserver((mutations) => {
       const relevant = mutations.some((mutation) => {
@@ -6802,7 +6873,7 @@
   function rowForButton(button) {
     const rowIndex = rowIndexFromButton(button);
     if (!Number.isFinite(rowIndex)) return null;
-    return (window.globalData || []).find((row) => Number(row?._rowIndex) === rowIndex) || null;
+    return window.__wipRowByIndex?.(rowIndex) || null;
   }
 
   function applicableMachines(row) {
@@ -6881,16 +6952,15 @@
 
   function install() {
     installStyle();
-    ['renderGrid', 'renderTop200', 'runFilter', 'updateVisibleRows'].forEach(wrapRender);
+    ['renderTop200', 'runFilter', 'updateVisibleRows'].forEach(wrapRender);
     refreshBadges();
   }
 
   install();
-  document.addEventListener('DOMContentLoaded', () => {
-    [100, 300, 700, 1200, 2200, 4000, 7000, 11000, 16000, 22000].forEach((delay) => setTimeout(install, delay));
-  });
-  [150, 450, 900, 1800, 3200, 5200, 8500, 13000, 19000, 26000].forEach((delay) => setTimeout(install, delay));
-  try { new MutationObserver(() => setTimeout(refreshBadges, 0)).observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('dashboard:grid-rendered', () => setTimeout(refreshBadges, 0));
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', () => setTimeout(install, 0));
+  setTimeout(install, 2000);
 })();
 ;
 
@@ -6900,49 +6970,11 @@
   if (window.__WIP_UNDERCARRIAGE_NATIVE_VISUAL_FINAL_PATCH__ === PATCH_ID) return;
   window.__WIP_UNDERCARRIAGE_NATIVE_VISUAL_FINAL_PATCH__ = PATCH_ID;
 
-  const norm = (value) => String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  function isVisible(element) {
-    if (!element) return false;
-    const style = getComputedStyle(element);
-    const rect = element.getBoundingClientRect();
-    return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 120 && rect.height > 24;
-  }
-
-  function findHeaderByTitle(titleStart) {
-    const target = norm(titleStart);
-    const candidates = [...document.querySelectorAll('button, summary, [role="button"], div, h3, h4')]
-      .filter((node) => isVisible(node) && norm(node.textContent || '').startsWith(target));
-
-    return candidates
-      .map((node) => {
-        const clickable = node.closest('button, summary, [role="button"]') || node;
-        let block = clickable;
-        let current = clickable;
-        for (let i = 0; i < 4 && current?.parentElement; i += 1) {
-          const parent = current.parentElement;
-          const text = norm(parent.textContent || '');
-          const rect = parent.getBoundingClientRect();
-          const looksLikeHeader = text.startsWith(target) && text.length <= 80 && rect.height >= 32 && rect.height <= 72;
-          if (looksLikeHeader) block = parent;
-          current = parent;
-        }
-        return block;
-      })
-      .sort((a, b) => (a.textContent || '').length - (b.textContent || '').length)[0] || null;
-  }
-
   function findNativeReferenceHeader() {
-    return findHeaderByTitle('6. priorité clients')
-      || findHeaderByTitle('6. priorite clients')
-      || findHeaderByTitle('5. secteur')
-      || findHeaderByTitle('1. données brutes')
-      || findHeaderByTitle('1. donnees brutes');
+    return document.querySelector('button[onclick*="acc-priorite-client"]')
+      || document.querySelector('button[onclick*="acc-secteur-activite"]')
+      || document.querySelector('button[onclick*="acc-brutes"]')
+      || null;
   }
 
   function copyComputed(source, target, props) {
@@ -6955,29 +6987,11 @@
   }
 
   function findTitleText(header) {
-    if (!header) return null;
-    const nodes = [...header.querySelectorAll('span, div, strong, b')]
-      .filter((node) => {
-        const text = norm(node.textContent || '');
-        const rect = node.getBoundingClientRect();
-        return rect.width > 20 && rect.height > 8 && /priorit|secteur|donnees|clients/.test(text);
-      });
-    return nodes.sort((a, b) => (a.textContent || '').length - (b.textContent || '').length)[0] || header;
+    return header?.querySelector('span') || header || null;
   }
 
   function findChevron(header) {
-    if (!header) return null;
-    const children = [...header.querySelectorAll('svg, i, .chevron, [class*="chevron"], [class*="Chevron"], span')];
-    return children.filter((node) => {
-      const text = norm(node.textContent || '');
-      const rect = node.getBoundingClientRect();
-      if (text.includes('priorite') || text.includes('clients') || text.includes('secteur')) return false;
-      return rect.width <= 32 && rect.height <= 32;
-    }).sort((a, b) => {
-      const ar = a.getBoundingClientRect();
-      const br = b.getBoundingClientRect();
-      return br.left - ar.left;
-    })[0] || null;
+    return header?.querySelector('svg, i, .chevron, [class*="chevron"], [class*="Chevron"]') || null;
   }
 
   function makeFallbackChevron() {
@@ -7077,11 +7091,9 @@
   }
 
   install();
-  document.addEventListener('DOMContentLoaded', () => {
-    [80, 200, 500, 900, 1500, 2600, 4200, 7000, 11000, 16000].forEach((delay) => setTimeout(install, delay));
-  });
-  [120, 350, 800, 1300, 2200, 3600, 5600, 8500, 12500, 18000, 24000].forEach((delay) => setTimeout(install, delay));
-  try { new MutationObserver(() => setTimeout(install, 0)).observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', () => setTimeout(install, 0));
+  setTimeout(install, 2000);
 })();
 ;
 
@@ -7147,16 +7159,17 @@
     }, 0);
   }
 
-  [
+  const guardedFunctionNames = [
     'runFilter',
-    'renderGrid',
     'renderTop200',
     'getTop200Data',
     'updateVisibleRows',
     'updateActiveCounter',
     'renderMap',
     'openDetails'
-  ].forEach(guardFunction);
+  ];
+  if (!window.renderGrid?.__wipPerformanceGridLimit) guardedFunctionNames.push('renderGrid');
+  guardedFunctionNames.forEach(guardFunction);
   guardedBadgeRefresh();
 })();
 ;

@@ -59,15 +59,16 @@
     }, 0);
   }
 
-  [
+  const guardedFunctionNames = [
     'runFilter',
-    'renderGrid',
     'renderTop200',
     'getTop200Data',
     'updateVisibleRows',
     'updateActiveCounter',
     'renderMap',
     'openDetails'
-  ].forEach(guardFunction);
+  ];
+  if (!window.renderGrid?.__wipPerformanceGridLimit) guardedFunctionNames.push('renderGrid');
+  guardedFunctionNames.forEach(guardFunction);
   guardedBadgeRefresh();
 })();

@@ -13,7 +13,7 @@
   function rowForButton(button) {
     const rowIndex = rowIndexFromButton(button);
     if (!Number.isFinite(rowIndex)) return null;
-    return (window.globalData || []).find((row) => Number(row?._rowIndex) === rowIndex) || null;
+    return window.__wipRowByIndex?.(rowIndex) || null;
   }
 
   function applicableMachines(row) {
@@ -92,14 +92,13 @@
 
   function install() {
     installStyle();
-    ['renderGrid', 'renderTop200', 'runFilter', 'updateVisibleRows'].forEach(wrapRender);
+    ['renderTop200', 'runFilter', 'updateVisibleRows'].forEach(wrapRender);
     refreshBadges();
   }
 
   install();
-  document.addEventListener('DOMContentLoaded', () => {
-    [100, 300, 700, 1200, 2200, 4000, 7000, 11000, 16000, 22000].forEach((delay) => setTimeout(install, delay));
-  });
-  [150, 450, 900, 1800, 3200, 5200, 8500, 13000, 19000, 26000].forEach((delay) => setTimeout(install, delay));
-  try { new MutationObserver(() => setTimeout(refreshBadges, 0)).observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('dashboard:grid-rendered', () => setTimeout(refreshBadges, 0));
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', () => setTimeout(install, 0));
+  setTimeout(install, 2000);
 })();

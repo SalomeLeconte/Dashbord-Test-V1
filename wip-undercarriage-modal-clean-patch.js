@@ -17,7 +17,7 @@
 
   function rowFromBadge(badge) {
     const explicit = Number(badge?.dataset?.rowIndex || NaN);
-    if (Number.isFinite(explicit)) return (globalData || []).find((row) => Number(row?._rowIndex) === explicit) || null;
+    if (Number.isFinite(explicit)) return window.__wipRowByIndex?.(explicit) || null;
 
     const detailButton = badge?.parentElement?.querySelector?.('button[onclick^="openDetails("]')
       || badge?.closest?.('tr, .mobile-card, div')?.querySelector?.('button[onclick^="openDetails("]');
@@ -25,7 +25,7 @@
     const rowIndex = match ? Number(match[1]) : NaN;
     if (!Number.isFinite(rowIndex)) return null;
     badge.dataset.rowIndex = String(rowIndex);
-    return (globalData || []).find((row) => Number(row?._rowIndex) === rowIndex) || null;
+    return window.__wipRowByIndex?.(rowIndex) || null;
   }
 
   function titleFor(row) {
@@ -188,7 +188,7 @@
   }, true);
 
   install();
-  document.addEventListener('DOMContentLoaded', () => [150, 500, 1200, 2500, 5000, 9000].forEach((delay) => setTimeout(install, delay)));
-  [150, 500, 1200, 2500, 5000, 9000, 14000].forEach((delay) => setTimeout(install, delay));
-  try { new MutationObserver(() => setTimeout(install, 0)).observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', () => setTimeout(install, 0));
+  setTimeout(install, 2000);
 })();

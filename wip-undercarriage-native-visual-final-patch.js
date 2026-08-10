@@ -3,49 +3,11 @@
   if (window.__WIP_UNDERCARRIAGE_NATIVE_VISUAL_FINAL_PATCH__ === PATCH_ID) return;
   window.__WIP_UNDERCARRIAGE_NATIVE_VISUAL_FINAL_PATCH__ = PATCH_ID;
 
-  const norm = (value) => String(value ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  function isVisible(element) {
-    if (!element) return false;
-    const style = getComputedStyle(element);
-    const rect = element.getBoundingClientRect();
-    return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 120 && rect.height > 24;
-  }
-
-  function findHeaderByTitle(titleStart) {
-    const target = norm(titleStart);
-    const candidates = [...document.querySelectorAll('button, summary, [role="button"], div, h3, h4')]
-      .filter((node) => isVisible(node) && norm(node.textContent || '').startsWith(target));
-
-    return candidates
-      .map((node) => {
-        const clickable = node.closest('button, summary, [role="button"]') || node;
-        let block = clickable;
-        let current = clickable;
-        for (let i = 0; i < 4 && current?.parentElement; i += 1) {
-          const parent = current.parentElement;
-          const text = norm(parent.textContent || '');
-          const rect = parent.getBoundingClientRect();
-          const looksLikeHeader = text.startsWith(target) && text.length <= 80 && rect.height >= 32 && rect.height <= 72;
-          if (looksLikeHeader) block = parent;
-          current = parent;
-        }
-        return block;
-      })
-      .sort((a, b) => (a.textContent || '').length - (b.textContent || '').length)[0] || null;
-  }
-
   function findNativeReferenceHeader() {
-    return findHeaderByTitle('6. priorité clients')
-      || findHeaderByTitle('6. priorite clients')
-      || findHeaderByTitle('5. secteur')
-      || findHeaderByTitle('1. données brutes')
-      || findHeaderByTitle('1. donnees brutes');
+    return document.querySelector('button[onclick*="acc-priorite-client"]')
+      || document.querySelector('button[onclick*="acc-secteur-activite"]')
+      || document.querySelector('button[onclick*="acc-brutes"]')
+      || null;
   }
 
   function copyComputed(source, target, props) {
@@ -58,29 +20,11 @@
   }
 
   function findTitleText(header) {
-    if (!header) return null;
-    const nodes = [...header.querySelectorAll('span, div, strong, b')]
-      .filter((node) => {
-        const text = norm(node.textContent || '');
-        const rect = node.getBoundingClientRect();
-        return rect.width > 20 && rect.height > 8 && /priorit|secteur|donnees|clients/.test(text);
-      });
-    return nodes.sort((a, b) => (a.textContent || '').length - (b.textContent || '').length)[0] || header;
+    return header?.querySelector('span') || header || null;
   }
 
   function findChevron(header) {
-    if (!header) return null;
-    const children = [...header.querySelectorAll('svg, i, .chevron, [class*="chevron"], [class*="Chevron"], span')];
-    return children.filter((node) => {
-      const text = norm(node.textContent || '');
-      const rect = node.getBoundingClientRect();
-      if (text.includes('priorite') || text.includes('clients') || text.includes('secteur')) return false;
-      return rect.width <= 32 && rect.height <= 32;
-    }).sort((a, b) => {
-      const ar = a.getBoundingClientRect();
-      const br = b.getBoundingClientRect();
-      return br.left - ar.left;
-    })[0] || null;
+    return header?.querySelector('svg, i, .chevron, [class*="chevron"], [class*="Chevron"]') || null;
   }
 
   function makeFallbackChevron() {
@@ -180,9 +124,7 @@
   }
 
   install();
-  document.addEventListener('DOMContentLoaded', () => {
-    [80, 200, 500, 900, 1500, 2600, 4200, 7000, 11000, 16000].forEach((delay) => setTimeout(install, delay));
-  });
-  [120, 350, 800, 1300, 2200, 3600, 5600, 8500, 12500, 18000, 24000].forEach((delay) => setTimeout(install, delay));
-  try { new MutationObserver(() => setTimeout(install, 0)).observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', () => setTimeout(install, 0));
+  setTimeout(install, 2000);
 })();

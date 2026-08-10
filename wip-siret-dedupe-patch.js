@@ -120,8 +120,10 @@
 
   function dedupeCurrentFilteredData() {
     try {
-      if (Array.isArray(currentFilteredData)) currentFilteredData = dedupeRows(currentFilteredData);
-      if (Array.isArray(window.currentFilteredData)) window.currentFilteredData = dedupeRows(window.currentFilteredData);
+      if (Array.isArray(currentFilteredData)) {
+        currentFilteredData = dedupeRows(currentFilteredData);
+        window.currentFilteredData = currentFilteredData;
+      }
     } catch (error) {}
   }
 
@@ -173,14 +175,18 @@
   function install() {
     wrapRunFilter();
     wrapRenderTop200();
-    ['renderGrid', 'renderMobileGridCards', 'renderMap', 'renderKnownMarkers'].forEach(wrapArrayRenderer);
+    if (window.renderGrid?.__wipPerformanceGridLimit) {
+      window.__wipRegisterGridDataTransform?.('siret-dedupe', dedupeRows);
+    } else {
+      wrapArrayRenderer('renderGrid');
+    }
+    ['renderMobileGridCards', 'renderMap', 'renderKnownMarkers'].forEach(wrapArrayRenderer);
     ['calculateRouteFromVisiblePoints', 'prepareRoutePointsForChoice'].forEach(wrapRouteFunction);
     dedupeCurrentFilteredData();
   }
 
   install();
-  document.addEventListener('DOMContentLoaded', () => {
-    [100, 400, 900, 1600, 2600, 4200, 6800, 9800, 13200, 17000].forEach((delay) => window.setTimeout(install, delay));
-  });
-  [250, 700, 1300, 2200, 3600, 5600, 8200, 11600, 15400].forEach((delay) => window.setTimeout(install, delay));
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', install, { once: true });
+  window.setTimeout(install, 2000);
 })();
