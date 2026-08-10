@@ -57,12 +57,19 @@
     const select = root()?.querySelector('[data-uc="smr"]');
     if (!select) return;
     const current = String(select.value || '0');
-    const options = ['<option value="0">Tous</option>'];
+    const optionData = [{ value: '0', label: 'Tous' }];
     for (let value = 1000; value <= 10000; value += 1000) {
-      options.push(`<option value="${value}">≥ ${value.toLocaleString('fr-FR')} h</option>`);
+      optionData.push({ value: String(value), label: `≥ ${value.toLocaleString('fr-FR')} h` });
     }
-    select.innerHTML = options.join('');
-    select.value = options.some((html) => html.includes(`value="${esc(current)}"`)) ? current : '0';
+    const alreadyCurrent = optionData.length === select.options.length
+      && optionData.every((item, index) => select.options[index]?.value === item.value
+        && select.options[index]?.textContent?.trim() === item.label);
+    if (!alreadyCurrent) {
+      select.innerHTML = optionData
+        .map((item) => `<option value="${esc(item.value)}">${esc(item.label)}</option>`)
+        .join('');
+    }
+    select.value = optionData.some((item) => item.value === current) ? current : '0';
   }
 
   function removeUnsupportedFilters() {
@@ -86,8 +93,8 @@
     if (type) {
       [...type.options].forEach((option) => {
         if (option.value === 'MVM') option.remove();
-        if (option.value === 'BULL') option.textContent = 'BULL / Dozer D*';
-        if (option.value === 'EXCA') option.textContent = 'EXCA PC* / HB*';
+        if (option.value === 'BULL' && option.textContent !== 'BULL / Dozer D*') option.textContent = 'BULL / Dozer D*';
+        if (option.value === 'EXCA' && option.textContent !== 'EXCA PC* / HB*') option.textContent = 'EXCA PC* / HB*';
       });
       if (type.value === 'MVM') type.value = '';
     }
@@ -95,7 +102,8 @@
     updateSmrOptions();
 
     const note = panel.querySelector('p');
-    if (note) note.textContent = 'BULL / Dozer : modèles D*. EXCA : modèles PC* ou HB*. Les autres modèles ne sont pas pris en compte.';
+    const noteText = 'BULL / Dozer : modèles D*. EXCA : modèles PC* ou HB*. Les autres modèles ne sont pas pris en compte.';
+    if (note && note.textContent !== noteText) note.textContent = noteText;
   }
 
   function machines(row) {
@@ -167,7 +175,8 @@
         return;
       }
       badge.dataset.rowIndex = String(row._rowIndex ?? '');
-      badge.textContent = `Undercarriage • ${list.length}`;
+      const label = `Undercarriage • ${list.length}`;
+      if (badge.textContent !== label) badge.textContent = label;
     });
   }
 

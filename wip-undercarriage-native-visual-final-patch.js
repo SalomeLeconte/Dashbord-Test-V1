@@ -95,8 +95,11 @@
     if (!summary) return;
     const current = summary.querySelector('.wip-undercarriage-integrated-chevron, .wip-uc-native-chevron, .wip-uc-native-chevron-fallback');
     const referenceChevron = findChevron(referenceHeader);
+    const source = referenceChevron ? 'reference' : 'fallback';
+    if (current?.classList?.contains('wip-uc-native-chevron') && current.dataset.wipUcChevronSource === source) return;
     const clone = referenceChevron ? referenceChevron.cloneNode(true) : makeFallbackChevron();
     clone.classList.add('wip-uc-native-chevron');
+    clone.dataset.wipUcChevronSource = source;
     clone.setAttribute('aria-hidden', 'true');
 
     if (current) current.replaceWith(clone);
@@ -157,7 +160,7 @@
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final .wip-uc-native-chevron-fallback{display:inline-flex!important;align-items:center!important;justify-content:center!important;width:16px!important;height:16px!important;color:#94a3b8!important;transition:transform .18s ease!important;flex:0 0 auto!important;margin-left:8px!important}
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final[open] .wip-uc-native-chevron{transform:rotate(180deg)!important}
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final[open] .wip-uc-native-chevron-fallback{transform:rotate(180deg)!important}
-      #wip-undercarriage-integrated-body.wip-uc-native-visual-final-body{margin-top:.35rem!important;border:1px solid #e5e7eb!important;border-left:4px solid rgba(234,179,8,.45)!important;border-radius:.9rem!important;background:#fff!important;box-shadow:0 8px 18px rgba(15,23,42,.04)!important;padding:0!important;overflow:hidden!important}
+      #wip-undercarriage-integrated-body.wip-uc-native-visual-final-body{margin-top:.35rem!important;border:1px solid #e5e7eb!important;border-left:4px solid rgba(234,179,8,.45)!important;border-radius:.9rem!important;background:#fff!important;box-shadow:0 8px 18px rgba(15,23,42,.04)!important;padding:0!important;overflow:visible!important}
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final .wip-uc-field select{color-scheme:light!important;background-color:#fff!important;color:#334155!important;border-color:#e5e7eb!important}
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final .wip-uc-field select option{background:#fff!important;color:#334155!important}
       .dark #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final{background:transparent!important;border:0!important}

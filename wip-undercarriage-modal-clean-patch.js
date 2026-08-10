@@ -145,7 +145,8 @@
         return;
       }
       badge.dataset.rowIndex = String(row._rowIndex ?? '');
-      badge.textContent = `Undercarriage • ${list.length}`;
+      const label = `Undercarriage • ${list.length}`;
+      if (badge.textContent !== label) badge.textContent = label;
       badge.setAttribute('role', 'button');
       badge.setAttribute('tabindex', '0');
       badge.setAttribute('title', 'Voir uniquement les données undercarriage');

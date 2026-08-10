@@ -276,8 +276,8 @@
     if (type) {
       [...type.options].forEach((option) => {
         if (option.value === 'MVM') option.remove();
-        if (option.value === 'BULL') option.textContent = 'BULL / Dozer D*';
-        if (option.value === 'EXCA') option.textContent = 'EXCA PC* / HB*';
+        if (option.value === 'BULL' && option.textContent !== 'BULL / Dozer D*') option.textContent = 'BULL / Dozer D*';
+        if (option.value === 'EXCA' && option.textContent !== 'EXCA PC* / HB*') option.textContent = 'EXCA PC* / HB*';
       });
       if (type.value === 'MVM') type.value = '';
     }
@@ -289,7 +289,8 @@
     root.querySelector('[data-uc="sort"]')?.closest('label,div')?.remove();
 
     const note = root.querySelector('p');
-    if (note) note.textContent = 'BULL / Dozer : modèles D*. EXCA : modèles PC* ou HB*. Les autres modèles ne sont pas pris en compte.';
+    const noteText = 'BULL / Dozer : modèles D*. EXCA : modèles PC* ou HB*. Les autres modèles ne sont pas pris en compte.';
+    if (note && note.textContent !== noteText) note.textContent = noteText;
   }
 
   function renderAfterFilter() {
@@ -361,7 +362,8 @@
       const badge = existing || document.createElement('span');
       badge.className = 'wip-uc-badge';
       badge.dataset.rowIndex = String(row._rowIndex ?? '');
-      badge.textContent = `Undercarriage • ${list.length}`;
+      const label = `Undercarriage • ${list.length}`;
+      if (badge.textContent !== label) badge.textContent = label;
       badge.setAttribute('role', 'button');
       badge.setAttribute('tabindex', '0');
       badge.setAttribute('title', 'Voir les données undercarriage');
