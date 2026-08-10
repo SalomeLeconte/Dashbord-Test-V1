@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-undercarriage-filter-2026-08-07';
+  const PATCH_ID = 'wip-undercarriage-filter-2026-08-10-v2';
   if (window.__WIP_UNDERCARRIAGE_FILTER_PATCH__ === PATCH_ID) return;
   window.__WIP_UNDERCARRIAGE_FILTER_PATCH__ = PATCH_ID;
 
@@ -136,6 +136,7 @@
     state.travelPctMin = Number(root.querySelector('[data-uc="travelPct"]')?.value || 0);
     state.travelHoursMin = Number(root.querySelector('[data-uc="travelHours"]')?.value || 0);
     state.sort = !!root.querySelector('[data-uc="sort"]')?.checked;
+    try { window.__wipSyncUndercarriageRangeUi?.(); } catch (error) {}
   }
   function refresh() {
     try { if (typeof runFilter === 'function') runFilter(); } catch (e) {}
@@ -143,6 +144,61 @@
     window.setTimeout(addBadges, 100);
   }
   const opt = (v, l) => `<option value="${esc(v)}">${esc(l)}</option>`;
+  const TRAVEL_HOUR_STEPS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 125, 150, 175, 200];
+  const TRAVEL_PCT_STEPS = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+
+  function rangeTicks(values, max) {
+    return values.map(value => `<span class="wip-uc-range-tick" style="left:${(value / max) * 100}%"></span>`).join('');
+  }
+
+  function nearestTravelHour(value) {
+    return TRAVEL_HOUR_STEPS.reduce((nearest, step) =>
+      Math.abs(step - value) < Math.abs(nearest - value) ? step : nearest, TRAVEL_HOUR_STEPS[0]);
+  }
+
+  function updateRangeUi(input, snap = false) {
+    if (!input?.matches?.('input[type="range"][data-uc]')) return;
+    let value = Number(input.value || 0);
+    if (snap && input.dataset.uc === 'travelHours') {
+      value = nearestTravelHour(value);
+      input.value = String(value);
+    }
+    const max = Number(input.max || 100) || 100;
+    input.style.setProperty('--wip-uc-range-progress', `${Math.max(0, Math.min(100, (value / max) * 100))}%`);
+    const output = input.closest('.wip-uc-range-field')?.querySelector(`[data-uc-output="${input.dataset.uc}"]`);
+    if (output) output.textContent = value ? `≥ ${value.toLocaleString('fr-FR')} ${input.dataset.uc === 'travelPct' ? '%' : 'h'}` : 'Tous';
+  }
+
+  function syncRangeUi(root = document.getElementById('wip-undercarriage-filter')) {
+    root?.querySelectorAll?.('input[type="range"][data-uc]').forEach(input => updateRangeUi(input));
+  }
+
+  window.__wipSyncUndercarriageRangeUi = syncRangeUi;
+
+  function bindUiEvents(root) {
+    if (!root || root.dataset.wipUcBaseEvents === 'true') return;
+    root.dataset.wipUcBaseEvents = 'true';
+    let refreshTimer = null;
+    const queueRefresh = () => {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => {
+        syncState();
+        refresh();
+      }, 50);
+    };
+
+    syncRangeUi(root);
+    root.addEventListener('input', event => {
+      if (!event.target?.matches?.('input[type="range"][data-uc]')) return;
+      updateRangeUi(event.target, true);
+      queueRefresh();
+    });
+    root.addEventListener('change', event => {
+      if (!event.target?.matches?.('select[data-uc],input[data-uc]')) return;
+      if (event.target.matches('input[type="range"]')) updateRangeUi(event.target, true);
+      queueRefresh();
+    });
+  }
 
   function installUi() {
     if (document.getElementById('wip-undercarriage-filter')) return;
@@ -155,32 +211,44 @@
           <label class="flex items-center gap-2 font-bold"><input data-uc="enabled" type="checkbox"> Avec données undercarriage uniquement</label>
           <label class="wip-uc-field">Type<select data-uc="type">${opt('', 'Tous')}${opt('EXCA', 'EXCA')}${opt('BULL', 'BULL')}${opt('MVM', 'MVM')}</select></label>
           <label class="wip-uc-field">Priorité<select data-uc="priority">${opt('', 'Toutes')}${opt('very', 'Très prioritaire : AA')}${opt('high', 'Prioritaire : AA / AB / BA')}${opt('watch', 'À surveiller : AC / BB / CA')}${opt('low', 'Faible : BC / CB / CC')}</select></label>
+          <div class="wip-uc-priority-legend" aria-label="Échelle des priorités undercarriage, du niveau faible au niveau très prioritaire">
+            <span class="is-low"><i></i><b>Faible</b><em>BC / CB / CC</em></span>
+            <span class="is-watch"><i></i><b>À surveiller</b><em>AC / BB / CA</em></span>
+            <span class="is-high"><i></i><b>Prioritaire</b><em>AA / AB / BA</em></span>
+            <span class="is-very"><i></i><b>Très prioritaire</b><em>AA</em></span>
+          </div>
           <label class="wip-uc-field">Classe<select data-uc="class">${['', 'AA', 'AB', 'AC', 'BA', 'BB', 'BC', 'CA', 'CB', 'CC'].map(v => opt(v, v || 'Toutes')).join('')}</select></label>
           <label class="wip-uc-field">SMR minimum<select data-uc="smr">${opt('0', 'Tous')}${opt('5000', '≥ 5 000 h')}${opt('9000', '≥ 9 000 h')}</select></label>
           <label class="wip-uc-field">Activité moyenne<select data-uc="activity">${opt('0', 'Toutes')}${opt('50', '≥ 50')}${opt('80', '≥ 80')}</select></label>
-          <label class="wip-uc-field">Travel EXCA %<select data-uc="travelPct">${opt('0', 'Tous')}${opt('30', '≥ 30 %')}${opt('50', '≥ 50 %')}${opt('70', '≥ 70 %')}</select></label>
-          <label class="wip-uc-field">Travel hours EXCA<select data-uc="travelHours">${opt('0', 'Tous')}${opt('100', '≥ 100 h')}${opt('250', '≥ 250 h')}${opt('500', '≥ 500 h')}</select></label>
+          <div class="wip-uc-field wip-uc-range-field" data-uc-field="travelHours">
+            <div class="wip-uc-range-head"><span>Travel hours EXCA</span><output data-uc-output="travelHours">Tous</output></div>
+            <div class="wip-uc-range-control">
+              <input data-uc="travelHours" type="range" min="0" max="200" step="1" value="0" aria-label="Travel hours EXCA minimum">
+              <div class="wip-uc-range-ticks" aria-hidden="true">${rangeTicks(TRAVEL_HOUR_STEPS, 200)}</div>
+            </div>
+            <div class="wip-uc-range-scale" aria-hidden="true"><span>0 h</span><span>100 h</span><span>200 h</span></div>
+          </div>
+          <div class="wip-uc-field wip-uc-range-field" data-uc-field="travelPct">
+            <div class="wip-uc-range-head"><span>Travel EXCA %</span><output data-uc-output="travelPct">Tous</output></div>
+            <div class="wip-uc-range-control">
+              <input data-uc="travelPct" type="range" min="0" max="100" step="10" value="0" aria-label="Travel EXCA pourcentage minimum">
+              <div class="wip-uc-range-ticks" aria-hidden="true">${rangeTicks(TRAVEL_PCT_STEPS, 100)}</div>
+            </div>
+            <div class="wip-uc-range-scale" aria-hidden="true"><span>0 %</span><span>50 %</span><span>100 %</span></div>
+          </div>
           <label class="flex items-center gap-2 font-bold"><input data-uc="sort" type="checkbox"> Trier par potentiel undercarriage</label>
-          <div class="grid grid-cols-2 gap-2 pt-1"><button id="wip-uc-apply" class="wip-uc-primary" type="button">Appliquer</button><button id="wip-uc-reset" class="wip-uc-secondary" type="button">Effacer</button></div>
           <p class="text-[10px] text-orange-700/80 dark:text-orange-200/80">A = fort, B = moyen, C = faible. AA est la classe la plus prioritaire ; CC la moins prioritaire.</p>
         </div>
       </details>`);
     const root = document.getElementById('wip-undercarriage-filter');
-    root.querySelectorAll('select,input').forEach(el => el.addEventListener('change', () => { syncState(); refresh(); }));
-    root.querySelector('#wip-uc-apply')?.addEventListener('click', () => { syncState(); refresh(); });
-    root.querySelector('#wip-uc-reset')?.addEventListener('click', () => {
-      Object.assign(state, { enabled: false, type: '', cls: '', priority: '', smrMin: 0, activityMin: 0, travelPctMin: 0, travelHoursMin: 0, sort: false });
-      root.querySelectorAll('select').forEach(select => { select.value = ''; });
-      root.querySelectorAll('input').forEach(input => { input.checked = false; });
-      refresh();
-    });
+    bindUiEvents(root);
   }
 
   function installStyle() {
     if (document.getElementById('wip-undercarriage-style')) return;
     const style = document.createElement('style');
     style.id = 'wip-undercarriage-style';
-    style.textContent = `.wip-uc-field{display:block;font-size:9px;font-weight:1000;letter-spacing:.08em;text-transform:uppercase;color:#c2410c}.wip-uc-field select{width:100%;margin-top:.25rem;border-radius:.75rem;border:1px solid #fed7aa;background:white;padding:.5rem .6rem;font-size:11px;font-weight:800;color:#7c2d12}.dark .wip-uc-field{color:#fdba74}.dark .wip-uc-field select{background:#0f172a;border-color:rgba(251,146,60,.35);color:#fed7aa}.wip-uc-primary,.wip-uc-secondary{border-radius:.75rem;padding:.55rem .7rem;font-size:10px;font-weight:1000;text-transform:uppercase;letter-spacing:.08em}.wip-uc-primary{background:#f97316;color:white}.wip-uc-secondary{background:white;color:#c2410c;border:1px solid #fed7aa}.wip-uc-badge{display:inline-flex;align-items:center;border-radius:999px;border:1px solid rgba(249,115,22,.35);background:#fff7ed;color:#9a3412;padding:.15rem .45rem;font-size:9px;font-weight:1000;letter-spacing:.04em;text-transform:uppercase;margin-top:.35rem}.dark .wip-uc-badge{background:rgba(154,52,18,.25);color:#fed7aa;border-color:rgba(251,146,60,.35)}.wip-uc-table{width:100%;border-collapse:collapse;font-size:11px}.wip-uc-table th,.wip-uc-table td{border-bottom:1px solid rgba(148,163,184,.22);padding:.45rem;text-align:left}.wip-uc-table th{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}`;
+    style.textContent = `.wip-uc-field{display:block;font-size:9px;font-weight:1000;letter-spacing:.08em;text-transform:uppercase;color:#c2410c}.wip-uc-field select{width:100%;margin-top:.25rem;border-radius:.75rem;border:1px solid #fed7aa;background:white;padding:.5rem .6rem;font-size:11px;font-weight:800;color:#7c2d12}.dark .wip-uc-field{color:#fdba74}.dark .wip-uc-field select{background:#0f172a;border-color:rgba(251,146,60,.35);color:#fed7aa}.wip-uc-priority-legend{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:-2px}.wip-uc-priority-legend>span{display:grid;grid-template-columns:7px minmax(0,1fr);align-items:center;column-gap:5px;min-width:0;border:1px solid var(--wip-uc-level-border);border-radius:8px;background:var(--wip-uc-level-bg);padding:5px 6px;color:var(--wip-uc-level-text);line-height:1.1}.wip-uc-priority-legend i{grid-row:1/3;width:7px;height:7px;border-radius:999px;background:var(--wip-uc-level-dot);box-shadow:0 0 0 2px color-mix(in srgb,var(--wip-uc-level-dot) 18%,transparent)}.wip-uc-priority-legend b,.wip-uc-priority-legend em{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wip-uc-priority-legend b{font-size:8px;font-style:normal;font-weight:1000;text-transform:uppercase;letter-spacing:.025em}.wip-uc-priority-legend em{margin-top:2px;font-size:8px;font-style:normal;font-weight:800;letter-spacing:0}.wip-uc-priority-legend .is-low{--wip-uc-level-dot:#16a34a;--wip-uc-level-bg:#f0fdf4;--wip-uc-level-border:#bbf7d0;--wip-uc-level-text:#166534}.wip-uc-priority-legend .is-watch{--wip-uc-level-dot:#eab308;--wip-uc-level-bg:#fefce8;--wip-uc-level-border:#fef08a;--wip-uc-level-text:#854d0e}.wip-uc-priority-legend .is-high{--wip-uc-level-dot:#f97316;--wip-uc-level-bg:#fff7ed;--wip-uc-level-border:#fed7aa;--wip-uc-level-text:#9a3412}.wip-uc-priority-legend .is-very{--wip-uc-level-dot:#dc2626;--wip-uc-level-bg:#fef2f2;--wip-uc-level-border:#fecaca;--wip-uc-level-text:#991b1b}.dark .wip-uc-priority-legend>span{background:color-mix(in srgb,var(--wip-uc-level-dot) 12%,#0f172a);border-color:color-mix(in srgb,var(--wip-uc-level-dot) 35%,#334155);color:#f8fafc}.wip-uc-range-field{padding:.2rem 0 .1rem!important}.wip-uc-range-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem}.wip-uc-range-head output{border-radius:999px;background:#fef3c7;color:#92400e;padding:.18rem .48rem;font-size:9px;font-weight:1000;letter-spacing:.02em;text-transform:none}.wip-uc-range-control{position:relative;margin-top:.35rem;padding:0 7px 8px}.wip-uc-range-control input[type="range"]{--wip-uc-range-progress:0%;display:block;width:100%;height:18px;margin:0;appearance:none;-webkit-appearance:none;background:transparent;cursor:pointer;accent-color:#eab308}.wip-uc-range-control input[type="range"]::-webkit-slider-runnable-track{height:4px;border-radius:999px;background:linear-gradient(to right,#eab308 0 var(--wip-uc-range-progress),#e2e8f0 var(--wip-uc-range-progress) 100%)}.wip-uc-range-control input[type="range"]::-moz-range-track{height:4px;border:0;border-radius:999px;background:#e2e8f0}.wip-uc-range-control input[type="range"]::-moz-range-progress{height:4px;border-radius:999px;background:#eab308}.wip-uc-range-control input[type="range"]::-webkit-slider-thumb{width:15px;height:15px;margin-top:-5.5px;border:2px solid #fff;border-radius:999px;background:#eab308;box-shadow:0 2px 7px rgba(15,23,42,.28);appearance:none;-webkit-appearance:none}.wip-uc-range-control input[type="range"]::-moz-range-thumb{width:13px;height:13px;border:2px solid #fff;border-radius:999px;background:#eab308;box-shadow:0 2px 7px rgba(15,23,42,.28)}.wip-uc-range-ticks{position:absolute;left:7px;right:7px;bottom:2px;height:5px}.wip-uc-range-tick{position:absolute;top:1px;width:3px;height:3px;border-radius:999px;background:#94a3b8;transform:translateX(-50%)}.wip-uc-range-scale{display:flex;align-items:center;justify-content:space-between;margin-top:-1px;color:#94a3b8;font-size:8px;font-weight:800;letter-spacing:0;text-transform:none}.dark .wip-uc-range-head output{background:rgba(234,179,8,.18);color:#fde68a}.dark .wip-uc-range-control input[type="range"]::-webkit-slider-runnable-track{background:linear-gradient(to right,#eab308 0 var(--wip-uc-range-progress),#334155 var(--wip-uc-range-progress) 100%)}.dark .wip-uc-range-control input[type="range"]::-moz-range-track{background:#334155}.wip-uc-badge{display:inline-flex;align-items:center;border-radius:999px;border:1px solid rgba(249,115,22,.35);background:#fff7ed;color:#9a3412;padding:.15rem .45rem;font-size:9px;font-weight:1000;letter-spacing:.04em;text-transform:uppercase;margin-top:.35rem}.dark .wip-uc-badge{background:rgba(154,52,18,.25);color:#fed7aa;border-color:rgba(251,146,60,.35)}.wip-uc-table{width:100%;border-collapse:collapse;font-size:11px}.wip-uc-table th,.wip-uc-table td{border-bottom:1px solid rgba(148,163,184,.22);padding:.45rem;text-align:left}.wip-uc-table th{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8}`;
     document.head.appendChild(style);
   }
 

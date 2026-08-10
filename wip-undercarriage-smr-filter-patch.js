@@ -50,6 +50,8 @@
     current.cls = '';
     current.activityMin = 0;
     current.sort = false;
+    try { window.__wipSyncUndercarriageRangeUi?.(); } catch (error) {}
+    try { window.__wipSyncUndercarriageCustomSelects?.(); } catch (error) {}
     return current;
   }
 
@@ -100,6 +102,11 @@
     }
 
     updateSmrOptions();
+    panel.querySelectorAll('#wip-uc-apply,#wip-uc-reset').forEach((button) => {
+      const actions = button.closest('.grid');
+      if (actions?.querySelectorAll('#wip-uc-apply,#wip-uc-reset').length === 2) actions.remove();
+      else button.remove();
+    });
 
     const note = panel.querySelector('p');
     const noteText = 'BULL / Dozer : modèles D*. EXCA : modèles PC* ou HB*. Les autres modèles ne sont pas pris en compte.';
@@ -184,28 +191,13 @@
     const panel = root();
     if (!panel || panel.dataset.wipUcSmrBound === 'true') return;
     panel.dataset.wipUcSmrBound = 'true';
+    if (panel.dataset.wipUcBaseEvents === 'true') return;
     panel.addEventListener('change', (event) => {
       if (!event.target?.matches?.('select,input')) return;
       syncState();
       try { if (typeof runFilter === 'function') runFilter(); } catch (error) {}
       try { if (typeof renderTop200 === 'function') renderTop200(); } catch (error) {}
       rerender();
-    }, true);
-    panel.addEventListener('click', (event) => {
-      if (!event.target?.closest?.('#wip-uc-apply')) return;
-      syncState();
-      try { if (typeof runFilter === 'function') runFilter(); } catch (error) {}
-      try { if (typeof renderTop200 === 'function') renderTop200(); } catch (error) {}
-      rerender();
-    }, true);
-    panel.addEventListener('click', (event) => {
-      if (!event.target?.closest?.('#wip-uc-reset')) return;
-      const s = state();
-      Object.assign(s, { enabled: false, type: '', priority: '', smrMin: 0, travelPctMin: 0, travelHoursMin: 0, cls: '', activityMin: 0, sort: false });
-      window.setTimeout(() => {
-        removeUnsupportedFilters();
-        try { if (typeof runFilter === 'function') runFilter(); } catch (error) {}
-      }, 0);
     }, true);
   }
 
