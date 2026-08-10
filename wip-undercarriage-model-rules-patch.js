@@ -1,12 +1,12 @@
 (() => {
-  const PATCH_ID = 'wip-undercarriage-model-rules-2026-08-10';
+  const PATCH_ID = 'wip-undercarriage-model-rules-2026-08-10-v2';
   if (window.__WIP_UNDERCARRIAGE_MODEL_RULES_PATCH__ === PATCH_ID) return;
   window.__WIP_UNDERCARRIAGE_MODEL_RULES_PATCH__ = PATCH_ID;
 
   const SCORE = { AA: 100, AB: 85, BA: 80, AC: 60, BB: 55, CA: 50, BC: 30, CB: 25, CC: 10 };
   const COLS = {
     models: ['data22.Liste Machines', 'Liste Machines'],
-    serials: ['data22.Liste Num serie Machines', 'Liste Num serie Machines'],
+    serials: ['data22.Liste Num serie Machines', 'data22.Liste Num série Machines', 'Liste Num serie Machines', 'Liste Num série Machines'],
     smr: ['data22.Machines SMR par client', 'Machines SMR par client'],
     bull: ['data22.Class BULL par client', 'Class BULL par client'],
     exca: ['data22.Class EXCA par client', 'Class EXCA par client'],
@@ -47,30 +47,38 @@
     .replace(/[^A-Z0-9]/g, '')
     .trim();
 
-  const modelCode = (value) => String(value ?? '').trim().toUpperCase();
+  const modelCode = (value) => normalizeMachineKey(value);
   const isBullModel = (model) => /^D/.test(modelCode(model));
   const isExcaModel = (model) => /^(PC|HB)/.test(modelCode(model));
+  const looksLikeModel = (value) => /^(D|PC|HB|WA|PW|GD|HM|HD|BR|WB|SK|CD|PC\d|HB\d)/i.test(String(value ?? '').trim());
 
-  function splitEntries(value) {
-    return String(value ?? '')
-      .split(/\s*[;\n]\s*/)
-      .map((entry, index) => {
-        const clean = entry.trim();
-        if (!clean || /^nan$/i.test(clean)) return null;
-        const match = clean.match(/^(.+?)\s*(?:-|:|→|=>)\s*(.+)$/);
-        return match
-          ? { key: match[1].trim(), value: match[2].trim(), index }
-          : { key: `machine_${index + 1}`, value: clean, index };
-      })
-      .filter(Boolean);
+  function tokenize(value) {
+    const text = String(value ?? '').trim();
+    if (!text) return [];
+    let parts = text.split(/\s*[;\n\r|]+\s*/).filter(Boolean);
+    if (parts.length <= 1 && /,\s*[A-Z0-9]/i.test(text)) parts = text.split(/\s*,\s*/).filter(Boolean);
+    return parts.map((part) => part.trim()).filter(Boolean);
+  }
+
+  function splitEntries(value, options = {}) {
+    const { parsePairs = true, modelPairs = false } = options;
+    return tokenize(value).map((clean, index) => {
+      const pair = clean.match(/^(.+?)\s+(?:-|:|→|=>)\s+(.+)$/);
+      if (parsePairs && pair) {
+        if (!modelPairs || looksLikeModel(pair[2])) {
+          return { key: pair[1].trim(), value: pair[2].trim(), index, raw: clean };
+        }
+      }
+      return { key: `machine_${index + 1}`, value: clean, index, raw: clean };
+    });
   }
 
   function entryMap(value) {
     const map = new Map();
-    splitEntries(value).forEach((entry) => {
+    splitEntries(value, { parsePairs: true }).forEach((entry) => {
       const key = normalizeMachineKey(entry.key || `machine_${entry.index + 1}`);
       if (!key) return;
-      map.set(key, { key: entry.key, value: entry.value, index: entry.index });
+      map.set(key, entry);
     });
     return map;
   }
@@ -81,28 +89,59 @@
   }
 
   function modelLookup(row) {
-    const models = splitEntries(get(row, COLS.models));
-    const serials = splitEntries(get(row, COLS.serials));
+    const modelEntries = splitEntries(get(row, COLS.models), { parsePairs: true, modelPairs: true });
+    const serialEntries = splitEntries(get(row, COLS.serials), { parsePairs: false });
     const byKey = new Map();
+    const byIndex = new Map();
 
-    models.forEach((entry, index) => {
+    modelEntries.forEach((entry, index) => {
       const model = entry.value || entry.key || '';
-      const indexKey = normalizeMachineKey(`machine_${index + 1}`);
-      if (indexKey && model) byKey.set(indexKey, model);
-      const entryKey = normalizeMachineKey(entry.key);
-      if (entryKey && model) byKey.set(entryKey, model);
+      if (!model) return;
+      byIndex.set(index, model);
+      byKey.set(normalizeMachineKey(`machine_${index + 1}`), model);
+      byKey.set(normalizeMachineKey(entry.key), model);
+      byKey.set(normalizeMachineKey(entry.value), model);
     });
 
-    serials.forEach((entry, index) => {
+    serialEntries.forEach((entry, index) => {
+      const model = byIndex.get(index) || '';
       const serial = entry.value || entry.key || '';
-      const model = models[index]?.value || models[index]?.key || '';
-      const serialKey = normalizeMachineKey(serial);
-      if (serialKey && model) byKey.set(serialKey, model);
-      const indexKey = normalizeMachineKey(`machine_${index + 1}`);
-      if (indexKey && model) byKey.set(indexKey, model);
+      if (!model) return;
+      byKey.set(normalizeMachineKey(serial), model);
+      byKey.set(normalizeMachineKey(entry.key), model);
+      byKey.set(normalizeMachineKey(`machine_${index + 1}`), model);
     });
 
-    return byKey;
+    return { byKey, byIndex };
+  }
+
+  function modelForEntry(entry, lookup) {
+    if (!entry) return '';
+    const byKey = lookup.byKey || new Map();
+    const byIndex = lookup.byIndex || new Map();
+    const candidates = [
+      entry.key,
+      entry.value,
+      entry.raw,
+      `machine_${entry.index + 1}`
+    ];
+    for (const candidate of candidates) {
+      const key = normalizeMachineKey(candidate);
+      const model = byKey.get(key);
+      if (model) return model;
+      if (looksLikeModel(candidate)) return candidate;
+    }
+    return byIndex.get(entry.index) || '';
+  }
+
+  function hasRawUndercarriage(row) {
+    return !![
+      get(row, COLS.smr),
+      get(row, COLS.bull),
+      get(row, COLS.exca),
+      get(row, COLS.travelPct),
+      get(row, COLS.travelHours)
+    ].some((value) => String(value || '').trim());
   }
 
   function buildUndercarriageMachines(row) {
@@ -115,12 +154,13 @@
       travelPct: entryMap(get(row, COLS.travelPct)),
       travelHours: entryMap(get(row, COLS.travelHours))
     };
-    const models = modelLookup(row);
+    const lookup = modelLookup(row);
     const keys = new Set();
     Object.values(maps).forEach((map) => map.forEach((_, key) => keys.add(key)));
 
     const list = [...keys].map((key) => {
-      const model = models.get(key) || '';
+      const source = maps.smr.get(key) || maps.bull.get(key) || maps.exca.get(key) || maps.travelPct.get(key) || maps.travelHours.get(key);
+      const model = modelForEntry(source, lookup);
       const bullAllowed = isBullModel(model);
       const excaAllowed = isExcaModel(model);
       const bull = bullAllowed ? cls(maps.bull.get(key)?.value) : '';
@@ -136,7 +176,7 @@
         travelPct >= 70 ? 35 : travelPct >= 50 ? 24 : travelPct >= 30 ? 12 : 0,
         travelHours >= 500 ? 20 : travelHours >= 250 ? 12 : travelHours >= 100 ? 7 : 0
       );
-      const serial = maps.smr.get(key)?.key || maps.bull.get(key)?.key || maps.exca.get(key)?.key || maps.travelPct.get(key)?.key || key;
+      const serial = source?.key || source?.value || key;
       const label = `${String(serial).replace(/^machine_\d+$/i, 'Machine')}${model ? ` — ${model}` : ''}`;
       return {
         key,
@@ -150,15 +190,20 @@
         travelHours,
         best,
         score,
+        rawAvailable: !!(maps.smr.get(key) || maps.bull.get(key) || maps.exca.get(key) || maps.travelPct.get(key) || maps.travelHours.get(key)),
+        modelAllowed: bullAllowed || excaAllowed,
         hasData: !!((bullAllowed && bull) || (excaAllowed && (exca || travelPct || travelHours)))
       };
-    }).filter((machine) => machine.hasData);
+    });
 
-    row._undercarriageMachines = list;
-    row._undercarriageCount = list.length;
-    row._undercarriageScore = list.reduce((max, machine) => Math.max(max, machine.score || 0), 0);
+    const applicable = list.filter((machine) => machine.hasData);
+    row._undercarriageMachines = applicable;
+    row._undercarriageRawMachines = list.filter((machine) => machine.rawAvailable);
+    row._undercarriageCount = applicable.length;
+    row._undercarriageScore = applicable.reduce((max, machine) => Math.max(max, machine.score || 0), 0);
+    row._wipUndercarriageHasRaw = hasRawUndercarriage(row);
     row._wipUndercarriageModelRulesApplied = true;
-    return list;
+    return applicable;
   }
 
   window.__wipBuildUndercarriageMachines = buildUndercarriageMachines;
@@ -176,7 +221,8 @@
   }
 
   function updateFilterUi() {
-    const type = document.querySelector('#wip-undercarriage-filter select[data-uc="type"]');
+    const root = document.getElementById('wip-undercarriage-filter');
+    const type = root?.querySelector('select[data-uc="type"]');
     if (type) {
       [...type.options].forEach((option) => {
         if (option.value === 'MVM') option.remove();
@@ -190,13 +236,12 @@
       }
     }
 
-    document.querySelectorAll('#wip-undercarriage-filter label, #wip-undercarriage-filter .wip-uc-field')
-      .forEach((node) => {
-        if (/\bMVM\b/i.test(node.textContent || '')) node.remove();
-      });
+    root?.querySelectorAll('label, .wip-uc-field').forEach((node) => {
+      if (/\bMVM\b/i.test(node.textContent || '')) node.remove();
+    });
 
-    const note = document.querySelector('#wip-undercarriage-filter p');
-    if (note) note.textContent = 'BULL / Dozer : modèles D*. EXCA : modèles PC* ou HB*. Les autres modèles ne sont pas pris en compte.';
+    const note = root?.querySelector('p');
+    if (note) note.textContent = 'BULL / Dozer : modèles D*. EXCA : modèles PC* ou HB*. Le badge reste visible si des données undercarriage existent, même si aucune machine applicable n’est détectée.';
   }
 
   function updateBadges() {
@@ -211,9 +256,15 @@
       }
       if (!row) return;
       const list = buildUndercarriageMachines(row);
+      const raw = !!row._wipUndercarriageHasRaw;
+      if (!raw && !list.length) {
+        badge.remove();
+        return;
+      }
       badge.textContent = `Undercarriage • ${list.length}`;
       badge.dataset.rowIndex = String(row._rowIndex ?? '');
-      if (!list.length) badge.remove();
+      badge.setAttribute('title', list.length ? 'Voir les données undercarriage applicables' : 'Données undercarriage présentes, mais aucune machine D / PC / HB reconnue');
+      badge.classList.toggle('wip-uc-badge-zero', !list.length);
     });
   }
 
@@ -231,6 +282,7 @@
 
   function modalHtml(row) {
     const list = buildUndercarriageMachines(row).sort((a, b) => (b.score || 0) - (a.score || 0));
+    const rawList = row._undercarriageRawMachines || [];
     const rows = list.map((machine) => `
       <tr>
         <td>${esc(machine.label)}</td>
@@ -244,6 +296,10 @@
       </tr>
     `).join('');
 
+    const empty = rawList.length
+      ? '<tr><td colspan="8">Données undercarriage présentes, mais aucune machine D / PC / HB reconnue. Vérifier Liste Machines et Liste Num série Machines.</td></tr>'
+      : '<tr><td colspan="8">Aucune donnée undercarriage trouvée.</td></tr>';
+
     return `
       <div class="wip-uc-clean-kicker">Données undercarriage par machine</div>
       <div class="wip-uc-clean-summary">
@@ -254,7 +310,7 @@
       <div class="wip-uc-clean-table-wrap">
         <table class="wip-uc-clean-table">
           <thead><tr><th>Machine / modèle</th><th>SMR</th><th>BULL / Dozer</th><th>EXCA</th><th>Travel %</th><th>Travel h</th><th>Classe</th><th>Score</th></tr></thead>
-          <tbody>${rows || '<tr><td colspan="8">Aucune donnée undercarriage applicable D / PC / HB.</td></tr>'}</tbody>
+          <tbody>${rows || empty}</tbody>
         </table>
       </div>
     `;
@@ -318,6 +374,19 @@
     try { runFilter = wrapped; } catch (error) {}
   }
 
+  function patchAddBadges() {
+    const current = window.addBadges;
+    if (typeof current !== 'function' || current.__wipUndercarriageModelRules) return;
+    const wrapped = function addBadgesWithUndercarriageModelRules(...args) {
+      const result = current.apply(this, args);
+      setTimeout(() => { refreshRows(); updateBadges(); }, 0);
+      return result;
+    };
+    wrapped.__wipUndercarriageModelRules = true;
+    window.addBadges = wrapped;
+    try { addBadges = wrapped; } catch (error) {}
+  }
+
   function installStyles() {
     if (document.getElementById('wip-undercarriage-model-rules-style')) return;
     const style = document.createElement('style');
@@ -326,6 +395,7 @@
       #wip-uc-model-rules-modal{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
       #wip-uc-model-rules-modal .wip-uc-clean-table th:nth-child(5),
       #wip-uc-model-rules-modal .wip-uc-clean-table td:nth-child(5){display:table-cell!important}
+      .wip-uc-badge-zero{opacity:.72!important;border-style:dashed!important}
     `;
     document.head.appendChild(style);
   }
@@ -333,6 +403,7 @@
   function install() {
     installStyles();
     patchRunFilter();
+    patchAddBadges();
     refreshRows();
     updateFilterUi();
     updateBadges();
