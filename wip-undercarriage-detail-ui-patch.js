@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-undercarriage-detail-ui-2026-08-07-v2';
+  const PATCH_ID = 'wip-undercarriage-detail-ui-2026-08-10-v3';
   if (window.__WIP_UNDERCARRIAGE_DETAIL_UI_PATCH__ === PATCH_ID) return;
   window.__WIP_UNDERCARRIAGE_DETAIL_UI_PATCH__ = PATCH_ID;
 
@@ -233,7 +233,7 @@
     const style = document.createElement('style');
     style.id = 'wip-undercarriage-detail-ui-style';
     style.textContent = `
-      #wip-undercarriage-integrated-accordion{border:1px solid #e5e7eb!important;border-left:4px solid #eab308!important;border-radius:16px!important;background:linear-gradient(90deg,#fffbeb 0%,#ffffff 58%,#ffffff 100%)!important;box-shadow:none!important;margin:0 0 12px!important;overflow:hidden!important}
+      #wip-undercarriage-integrated-accordion{border:1px solid #e5e7eb!important;border-left:4px solid #eab308!important;border-radius:16px!important;background:linear-gradient(90deg,#fffbeb 0%,#ffffff 58%,#ffffff 100%)!important;box-shadow:none!important;margin:.75rem 0 0!important;overflow:hidden!important}
       .dark #wip-undercarriage-integrated-accordion{background:linear-gradient(90deg,rgba(234,179,8,.08),rgba(15,23,42,.92))!important;border-color:#334155!important;border-left-color:#eab308!important}
       #wip-undercarriage-integrated-accordion .wip-undercarriage-integrated-summary{min-height:46px!important;padding:0 14px!important;color:#334155!important;font-size:11px!important;font-weight:1000!important;letter-spacing:.055em!important;text-transform:uppercase!important;background:transparent!important}
       .dark #wip-undercarriage-integrated-accordion .wip-undercarriage-integrated-summary{color:#e2e8f0!important}

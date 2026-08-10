@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-release-2026-08-07-final-clean';
+  const PATCH_ID = 'wip-release-2026-08-07-final-clean-v2';
   window.__WIP_RELEASE_REFINE_PATCH__ = PATCH_ID;
 
   const RELEASE_DATE = '07/08/2026';
@@ -107,7 +107,6 @@
         <div>
           <div class="wip-release-kicker">Version ${esc(RELEASE_DATE)} — ${esc(RELEASE_TIME)}</div>
           <div class="wip-release-title">${featureCount} nouveautés WIP à tester</div>
-          <div class="wip-release-sub">Cette date reste figée jusqu’à la prochaine demande de mise à jour. Les anciennes nouveautés ont été remplacées par cette version.</div>
         </div>
       </div>
       <div class="wip-release-sections">
@@ -131,6 +130,8 @@
   function installReleasePopupRefinement() {
     const modal = document.getElementById('v18-release-modal');
     if (!modal) return;
+    const versionTitle = modal.querySelector('#v18-release-version-title') || modal.querySelector('h3');
+    if (versionTitle) versionTitle.textContent = `Version du ${RELEASE_DATE}`;
 
     const renderBody = () => {
       const body = modal.querySelector('.p-5.overflow-y-auto') || modal.querySelector('[class*="overflow-y-auto"]');
@@ -164,7 +165,6 @@
       .wip-release-20260807{border:1px solid rgba(234,179,8,.35);background:linear-gradient(135deg,rgba(250,204,21,.12),rgba(255,255,255,.96));border-radius:16px;padding:14px}.dark .wip-release-20260807{background:linear-gradient(135deg,rgba(250,204,21,.14),rgba(15,23,42,.96));border-color:rgba(234,179,8,.28)}
       .wip-release-kicker{font-size:10px;font-weight:1000;letter-spacing:.12em;text-transform:uppercase;color:#b45309}.dark .wip-release-kicker{color:#facc15}
       .wip-release-title{margin-top:4px;font-size:18px;font-weight:1000;color:#0f172a}.dark .wip-release-title{color:#f8fafc}
-      .wip-release-sub{margin-top:5px;font-size:11px;line-height:1.45;color:#64748b}.dark .wip-release-sub{color:#cbd5e1}
     `;
     document.head.appendChild(style);
   }

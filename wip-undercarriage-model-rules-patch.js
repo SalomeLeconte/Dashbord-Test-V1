@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-undercarriage-model-rules-2026-08-10-v3';
+  const PATCH_ID = 'wip-undercarriage-model-rules-2026-08-10-v4';
   if (window.__WIP_UNDERCARRIAGE_MODEL_RULES_PATCH__ === PATCH_ID) return;
   window.__WIP_UNDERCARRIAGE_MODEL_RULES_PATCH__ = PATCH_ID;
 
@@ -221,6 +221,7 @@
     state.sort = false;
     try { window.__wipSyncUndercarriageRangeUi?.(); } catch (error) {}
     try { window.__wipSyncUndercarriageCustomSelects?.(); } catch (error) {}
+    try { window.__wipSyncUndercarriagePriorityUi?.(); } catch (error) {}
   }
 
   function selectedClass(machine) {
@@ -271,7 +272,17 @@
 
   function applyFinal(rows) {
     const filtered = (Array.isArray(rows) ? rows : []).filter(rowPass);
-    return filtered;
+    if (!state.priority) return filtered;
+    return filtered
+      .map((row, index) => ({ row, index, score: priorityScore(row) }))
+      .sort((a, b) => b.score - a.score || a.index - b.index)
+      .map(({ row }) => row);
+  }
+
+  function priorityScore(row) {
+    return buildUndercarriageMachines(row)
+      .filter(machinePass)
+      .reduce((best, machine) => Math.max(best, Number(machine.sortValue || machine.score || 0)), 0);
   }
 
   function updateFilterUi() {
