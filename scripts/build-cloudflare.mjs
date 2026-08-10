@@ -54,6 +54,7 @@ copyFileIfExists('wip-canton-note-cleanup-patch.js');
 copyFileIfExists('wip-undercarriage-model-rules-patch.js');
 copyFileIfExists('wip-undercarriage-smr-filter-patch.js');
 copyFileIfExists('wip-undercarriage-badge-restore-patch.js');
+copyFileIfExists('wip-undercarriage-native-visual-final-patch.js');
 
 // Cloudflare Pages configuration files. They must be present in the output directory.
 copyFileIfExists('_headers');
