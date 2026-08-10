@@ -498,8 +498,8 @@
                                 </div>
                             </div>
                             <div>
-                                <label class="modern-label">Ville / Canton</label>
-                                <input type="text" id="f-ville" oninput="runFilter()" placeholder="Ex: ville ou canton ..." class="modern-input">
+                                <label class="modern-label">Ville</label>
+                                <input type="text" id="f-ville" oninput="runFilter()" placeholder="Ex: Lyon, Nantes..." class="modern-input">
                             </div>
                         </div>
                     </div>
@@ -1435,7 +1435,7 @@
                 if (searchGroupe && String(item[COL.groupe] || "") !== searchGroupe) return false;
                 if (searchDeptSidebar && item._deptNorm !== searchDeptSidebar) return false;
                 if (searchAgence && String(item[COL.agence] || "") !== searchAgence) return false;
-                if (searchVille && ![item._searchVille, item._searchCanton].filter(Boolean).join(" " ).includes(searchVille)) return false;
+                if (searchVille && !item._searchVille.includes(searchVille)) return false;
                 if (searchModele && !item._searchMachines.includes(searchModele)) return false;
                 if (searchSerieMachine && !item._searchSeries.includes(searchSerieMachine)) return false;
                 if (nbMachinesFilter && !matchesMachineVolume(item, nbMachinesFilter)) return false;
@@ -3568,7 +3568,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
     const ville = document.getElementById('f-ville');
     const parent = ville?.closest('div');
     if (!parent) return;
-    ville.setAttribute('placeholder', 'Ex: LYON, NANTES ou canton...');
+    ville.setAttribute('placeholder', 'Ex: Lyon, Nantes...');
     parent.insertAdjacentHTML('beforeend', `
       <div class="mt-2">
         <label class="modern-label">Cantons</label>
@@ -3652,7 +3652,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
             </div>
             <div class="p-5 overflow-y-auto max-h-[70vh] space-y-4 text-sm text-gray-700 dark:text-slate-200">
               <ul class="list-disc pl-5 space-y-2">
-                <li>Ville/Canton dans une seule recherche avec liste déroulante de cantons.</li>
+                <li>Recherche par ville avec filtre canton séparé.</li>
                 <li>Filtre secteur d’activité remis en affichage précédent.</li>
                 <li>Filtre flotte détaillé de 1 à 5 machines.</li>
                 <li>Recherche par numéro client Irium.</li>
@@ -3669,7 +3669,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
   }
   window.openReleaseNotes = () => document.getElementById('v18-release-modal')?.classList.add('open');
   window.closeReleaseNotes = () => document.getElementById('v18-release-modal')?.classList.remove('open');
-  window.startReleaseTutorial = () => alert('Tutoriel nouveautés : 1) utilise Ville/Canton dans la même recherche, 2) choisis un canton dans la liste limitée à ton terrain, 3) ouvre Mon terrain pour la synthèse par département, 4) dans Cartographie, supprime une étape avec la poubelle, 5) ouvre Google Maps après calcul de l’itinéraire.');
+  window.startReleaseTutorial = () => alert('Tutoriel nouveautés : 1) recherche une ville, 2) ouvre Mon terrain pour la synthèse par département, 3) dans Cartographie, supprime une étape avec la poubelle, 4) ouvre Google Maps après calcul de l’itinéraire.');
 
   function addMonTerrainButton(){
     if (document.getElementById('v18-terrain-button')) return;
@@ -4031,7 +4031,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
     const year = document.getElementById('f-ca-annee');
     if (year && !year.dataset.v20DefaultDone) { year.dataset.v20DefaultDone='1'; try { setupCARange(); } catch(e){} }
     const ville = document.getElementById('f-ville');
-    if (ville) ville.placeholder = 'Ex: ville ou canton ...';
+    if (ville) ville.placeholder = 'Ex: Lyon, Nantes...';
     const cantonLabel = document.querySelector('label[for="f-canton-select"], #f-canton-select')?.closest('div')?.querySelector('label');
     if (cantonLabel) cantonLabel.textContent = 'Cantons';
     document.querySelectorAll('label').forEach(l => { if (n(l.textContent) === 'cantons disponibles') l.textContent='Cantons'; if (n(l.textContent) === 'age machine all') l.textContent='Âge machine'; });
@@ -4192,14 +4192,14 @@ Adresse : ${item[COL.adresse] || "-"}`);
     const oldRun = runFilter;
     runFilter = function(){
       oldRun.apply(this, arguments);
-      // Apply canton typed/select filter using the same Ville/Canton input.
+      // La saisie libre filtre uniquement la ville ; le canton reste séparé.
       const typed = n(document.getElementById('f-ville')?.value || '');
       const selectedCanton = n(document.getElementById('f-canton-select')?.value || '');
       if ((typed || selectedCanton) && Array.isArray(currentFilteredData)) {
         currentFilteredData = currentFilteredData.filter(item => {
           const city = n(item[COL.ville] || '');
           const canton = n(cantonValue(item));
-          const txtOk = !typed || city.includes(typed) || canton.includes(typed);
+          const txtOk = !typed || city.includes(typed);
           const selOk = !selectedCanton || canton === selectedCanton;
           return txtOk && selOk;
         });
@@ -5381,7 +5381,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
     const label=wrap?.querySelector('label'); if(label) label.textContent='Cantons — In progress';
     select.innerHTML='<option value="">In progress — non fonctionnel</option>';
     select.value=''; select.disabled=true; select.onchange=null; select.removeAttribute('onchange');
-    if(wrap && !wrap.querySelector('.v25-canton-progress')) wrap.insertAdjacentHTML('beforeend','<div class="v25-canton-progress">Menu déroulant canton en cours de développement : non fonctionnel pour le moment. Utilisez uniquement le champ Ville / Canton au-dessus.</div>');
+    if(wrap && !wrap.querySelector('.v25-canton-progress')) wrap.insertAdjacentHTML('beforeend','<div class="v25-canton-progress">Menu déroulant canton en cours de développement : non fonctionnel pour le moment. Utilisez le champ Ville au-dessus.</div>');
   }
 
   const sectorState = window.__v25SectorState ||= {cats:new Set(), nafs:new Set(), open:new Set(), wrapped:false};
