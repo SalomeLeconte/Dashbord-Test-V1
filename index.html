@@ -25,10 +25,37 @@
       const MAX_RIBBON_MS=30000;
       let frameReady=false;
       let ribbonTimer=null;
+      const patches=[
+        'wip-performance-patch.js',
+        'wip-followup-patch.js',
+        'wip-release-refine-patch.js',
+        'wip-marker-novelty-green-patch.js',
+        'wip-feedback-patch.js',
+        'wip-stability-repair-patch.js',
+        'wip-route-ui-refine-patch.js',
+        'wip-responsive-device-patch.js',
+        'wip-map-terrain-search-patch.js',
+        'wip-smart-route-sync-patch.js',
+        'wip-route-sector-final-fix-patch.js',
+        'wip-route-status-compact-patch.js',
+        'wip-table-excel-filters-date-sort-patch.js',
+        'wip-undercarriage-filter-patch.js',
+        'wip-canton-adaptive-filter-patch.js',
+        'wip-filter-placeholder-cleanup-patch.js',
+        'wip-siret-dedupe-patch.js',
+        'wip-undercarriage-detail-ui-patch.js',
+        'wip-release-target-precision-patch.js',
+        'wip-undercarriage-modal-clean-patch.js',
+        'wip-canton-note-cleanup-patch.js',
+        'wip-undercarriage-model-rules-patch.js',
+        'wip-undercarriage-smr-filter-patch.js',
+        'wip-undercarriage-badge-restore-patch.js',
+        'wip-undercarriage-native-visual-final-patch.js',
+        'wip-stack-guard-patch.js'
+      ];
 
       function isDesktop(){return window.matchMedia('(min-width:1024px)').matches;}
       function ribbonTimeAllowed(){return Date.now()-ribbonStartedAt<=MAX_RIBBON_MS;}
-
       function isPortfolioSelectionVisible(){
         if(!isDesktop()||!frameReady||!ribbonTimeAllowed())return false;
         try{
@@ -40,13 +67,11 @@
           return style.display!=='none'&&style.visibility!=='hidden'&&style.opacity!=='0'&&overlay.getBoundingClientRect().height>0;
         }catch(error){return false;}
       }
-
       function syncRibbon(){
         const show=isPortfolioSelectionVisible();
         ribbon?.classList.toggle('is-hidden',!show);
         if(!show&&Date.now()-ribbonStartedAt>MAX_RIBBON_MS){clearInterval(ribbonTimer);ribbonTimer=null;}
       }
-
       frame.addEventListener('load',()=>{
         frameReady=true;
         syncRibbon();
@@ -55,22 +80,21 @@
         window.setTimeout(syncRibbon,MAX_RIBBON_MS+100);
       });
       window.addEventListener('resize',syncRibbon);
-
       async function bootDashboard(){
         try{
           const response=await fetch('./dashboard-wip.html',{cache:'no-store'});
           if(!response.ok)throw new Error(`HTTP ${response.status}`);
           let html=await response.text();
           const baseHref=new URL('./',window.location.href).href;
+          const injected=patches.map((file)=>`<script src="./${file}"><\/script>`).join('\n');
           html=html.replace('<head>',`<head>\n<base href="${baseHref}">`);
-          html=html.replace('</body>','<script src="./wip-performance-patch.js"><\/script>\n<script src="./wip-followup-patch.js"><\/script>\n<script src="./wip-release-refine-patch.js"><\/script>\n<script src="./wip-marker-novelty-green-patch.js"><\/script>\n<script src="./wip-feedback-patch.js"><\/script>\n<script src="./wip-stability-repair-patch.js"><\/script>\n<script src="./wip-route-ui-refine-patch.js"><\/script>\n<script src="./wip-responsive-device-patch.js"><\/script>\n<script src="./wip-map-terrain-search-patch.js"><\/script>\n<script src="./wip-smart-route-sync-patch.js"><\/script>\n<script src="./wip-route-sector-final-fix-patch.js"><\/script>\n<script src="./wip-route-status-compact-patch.js"><\/script>\n<script src="./wip-table-excel-filters-date-sort-patch.js"><\/script>\n<script src="./wip-undercarriage-filter-patch.js"><\/script>\n<script src="./wip-canton-adaptive-filter-patch.js"><\/script>\n<script src="./wip-filter-placeholder-cleanup-patch.js"><\/script>\n<script src="./wip-siret-dedupe-patch.js"><\/script>\n<script src="./wip-undercarriage-detail-ui-patch.js"><\/script>\n<script src="./wip-release-target-precision-patch.js"><\/script>\n<script src="./wip-undercarriage-modal-clean-patch.js"><\/script>\n<script src="./wip-canton-note-cleanup-patch.js"><\/script>\n<script src="./wip-undercarriage-model-rules-patch.js"><\/script>\n<script src="./wip-undercarriage-smr-filter-patch.js"><\/script>\n<script src="./wip-undercarriage-badge-restore-patch.js"><\/script>\n<script src="./wip-undercarriage-native-visual-final-patch.js"><\/script>\n</body>');
+          html=html.replace('</body>',`${injected}\n</body>`);
           frame.srcdoc=html;
         }catch(error){
           console.error('Chargement du dashboard WIP impossible.',error);
           frame.src='./dashboard-wip.html';
         }
       }
-
       ribbonTimer=setInterval(syncRibbon,300);
       bootDashboard();
     })();
