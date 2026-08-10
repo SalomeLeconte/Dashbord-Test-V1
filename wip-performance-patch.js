@@ -1,5 +1,27 @@
 (() => {
   const ROW_BATCH_SIZE = 200;
+
+  // Les données sont déclarées avec `let` dans le script principal : elles sont
+  // globales, mais ne deviennent pas automatiquement des propriétés de window.
+  // Plusieurs modules WIP utilisent window.* pour partager cet état.
+  function exposeRuntimeState(name, getter, setter) {
+    try {
+      const descriptor = Object.getOwnPropertyDescriptor(window, name);
+      if (descriptor && !descriptor.configurable) return;
+      Object.defineProperty(window, name, {
+        configurable: true,
+        enumerable: false,
+        get: getter,
+        set: setter
+      });
+    } catch (error) {
+      console.warn(`Pont d'état ${name} indisponible.`, error);
+    }
+  }
+
+  exposeRuntimeState('globalData', () => globalData, value => { globalData = value; });
+  exposeRuntimeState('currentFilteredData', () => currentFilteredData, value => { currentFilteredData = value; });
+
   const originalLoadCSVData = window.loadCSVData;
   const originalSelectSector = window.selectSector;
   const originalBypassSelection = window.bypassSelection;

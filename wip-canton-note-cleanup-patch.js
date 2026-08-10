@@ -17,6 +17,7 @@
     if (!text || text.length > 420) return false;
     return text.includes('menu deroulant canton en cours de developpement')
       || text.includes('utilisez uniquement le champ ville / canton au-dessus')
+      || text.includes('utilisez le champ ville au-dessus')
       || text.includes('liste liee aux departements du pssr')
       || text.includes('le filtrage exact necessite une colonne canton par client');
   }
