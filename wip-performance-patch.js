@@ -6,19 +6,53 @@
   const originalRenderGrid = window.renderGrid;
 
   let dataLoadStarted = false;
+  let dataLoadScheduled = false;
+  let dataLoadPromise = null;
   let visibleRowLimit = ROW_BATCH_SIZE;
   let lastGridData = null;
 
+  function hasLoadedData() {
+    try { return Array.isArray(globalData) && globalData.length > 0; }
+    catch (error) { return false; }
+  }
+
   function startDataLoadAfterPaint() {
-    if (dataLoadStarted || typeof originalLoadCSVData !== 'function') return;
+    if (hasLoadedData()) return Promise.resolve(true);
+    if (dataLoadPromise) return dataLoadPromise;
+    if (typeof originalLoadCSVData !== 'function') return Promise.resolve(false);
+
     dataLoadStarted = true;
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        Promise.resolve(originalLoadCSVData()).catch((error) => {
-          console.error('Chargement différé des données impossible.', error);
-        });
-      }, 0);
+    dataLoadPromise = new Promise(resolve => {
+      requestAnimationFrame(() => window.setTimeout(resolve, 0));
+    }).then(() => originalLoadCSVData()).then(success => {
+      if (!success) {
+        dataLoadStarted = false;
+        dataLoadPromise = null;
+      }
+      return success;
+    }).catch(error => {
+      dataLoadStarted = false;
+      dataLoadPromise = null;
+      console.error('Chargement différé des données impossible.', error);
+      return false;
     });
+
+    return dataLoadPromise;
+  }
+
+  function scheduleBackgroundDataLoad() {
+    if (dataLoadScheduled || dataLoadStarted) return;
+    dataLoadScheduled = true;
+    const start = () => {
+      dataLoadScheduled = false;
+      startDataLoadAfterPaint();
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(start, { timeout: 1200 });
+    } else {
+      window.setTimeout(start, 600);
+    }
   }
 
   function updateLoadMoreControl(totalRows) {
@@ -52,8 +86,10 @@
 
   window.loadCSVData = function deferredInitialLoad() {
     if (typeof window.setLoadingState === 'function') {
-      window.setLoadingState('Sélectionnez un portefeuille pour charger les données.');
+      window.setLoadingState('Préparation des données en arrière-plan...');
     }
+    scheduleBackgroundDataLoad();
+    return dataLoadPromise;
   };
 
   if (typeof originalSelectSector === 'function') {
@@ -71,6 +107,10 @@
       return result;
     };
   }
+
+  window.addEventListener('online', () => {
+    if (!dataLoadStarted) startDataLoadAfterPaint();
+  });
 
   if (typeof originalRenderGrid === 'function') {
     window.renderGrid = function optimizedRenderGrid(data) {

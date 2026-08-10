@@ -82,6 +82,14 @@ Cette date est volontairement figée jusqu’à demande de mise à jour.
 
 - Optimisations d’affichage ordinateur, tablette et mobile.
 
+### Performance du chargement
+
+- Le dashboard est chargé directement dans l’iframe, sans reconstruction via `srcdoc`.
+- Les correctifs `wip-*.js` sont regroupés dans `wip-runtime.bundle.js` pour limiter les requêtes réseau.
+- `data11.csv` est téléchargé et analysé dans `csv-data-worker.js` afin de garder l’interface réactive.
+- La préparation des lignes est découpée en lots et le référentiel cantons est chargé uniquement à la demande.
+- Le cache HTTP est réutilisé tout en revalidant les données auprès de GitHub Pages.
+
 ---
 
 ## Fonctionnalités principales
@@ -170,10 +178,15 @@ Dashbord-Test-V1/
 │
 ├── index.html
 ├── dashboard-wip.html
+├── csv-data-worker.js
+├── wip-runtime.bundle.js
 ├── README.md
 ├── data11.csv
 ├── wip-*.js
 ├── scripts/
-│   └── build-cloudflare.mjs
+│   ├── build-cloudflare.mjs
+│   └── build-runtime-bundle.mjs
 └── assets/
 ```
+
+Après la modification d’un correctif `wip-*.js`, exécuter `npm run bundle`. La commande `npm run build` régénère également le bundle avant de préparer le dossier `dist/`.
