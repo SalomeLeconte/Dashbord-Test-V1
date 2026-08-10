@@ -28,6 +28,7 @@ const runtimeFiles = [
   'wip-canton-note-cleanup-patch.js',
   'wip-undercarriage-model-rules-patch.js',
   'wip-undercarriage-smr-filter-patch.js',
+  'wip-undercarriage-custom-select-patch.js',
   'wip-undercarriage-badge-restore-patch.js',
   'wip-undercarriage-native-visual-final-patch.js',
   'wip-stack-guard-patch.js'
