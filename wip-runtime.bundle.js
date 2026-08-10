@@ -11,7 +11,6 @@
   const originalRenderGrid = window.renderGrid;
 
   let dataLoadStarted = false;
-  let dataLoadScheduled = false;
   let dataLoadPromise = null;
   let visibleRowLimit = ROW_BATCH_SIZE;
   let lastGridData = null;
@@ -21,15 +20,13 @@
     catch (error) { return false; }
   }
 
-  function startDataLoadAfterPaint() {
+  function startDataLoad() {
     if (hasLoadedData()) return Promise.resolve(true);
     if (dataLoadPromise) return dataLoadPromise;
     if (typeof originalLoadCSVData !== 'function') return Promise.resolve(false);
 
     dataLoadStarted = true;
-    dataLoadPromise = new Promise(resolve => {
-      requestAnimationFrame(() => window.setTimeout(resolve, 0));
-    }).then(() => originalLoadCSVData()).then(success => {
+    dataLoadPromise = Promise.resolve(originalLoadCSVData()).then(success => {
       if (!success) {
         dataLoadStarted = false;
         dataLoadPromise = null;
@@ -43,21 +40,6 @@
     });
 
     return dataLoadPromise;
-  }
-
-  function scheduleBackgroundDataLoad() {
-    if (dataLoadScheduled || dataLoadStarted) return;
-    dataLoadScheduled = true;
-    const start = () => {
-      dataLoadScheduled = false;
-      startDataLoadAfterPaint();
-    };
-
-    if (typeof window.requestIdleCallback === 'function') {
-      window.requestIdleCallback(start, { timeout: 1200 });
-    } else {
-      window.setTimeout(start, 600);
-    }
   }
 
   function updateLoadMoreControl(totalRows) {
@@ -89,18 +71,17 @@
     }
   }
 
-  window.loadCSVData = function deferredInitialLoad() {
-    if (typeof window.setLoadingState === 'function') {
-      window.setLoadingState('Préparation des données en arrière-plan...');
-    }
-    scheduleBackgroundDataLoad();
-    return dataLoadPromise;
+  window.loadCSVData = function coordinatedInitialLoad() {
+    return startDataLoad();
   };
 
   if (typeof originalSelectSector === 'function') {
     window.selectSector = function optimizedSelectSector(...args) {
       const result = originalSelectSector.apply(this, args);
-      startDataLoadAfterPaint();
+      if (!hasLoadedData() && typeof window.setLoadingState === 'function') {
+        window.setLoadingState('Chargement de data11.csv...');
+      }
+      startDataLoad();
       return result;
     };
   }
@@ -108,14 +89,21 @@
   if (typeof originalBypassSelection === 'function') {
     window.bypassSelection = function optimizedBypassSelection(...args) {
       const result = originalBypassSelection.apply(this, args);
-      startDataLoadAfterPaint();
+      if (!hasLoadedData() && typeof window.setLoadingState === 'function') {
+        window.setLoadingState('Chargement de data11.csv...');
+      }
+      startDataLoad();
       return result;
     };
   }
 
   window.addEventListener('online', () => {
-    if (!dataLoadStarted) startDataLoadAfterPaint();
+    if (!dataLoadStarted) startDataLoad();
   });
+
+  // Le parsing est réalisé dans un Worker : le téléchargement peut donc démarrer
+  // immédiatement sans bloquer la sélection du portefeuille ni l'interface.
+  startDataLoad();
 
   if (typeof originalRenderGrid === 'function') {
     window.renderGrid = function optimizedRenderGrid(data) {
