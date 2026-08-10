@@ -156,6 +156,8 @@
     if (activeSelect && !activeSelect.isConnected) closeMenu();
   }
 
+  window.__wipSyncUndercarriageCustomSelects = syncAll;
+
   function queueSync() {
     if (syncQueued) return;
     syncQueued = true;

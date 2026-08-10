@@ -219,6 +219,8 @@
     state.travelPctMin = Number(root.querySelector('[data-uc="travelPct"]')?.value || 0);
     state.travelHoursMin = Number(root.querySelector('[data-uc="travelHours"]')?.value || 0);
     state.sort = false;
+    try { window.__wipSyncUndercarriageRangeUi?.(); } catch (error) {}
+    try { window.__wipSyncUndercarriageCustomSelects?.(); } catch (error) {}
   }
 
   function selectedClass(machine) {
@@ -290,6 +292,11 @@
       if (/Trier par potentiel/i.test(node.textContent || '')) node.remove();
     });
     root.querySelector('[data-uc="sort"]')?.closest('label,div')?.remove();
+    root.querySelectorAll('#wip-uc-apply,#wip-uc-reset').forEach((button) => {
+      const actions = button.closest('.grid');
+      if (actions?.querySelectorAll('#wip-uc-apply,#wip-uc-reset').length === 2) actions.remove();
+      else button.remove();
+    });
 
     const note = root.querySelector('p');
     const noteText = 'BULL / Dozer : modèles D*. EXCA : modèles PC* ou HB*. Les autres modèles ne sont pas pris en compte.';
@@ -378,16 +385,10 @@
     const root = document.getElementById('wip-undercarriage-filter');
     if (!root || root.dataset.wipFinalRulesEvents === 'true') return;
     root.dataset.wipFinalRulesEvents = 'true';
+    if (root.dataset.wipUcBaseEvents === 'true') return;
     root.querySelectorAll('select,input').forEach((field) => {
       field.addEventListener('change', runFullRefresh);
       field.addEventListener('input', runFullRefresh);
-    });
-    root.querySelector('#wip-uc-apply')?.addEventListener('click', runFullRefresh);
-    root.querySelector('#wip-uc-reset')?.addEventListener('click', () => {
-      Object.assign(state, { enabled: false, type: '', cls: '', priority: '', smrMin: 0, activityMin: 0, travelPctMin: 0, travelHoursMin: 0, sort: false });
-      root.querySelectorAll('select').forEach((select) => { select.value = ''; });
-      root.querySelectorAll('input').forEach((input) => { input.checked = false; });
-      runFullRefresh();
     });
   }
 

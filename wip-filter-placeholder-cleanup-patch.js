@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-filter-placeholder-cleanup-toggle-2026-08-07-v4';
+  const PATCH_ID = 'wip-filter-placeholder-cleanup-toggle-2026-08-10-v5';
   if (window.__WIP_FILTER_PLACEHOLDER_CLEANUP_PATCH__ === PATCH_ID) return;
   window.__WIP_FILTER_PLACEHOLDER_CLEANUP_PATCH__ = PATCH_ID;
 
@@ -146,6 +146,21 @@
     hideLooseEmptyBodiesAround(headerBlock);
   }
 
+  function positionAfterPriority(accordion) {
+    if (!accordion) return;
+    const priorityBody = document.getElementById('acc-priorite-client');
+    const prioritySection = priorityBody?.parentElement;
+    const filterList = prioritySection?.parentElement;
+    if (prioritySection && filterList && prioritySection.nextElementSibling !== accordion) {
+      filterList.insertBefore(accordion, prioritySection.nextElementSibling);
+    }
+    accordion.classList.remove('mt-4');
+
+    const legacyBody = document.getElementById('acc-undercarriage');
+    const legacySection = legacyBody?.parentElement;
+    if (legacySection && legacySection !== accordion && !legacySection.contains(accordion)) legacySection.remove();
+  }
+
   function flattenFilter(filter) {
     if (!filter) return;
     if (filter.tagName === 'DETAILS') filter.open = true;
@@ -184,6 +199,7 @@
 
     hideOriginalHeader(headerBlock);
     removeExternalUndercarriageShells(filter);
+    positionAfterPriority(accordion);
   }
 
   function cleanupDuplicateStandaloneUndercarriage() {
@@ -238,7 +254,7 @@
       .wip-hidden-original-undercarriage-header,
       .wip-hidden-undercarriage-orphan,
       .wip-hidden-undercarriage-summary{display:none!important}
-      .wip-undercarriage-integrated-accordion{border:1px solid #fed7aa!important;border-left:4px solid #f59e0b!important;border-radius:16px!important;background:#fffdf7!important;overflow:hidden!important;margin:0 0 12px!important}
+      .wip-undercarriage-integrated-accordion{border:1px solid #fed7aa!important;border-left:4px solid #f59e0b!important;border-radius:16px!important;background:#fffdf7!important;overflow:hidden!important;margin:0!important}
       .dark .wip-undercarriage-integrated-accordion{background:rgba(15,23,42,.92)!important;border-color:rgba(251,146,60,.35)!important}
       .wip-undercarriage-integrated-summary{list-style:none!important;cursor:pointer!important;min-height:46px!important;display:flex!important;align-items:center!important;justify-content:space-between!important;padding:0 14px!important;font-size:11px!important;font-weight:1000!important;letter-spacing:.055em!important;text-transform:uppercase!important;color:#111827!important;user-select:none!important}
       .dark .wip-undercarriage-integrated-summary{color:#f8fafc!important}
