@@ -57,50 +57,97 @@
 
   async function loadReference() {
     if (Array.isArray(window.__wipCantonReference) && window.__wipCantonReference.length) return window.__wipCantonReference;
+    if (window.__wipCantonReferencePromise) return window.__wipCantonReferencePromise;
+
     state.loading = true;
     state.error = '';
     updateStatus();
-    try {
-      const response = await fetch(COMMUNES_URL, { cache: 'force-cache' });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const text = await response.text();
-      const lines = text.split(/\r?\n/).filter(Boolean);
-      const headers = parseCsvLine(lines.shift()).map(norm);
-      const idx = (...names) => names.map(name => headers.indexOf(norm(name))).find(i => i >= 0);
-      const iCity = idx('nom_standard', 'nom_sans_accent', 'nom_commune');
-      const iDept = idx('dep_code', 'code_departement', 'departement');
-      const iCanton = idx('canton_nom', 'nom_canton', 'libelle_canton');
-      const iCantonCode = idx('canton_code', 'code_canton');
-      const iLat = idx('latitude_centre', 'latitude', 'lat');
-      const iLon = idx('longitude_centre', 'longitude', 'lon');
-      const rows = lines.map(line => {
-        const cols = parseCsvLine(line);
-        const canton = cols[iCanton] || cols[iCantonCode] || '';
-        const city = cols[iCity] || '';
-        const dept = String(cols[iDept] || '').padStart(2, '0');
-        if (!canton || !city || !dept) return null;
-        return {
-          city,
-          cityNorm: norm(city),
-          dept,
-          canton,
-          cantonNorm: norm(canton),
-          lat: num(cols[iLat]),
-          lon: num(cols[iLon])
-        };
-      }).filter(Boolean);
-      window.__wipCantonReference = rows;
-      state.loading = false;
-      updateStatus();
-      return rows;
-    } catch (error) {
-      console.warn('Référentiel cantons indisponible', error);
-      state.loading = false;
-      state.error = 'Référentiel cantons indisponible';
-      updateStatus();
-      window.__wipCantonReference = [];
-      return [];
-    }
+    window.__wipCantonReferencePromise = (async () => {
+      try {
+        let rows;
+        try {
+          rows = await loadReferenceInWorker();
+        } catch (workerError) {
+          console.warn('Worker cantons indisponible, utilisation du chargement de secours.', workerError);
+          rows = await loadReferenceOnMainThread();
+        }
+        window.__wipCantonReference = rows;
+        state.loading = false;
+        updateStatus();
+        return rows;
+      } catch (error) {
+        console.warn('Référentiel cantons indisponible', error);
+        state.loading = false;
+        state.error = 'Référentiel cantons indisponible';
+        updateStatus();
+        window.__wipCantonReference = [];
+        return [];
+      } finally {
+        window.__wipCantonReferencePromise = null;
+      }
+    })();
+    return window.__wipCantonReferencePromise;
+  }
+
+  function loadReferenceInWorker() {
+    if (typeof Worker === 'undefined') return Promise.reject(new Error('Web Worker non pris en charge'));
+    return new Promise((resolve, reject) => {
+      const workerUrl = new URL('./csv-data-worker.js', document.baseURI);
+      let worker;
+      let settled = false;
+      const finish = (callback, value) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timeoutId);
+        worker?.terminate();
+        callback(value);
+      };
+      const timeoutId = window.setTimeout(() => finish(reject, new Error('Délai du référentiel cantons dépassé')), 90000);
+      try {
+        worker = new Worker(workerUrl.href, { name: 'dashboard-canton-loader' });
+      } catch (error) {
+        finish(reject, error);
+        return;
+      }
+      worker.onmessage = event => {
+        const message = event.data || {};
+        if (message.type === 'error') finish(reject, new Error(message.message || 'Erreur du worker cantons'));
+        if (message.type === 'canton-result') finish(resolve, Array.isArray(message.rows) ? message.rows : []);
+      };
+      worker.onerror = event => finish(reject, new Error(event.message || 'Erreur du worker cantons'));
+      worker.postMessage({ type: 'load-canton', url: COMMUNES_URL });
+    });
+  }
+
+  async function loadReferenceOnMainThread() {
+    const response = await fetch(COMMUNES_URL, { cache: 'force-cache' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const text = await response.text();
+    const lines = text.split(/\r?\n/).filter(Boolean);
+    const headers = parseCsvLine(lines.shift()).map(norm);
+    const idx = (...names) => names.map(name => headers.indexOf(norm(name))).find(i => i >= 0);
+    const iCity = idx('nom_standard', 'nom_sans_accent', 'nom_commune');
+    const iDept = idx('dep_code', 'code_departement', 'departement');
+    const iCanton = idx('canton_nom', 'nom_canton', 'libelle_canton');
+    const iCantonCode = idx('canton_code', 'code_canton');
+    const iLat = idx('latitude_centre', 'latitude', 'lat');
+    const iLon = idx('longitude_centre', 'longitude', 'lon');
+    return lines.map(line => {
+      const cols = parseCsvLine(line);
+      const canton = cols[iCanton] || cols[iCantonCode] || '';
+      const city = cols[iCity] || '';
+      const dept = String(cols[iDept] || '').padStart(2, '0');
+      if (!canton || !city || !dept) return null;
+      return {
+        city,
+        cityNorm: norm(city),
+        dept,
+        canton,
+        cantonNorm: norm(canton),
+        lat: num(cols[iLat]),
+        lon: num(cols[iLon])
+      };
+    }).filter(Boolean);
   }
 
   function cantonForRow(row) {
@@ -141,8 +188,10 @@
     return [...map.values()].sort((a, b) => a.localeCompare(b, 'fr', { numeric: true }));
   }
 
-  async function computeOptions() {
-    const ref = await loadReference();
+  async function computeOptions({ loadRemote = true } = {}) {
+    const ref = loadRemote
+      ? await loadReference()
+      : (Array.isArray(window.__wipCantonReference) ? window.__wipCantonReference : []);
     const dept = selectedDept();
     const city = citySearch();
     let options = [];
@@ -213,11 +262,13 @@
         <button type="button" id="f-canton-reset" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/80 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300">Réinitialiser canton</button>
         <div id="f-canton-adaptive-status" class="text-[10px] text-slate-400">Initialisation...</div>
       </div>`);
-    document.getElementById('f-canton-adaptive-select')?.addEventListener('change', event => {
+    const cantonSelect = document.getElementById('f-canton-adaptive-select');
+    cantonSelect?.addEventListener('change', event => {
       state.selected = event.target.value || '';
       state.nearbyOnly = false;
       safeRunFilter();
     });
+    cantonSelect?.addEventListener('focus', () => computeOptions());
     document.getElementById('f-canton-reset')?.addEventListener('click', () => {
       state.selected = '';
       state.nearbyOnly = false;
@@ -234,7 +285,7 @@
     document.getElementById('f-canton-nearby')?.addEventListener('click', requestNearby);
     [deptField, cityField].forEach(field => field?.addEventListener('input', () => computeOptions()));
     [deptField, cityField].forEach(field => field?.addEventListener('change', () => computeOptions()));
-    computeOptions();
+    computeOptions({ loadRemote: false });
   }
 
   function requestNearby() {
@@ -335,5 +386,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', boot);
+  document.addEventListener('dashboard:data-ready', () => computeOptions({ loadRemote: false }));
   [300, 900, 1800, 3500, 6500].forEach(delay => window.setTimeout(boot, delay));
 })();

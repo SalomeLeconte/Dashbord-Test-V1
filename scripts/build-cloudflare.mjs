@@ -30,32 +30,8 @@ function copyDirectoryIfExists(directoryName) {
 const runtimeFiles = [
   'index.html',
   'dashboard-wip.html',
-  'wip-performance-patch.js',
-  'wip-followup-patch.js',
-  'wip-release-refine-patch.js',
-  'wip-marker-novelty-green-patch.js',
-  'wip-feedback-patch.js',
-  'wip-stability-repair-patch.js',
-  'wip-route-ui-refine-patch.js',
-  'wip-responsive-device-patch.js',
-  'wip-map-terrain-search-patch.js',
-  'wip-smart-route-sync-patch.js',
-  'wip-route-sector-final-fix-patch.js',
-  'wip-route-status-compact-patch.js',
-  'wip-table-excel-filters-date-sort-patch.js',
-  'wip-undercarriage-filter-patch.js',
-  'wip-canton-adaptive-filter-patch.js',
-  'wip-filter-placeholder-cleanup-patch.js',
-  'wip-siret-dedupe-patch.js',
-  'wip-undercarriage-detail-ui-patch.js',
-  'wip-release-target-precision-patch.js',
-  'wip-undercarriage-modal-clean-patch.js',
-  'wip-canton-note-cleanup-patch.js',
-  'wip-undercarriage-model-rules-patch.js',
-  'wip-undercarriage-smr-filter-patch.js',
-  'wip-undercarriage-badge-restore-patch.js',
-  'wip-undercarriage-native-visual-final-patch.js',
-  'wip-stack-guard-patch.js'
+  'wip-runtime.bundle.js',
+  'csv-data-worker.js'
 ];
 
 runtimeFiles.forEach(copyFileIfExists);

@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashbord optimisation visite client / prospection</title>
+
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+    <link rel="preconnect" href="https://unpkg.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
     
@@ -966,6 +971,7 @@
         let selectedSectorDepts = [];
         let selectedPssrNorm = "";
         let globalData = [];
+        let csvLoadPromise = null;
         let currentFilteredData = [];
         let csvHeaders = [];
         let currentTab = "table";
@@ -1038,27 +1044,121 @@
         }
 
         async function loadCSVData() {
-            setLoadingState("Chargement de data11.csv...");
-            try {
-                const response = await fetch(CSV_FILE, { cache: "no-store" });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const text = await response.text();
-                ingestCSVText(text);
-            } catch (error) {
-                console.error("Chargement de data11.csv impossible.", error);
-                showCsvLoadError(error);
-            }
+            if (globalData.length) return true;
+            if (csvLoadPromise) return csvLoadPromise;
+
+            csvLoadPromise = (async () => {
+                const startedAt = performance.now();
+                setLoadingState("Chargement des données...");
+                try {
+                    let rows;
+                    try {
+                        rows = await loadCSVRowsInWorker();
+                    } catch (workerError) {
+                        console.warn("Worker CSV indisponible, utilisation du chargement de secours.", workerError);
+                        rows = await loadCSVRowsOnMainThread();
+                    }
+
+                    await ingestCSVRows(rows);
+                    document.dispatchEvent(new CustomEvent("dashboard:data-ready", {
+                        detail: {
+                            rows: globalData.length,
+                            durationMs: Math.round(performance.now() - startedAt)
+                        }
+                    }));
+                    return true;
+                } catch (error) {
+                    csvLoadPromise = null;
+                    console.error("Chargement de data11.csv impossible.", error);
+                    showCsvLoadError(error);
+                    return false;
+                }
+            })();
+
+            return csvLoadPromise;
+        }
+
+        function loadCSVRowsInWorker() {
+            if (typeof Worker === "undefined") return Promise.reject(new Error("Web Worker non pris en charge"));
+
+            return new Promise((resolve, reject) => {
+                const workerUrl = new URL("./csv-data-worker.js", document.baseURI);
+                const csvUrl = new URL(CSV_FILE, document.baseURI);
+                let worker;
+                let settled = false;
+
+                const finish = (callback, value) => {
+                    if (settled) return;
+                    settled = true;
+                    window.clearTimeout(timeoutId);
+                    worker?.terminate();
+                    callback(value);
+                };
+
+                const timeoutId = window.setTimeout(() => {
+                    finish(reject, new Error("Délai de chargement CSV dépassé"));
+                }, 90000);
+
+                try {
+                    worker = new Worker(workerUrl.href, { name: "dashboard-csv-loader" });
+                } catch (error) {
+                    finish(reject, error);
+                    return;
+                }
+
+                worker.onmessage = event => {
+                    const message = event.data || {};
+                    if (message.type === "status" && message.message) {
+                        setLoadingState(message.message);
+                        return;
+                    }
+                    if (message.type === "error") {
+                        finish(reject, new Error(message.message || "Erreur du worker CSV"));
+                        return;
+                    }
+                    if (message.type === "result") {
+                        finish(resolve, Array.isArray(message.rows) ? message.rows : []);
+                    }
+                };
+                worker.onerror = event => finish(reject, new Error(event.message || "Erreur du worker CSV"));
+                worker.postMessage({ type: "load", url: csvUrl.href });
+            });
+        }
+
+        async function loadCSVRowsOnMainThread() {
+            setLoadingState("Téléchargement des données...");
+            const response = await fetch(CSV_FILE, { cache: "no-cache" });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const text = await response.text();
+            setLoadingState("Analyse des données...");
+            return parseCSV(text);
         }
 
         function ingestCSVText(text) {
-            const rows = parseCSV(text);
+            return ingestCSVRows(parseCSV(text));
+        }
+
+        async function yieldToBrowser() {
+            if (globalThis.scheduler && typeof globalThis.scheduler.yield === "function") {
+                await globalThis.scheduler.yield();
+                return;
+            }
+            await new Promise(resolve => window.setTimeout(resolve, 0));
+        }
+
+        async function ingestCSVRows(rows) {
             if (!rows.length) throw new Error("CSV vide");
 
             const headers = rows[0].map(h => String(h || "").replace(/^\ufeff/, "").trim());
             csvHeaders = headers;
-            globalData = rows.slice(1)
-                .filter(row => row.some(v => String(v || "").trim() !== ""))
-                .map((row, index) => {
+            const sourceRows = rows.slice(1).filter(row => row.some(v => String(v || "").trim() !== ""));
+            const preparedData = new Array(sourceRows.length);
+            const chunkSize = 400;
+
+            for (let chunkStart = 0; chunkStart < sourceRows.length; chunkStart += chunkSize) {
+                const chunkEnd = Math.min(sourceRows.length, chunkStart + chunkSize);
+                for (let index = chunkStart; index < chunkEnd; index++) {
+                    const row = sourceRows[index];
                     const item = {};
                     headers.forEach((header, i) => item[header] = row[i] ?? "");
                     item._rowIndex = index;
@@ -1084,8 +1184,14 @@
                     item._adresseSearch = buildAddressQuery(item);
                     item._lat = getFirstNumericField(item, ["Latitude", "latitude", "lat", "LAT", "Coordonnée Latitude", "Coordonnee Latitude"]);
                     item._lon = getFirstNumericField(item, ["Longitude", "longitude", "lng", "lon", "LONG", "Coordonnée Longitude", "Coordonnee Longitude"]);
-                    return item;
-                });
+                    preparedData[index] = item;
+                }
+
+                setLoadingState(`Préparation des données ${chunkEnd.toLocaleString("fr-FR")}/${sourceRows.length.toLocaleString("fr-FR")}...`);
+                await yieldToBrowser();
+            }
+
+            globalData = preparedData;
 
             populateFilterOptions();
             setupCARange();
@@ -3130,8 +3236,8 @@ Adresse : ${item[COL.adresse] || "-"}`);
             tbody.innerHTML = `
                 <tr>
                     <td colspan="6" class="p-8 text-center text-sm text-gray-500 dark:text-slate-400">
-                        <div class="font-bold text-gray-800 dark:text-white mb-2">Impossible de charger data7.csv automatiquement.</div>
-                        <div class="mb-4">Place index.html et data7.csv dans le même dossier et ouvre la page via un petit serveur local, ou charge le CSV manuellement ci-dessous.</div>
+                        <div class="font-bold text-gray-800 dark:text-white mb-2">Impossible de charger data11.csv automatiquement.</div>
+                        <div class="mb-4">Vérifie la connexion puis réessaie, ou charge le CSV manuellement ci-dessous.</div>
                         <input type="file" accept=".csv,text/csv" onchange="loadCSVFromInput(event)" class="text-xs">
                         <div class="text-[10px] mt-3 text-gray-400">Erreur technique : ${escapeHtml(error.message || error)}</div>
                     </td>
@@ -3142,7 +3248,9 @@ Adresse : ${item[COL.adresse] || "-"}`);
             const file = event.target.files?.[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = e => ingestCSVText(String(e.target.result || ""));
+            reader.onload = e => {
+                ingestCSVText(String(e.target.result || "")).catch(showCsvLoadError);
+            };
             reader.readAsText(file, "utf-8");
         }
 
@@ -5666,5 +5774,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
 })();
 </script>
 
+<script src="./wip-runtime.bundle.js"></script>
 </body>
 </html>
