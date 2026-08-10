@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-undercarriage-native-visual-final-2026-08-10';
+  const PATCH_ID = 'wip-undercarriage-native-visual-final-2026-08-10-v2';
   if (window.__WIP_UNDERCARRIAGE_NATIVE_VISUAL_FINAL_PATCH__ === PATCH_ID) return;
   window.__WIP_UNDERCARRIAGE_NATIVE_VISUAL_FINAL_PATCH__ = PATCH_ID;
 
@@ -70,13 +70,24 @@
     });
   }
 
+  function findTitleText(header) {
+    if (!header) return null;
+    const nodes = [...header.querySelectorAll('span, div, strong, b')]
+      .filter((node) => {
+        const text = norm(node.textContent || '');
+        const rect = node.getBoundingClientRect();
+        return rect.width > 20 && rect.height > 8 && /priorit|secteur|donnees|clients/.test(text);
+      });
+    return nodes.sort((a, b) => (a.textContent || '').length - (b.textContent || '').length)[0] || header;
+  }
+
   function findChevron(header) {
     if (!header) return null;
     const children = [...header.querySelectorAll('svg, i, .chevron, [class*="chevron"], [class*="Chevron"], span')];
     return children.filter((node) => {
       const text = norm(node.textContent || '');
       const rect = node.getBoundingClientRect();
-      if (text.includes('priorite') || text.includes('clients')) return false;
+      if (text.includes('priorite') || text.includes('clients') || text.includes('secteur')) return false;
       return rect.width <= 32 && rect.height <= 32;
     }).sort((a, b) => {
       const ar = a.getBoundingClientRect();
@@ -108,14 +119,17 @@
   function alignVisual() {
     const accordion = document.getElementById('wip-undercarriage-integrated-accordion');
     const summary = accordion?.querySelector('.wip-undercarriage-integrated-summary, summary');
+    const titleSpan = summary?.querySelector('span:first-child');
     const body = document.getElementById('wip-undercarriage-integrated-body');
     if (!accordion || !summary) return;
 
     const refHeader = findNativeReferenceHeader();
     const refContainer = headerContainer(refHeader) || refHeader;
+    const refTitle = findTitleText(refHeader);
 
     accordion.classList.add('wip-uc-native-visual-final');
     summary.classList.add('wip-uc-native-visual-final-summary');
+    titleSpan?.classList.add('wip-uc-native-title-text');
     body?.classList.add('wip-uc-native-visual-final-body');
 
     if (refContainer) {
@@ -137,7 +151,14 @@
       replaceChevron(summary, null);
     }
 
-    summary.querySelector('span:first-child')?.style.setProperty('color', getComputedStyle(refHeader || summary).color, 'important');
+    if (titleSpan) {
+      const source = refTitle || refHeader || summary;
+      copyComputed(source, titleSpan, [
+        'font-family', 'font-size', 'font-weight', 'letter-spacing', 'text-transform', 'line-height', 'color'
+      ]);
+      titleSpan.style.setProperty('display', 'inline-flex', 'important');
+      titleSpan.style.setProperty('align-items', 'center', 'important');
+    }
   }
 
   function installStyle() {
@@ -147,6 +168,8 @@
     style.textContent = `
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final{border:1px solid #e2e8f0!important;border-left:4px solid #eab308!important;border-radius:14px!important;background:linear-gradient(90deg,#fffbeb 0%,#f8fafc 100%)!important;box-shadow:none!important;margin:0 0 12px!important;overflow:hidden!important}
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final>summary.wip-uc-native-visual-final-summary{list-style:none!important;display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:46px!important;padding:0 14px!important;background:linear-gradient(90deg,#fffbeb 0%,#f8fafc 100%)!important;color:#334155!important;font-size:11px!important;font-weight:1000!important;letter-spacing:.055em!important;text-transform:uppercase!important;cursor:pointer!important;user-select:none!important;border-radius:14px!important}
+      #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final>summary.wip-uc-native-visual-final-summary .wip-uc-native-title-text,
+      #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final>summary.wip-uc-native-visual-final-summary>span:first-child{font-size:11px!important;font-weight:1000!important;letter-spacing:.055em!important;text-transform:uppercase!important;line-height:1!important;color:#334155!important;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif!important}
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final>summary.wip-uc-native-visual-final-summary::-webkit-details-marker{display:none!important}
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final>summary.wip-uc-native-visual-final-summary::marker{content:""!important}
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final .wip-undercarriage-integrated-chevron{display:none!important}
@@ -157,6 +180,8 @@
       #wip-undercarriage-integrated-body.wip-uc-native-visual-final-body{border-top:1px solid #e2e8f0!important;background:#fff!important;padding:0!important}
       .dark #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final{background:linear-gradient(90deg,rgba(234,179,8,.08),rgba(15,23,42,.92))!important;border-color:#334155!important;border-left-color:#eab308!important}
       .dark #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final>summary.wip-uc-native-visual-final-summary{background:linear-gradient(90deg,rgba(234,179,8,.08),rgba(15,23,42,.92))!important;color:#e2e8f0!important}
+      .dark #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final>summary.wip-uc-native-visual-final-summary .wip-uc-native-title-text,
+      .dark #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final>summary.wip-uc-native-visual-final-summary>span:first-child{color:#e2e8f0!important}
       .dark #wip-undercarriage-integrated-body.wip-uc-native-visual-final-body{border-top-color:#334155!important;background:#020617!important}
     `;
     document.head.appendChild(style);
