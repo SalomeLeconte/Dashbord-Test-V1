@@ -23,18 +23,14 @@
   }
 
   function removeObsoleteCantonNotes() {
-    document.querySelectorAll('p,small,span,div').forEach((element) => {
+    const root = document.getElementById('filters-panel') || document.querySelector('aside') || document;
+    root.querySelectorAll('p,small,span,div').forEach((element) => {
       if (isObsoleteCantonNote(element)) element.remove();
     });
   }
 
   removeObsoleteCantonNotes();
-  document.addEventListener('DOMContentLoaded', () => {
-    [80, 250, 600, 1200, 2400, 5000, 9000].forEach((delay) => window.setTimeout(removeObsoleteCantonNotes, delay));
-  });
-  [120, 450, 900, 1800, 3600, 7200, 12000].forEach((delay) => window.setTimeout(removeObsoleteCantonNotes, delay));
-  try {
-    new MutationObserver(() => window.setTimeout(removeObsoleteCantonNotes, 0))
-      .observe(document.documentElement, { childList: true, subtree: true });
-  } catch (error) {}
+  document.addEventListener('dashboard:data-ready', () => window.setTimeout(removeObsoleteCantonNotes, 0));
+  document.addEventListener('DOMContentLoaded', removeObsoleteCantonNotes, { once: true });
+  window.setTimeout(removeObsoleteCantonNotes, 2000);
 })();

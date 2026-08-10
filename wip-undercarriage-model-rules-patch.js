@@ -138,6 +138,9 @@
 
   function buildUndercarriageMachines(row) {
     if (!row) return [];
+    if (row._wipUndercarriageModelRulesApplied && Array.isArray(row._undercarriageMachines)) {
+      return row._undercarriageMachines;
+    }
     const maps = {
       smr: entryMap(get(row, COLS.smr)),
       bull: entryMap(get(row, COLS.bull)),
@@ -303,21 +306,19 @@
 
   function runFullRefresh() {
     syncState();
-    refreshRows();
     try { if (typeof runFilter === 'function') runFilter(); }
     catch (error) { console.warn('Undercarriage refresh failed', error); }
-    setTimeout(() => { refreshRows(); updateBadges(); }, 120);
+    setTimeout(updateBadges, 120);
   }
 
   function patchRunFilter() {
+    if (window.__WIP_FINAL_UNDERCARRIAGE_RUN_FILTER_WRAPPED__) return;
     const current = window.runFilter;
     if (typeof current !== 'function' || current.__wipFinalUndercarriageRules) return;
     const wrapped = function runFilterWithFinalUndercarriageRules(...args) {
       syncState();
-      refreshRows();
       const result = current.apply(this, args);
       try {
-        refreshRows();
         if (finalActive() && Array.isArray(window.currentFilteredData)) {
           window.currentFilteredData = applyFinal(window.currentFilteredData);
           try { currentFilteredData = window.currentFilteredData; } catch (error) {}
@@ -331,20 +332,22 @@
     wrapped.__wipFinalUndercarriageRules = true;
     window.runFilter = wrapped;
     try { runFilter = wrapped; } catch (error) {}
+    window.__WIP_FINAL_UNDERCARRIAGE_RUN_FILTER_WRAPPED__ = true;
   }
 
   function patchTop200() {
+    if (window.__WIP_FINAL_UNDERCARRIAGE_TOP200_WRAPPED__) return;
     const current = window.getTop200Data;
     if (typeof current !== 'function' || current.__wipFinalUndercarriageTop200) return;
     const wrapped = function getTop200DataWithFinalUndercarriageRules(...args) {
       const rows = current.apply(this, args);
       syncState();
-      refreshRows();
       return finalActive() ? applyFinal(rows) : rows;
     };
     wrapped.__wipFinalUndercarriageTop200 = true;
     window.getTop200Data = wrapped;
     try { getTop200Data = wrapped; } catch (error) {}
+    window.__WIP_FINAL_UNDERCARRIAGE_TOP200_WRAPPED__ = true;
   }
 
   function updateBadges() {
@@ -352,7 +355,7 @@
     buttons.forEach((button) => {
       const match = String(button.getAttribute('onclick') || '').match(/openDetails\((\d+)\)/);
       const rowIndex = match ? Number(match[1]) : NaN;
-      const row = Number.isFinite(rowIndex) ? (window.globalData || []).find((item) => Number(item?._rowIndex) === rowIndex) : null;
+      const row = Number.isFinite(rowIndex) ? window.__wipRowByIndex?.(rowIndex) || null : null;
       const list = row ? buildUndercarriageMachines(row) : [];
       const existing = button.parentElement?.querySelector('.wip-uc-badge');
       if (!row || !list.length) {
@@ -408,14 +411,13 @@
     installStyles();
     patchRunFilter();
     patchTop200();
-    refreshRows();
     updateFilterUi();
     installEvents();
     updateBadges();
   }
 
   install();
-  document.addEventListener('DOMContentLoaded', () => [100, 400, 900, 1800, 3500, 6500, 10000, 15000].forEach((delay) => setTimeout(install, delay)));
-  [150, 550, 1200, 2400, 4800, 8000, 12000, 18000].forEach((delay) => setTimeout(install, delay));
-  try { new MutationObserver(() => setTimeout(install, 0)).observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('dashboard:data-ready', () => window.setTimeout(install, 0));
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  setTimeout(install, 2000);
 })();

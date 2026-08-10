@@ -267,8 +267,9 @@
 
   window.__wipSyncUndercarriageSelects = syncAll;
   install();
-  document.addEventListener('DOMContentLoaded', install);
-  [80, 200, 500, 1000, 2000, 4000, 7000, 11000].forEach((delay) => window.setTimeout(install, delay));
+  document.addEventListener('DOMContentLoaded', install, { once: true });
+  document.addEventListener('dashboard:data-ready', queueSync);
+  window.setTimeout(install, 2000);
   try {
     new MutationObserver((mutations) => {
       const relevant = mutations.some((mutation) => {
