@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-undercarriage-native-visual-final-2026-08-10-v3';
+  const PATCH_ID = 'wip-undercarriage-native-visual-final-2026-08-10-v4';
   if (window.__WIP_UNDERCARRIAGE_NATIVE_VISUAL_FINAL_PATCH__ === PATCH_ID) return;
   window.__WIP_UNDERCARRIAGE_NATIVE_VISUAL_FINAL_PATCH__ = PATCH_ID;
 
@@ -92,7 +92,7 @@
     const style = document.createElement('style');
     style.id = 'wip-undercarriage-native-visual-final-style';
     style.textContent = `
-      #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final{border:0!important;border-left:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;margin:0!important;overflow:visible!important;min-height:0!important}
+      #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final{border:0!important;border-left:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;margin:.75rem 0 0!important;overflow:visible!important;min-height:0!important}
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final>summary.wip-uc-native-visual-final-summary{list-style:none!important;width:100%!important;display:flex!important;align-items:center!important;justify-content:space-between!important;min-height:46px!important;padding:.85rem!important;background:linear-gradient(90deg,rgba(250,204,21,.13),rgba(248,250,252,.96))!important;border:1px solid #e5e7eb!important;border-left:4px solid #eab308!important;border-radius:.9rem!important;color:#334155!important;font-size:11px!important;font-weight:1000!important;letter-spacing:.055em!important;text-transform:uppercase!important;text-align:left!important;cursor:pointer!important;user-select:none!important;transition:border-color .18s ease,background-color .18s ease,transform .18s ease!important}
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final>summary.wip-uc-native-visual-final-summary:hover{border-color:#eab308!important}
       #wip-undercarriage-integrated-accordion.wip-uc-native-visual-final>summary.wip-uc-native-visual-final-summary .wip-uc-native-title-text,

@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-undercarriage-smr-filter-2026-08-10';
+  const PATCH_ID = 'wip-undercarriage-smr-filter-2026-08-10-v2';
   if (window.__WIP_UNDERCARRIAGE_SMR_FILTER_PATCH__ === PATCH_ID) return;
   window.__WIP_UNDERCARRIAGE_SMR_FILTER_PATCH__ = PATCH_ID;
 
@@ -52,6 +52,7 @@
     current.sort = false;
     try { window.__wipSyncUndercarriageRangeUi?.(); } catch (error) {}
     try { window.__wipSyncUndercarriageCustomSelects?.(); } catch (error) {}
+    try { window.__wipSyncUndercarriagePriorityUi?.(); } catch (error) {}
     return current;
   }
 
@@ -125,16 +126,18 @@
     return !!(s.enabled || s.type || s.priority || s.smrMin || s.travelPctMin || s.travelHoursMin);
   }
 
-  function machineClass(machine) {
-    return machine?.bull || machine?.exca || machine?.best || '';
+  function machineClasses(machine, current = state()) {
+    if (current.type === 'BULL') return [machine?.bull].filter(Boolean);
+    if (current.type === 'EXCA') return [machine?.exca].filter(Boolean);
+    return [machine?.bull, machine?.exca, machine?.best].filter((value, index, values) => value && values.indexOf(value) === index);
   }
 
   function machinePass(machine) {
     const s = syncState();
     if (s.type === 'BULL' && !machine.bull) return false;
     if (s.type === 'EXCA' && !(machine.exca || machine.travelPct || machine.travelHours)) return false;
-    const cls = machineClass(machine);
-    if (s.priority && !GROUPS[s.priority]?.has(cls)) return false;
+    const classes = machineClasses(machine, s);
+    if (s.priority && !classes.some(cls => GROUPS[s.priority]?.has(cls))) return false;
     if (s.smrMin && Number(machine.smr || 0) < s.smrMin) return false;
     if (s.travelPctMin && Number(machine.travelPct || 0) < s.travelPctMin) return false;
     if (s.travelHoursMin && Number(machine.travelHours || 0) < s.travelHoursMin) return false;
@@ -149,7 +152,20 @@
   }
 
   function applyRows(rows) {
-    return (Array.isArray(rows) ? rows : []).filter(rowPass);
+    const filtered = (Array.isArray(rows) ? rows : []).filter(rowPass);
+    const selectedPriority = state().priority;
+    if (!selectedPriority) return filtered;
+    return filtered
+      .map((row, index) => ({ row, index, score: priorityScore(row, selectedPriority) }))
+      .sort((a, b) => b.score - a.score || a.index - b.index)
+      .map(({ row }) => row);
+  }
+
+  function priorityScore(row, selectedPriority) {
+    const current = state();
+    return machines(row)
+      .filter(machine => machineClasses(machine, current).some(cls => GROUPS[selectedPriority]?.has(cls)))
+      .reduce((best, machine) => Math.max(best, Number(machine.sortValue || machine.score || 0)), 0);
   }
 
   function rerender() {
