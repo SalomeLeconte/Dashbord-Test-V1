@@ -25,6 +25,8 @@
       const MAX_RIBBON_MS=30000;
       let frameReady=false;
       let ribbonTimer=null;
+      const runtimePatches=['wip-table-excel-filter-precision-patch.js'];
+
       function isDesktop(){return window.matchMedia('(min-width:1024px)').matches;}
       function ribbonTimeAllowed(){return Date.now()-ribbonStartedAt<=MAX_RIBBON_MS;}
       function isPortfolioSelectionVisible(){
@@ -43,8 +45,24 @@
         ribbon?.classList.toggle('is-hidden',!show);
         if(!show&&Date.now()-ribbonStartedAt>MAX_RIBBON_MS){clearInterval(ribbonTimer);ribbonTimer=null;}
       }
+      function injectRuntimePatches(){
+        try{
+          const doc=frame.contentDocument;
+          if(!doc?.body)return;
+          runtimePatches.forEach((file)=>{
+            const id=`wip-runtime-${file.replace(/[^a-z0-9_-]/gi,'-')}`;
+            if(doc.getElementById(id))return;
+            const script=doc.createElement('script');
+            script.id=id;
+            script.src=`./${file}`;
+            script.defer=true;
+            doc.body.appendChild(script);
+          });
+        }catch(error){console.warn('Injection patch WIP impossible.',error);}
+      }
       frame.addEventListener('load',()=>{
         frameReady=true;
+        injectRuntimePatches();
         syncRibbon();
         clearInterval(ribbonTimer);
         ribbonTimer=setInterval(syncRibbon,300);
