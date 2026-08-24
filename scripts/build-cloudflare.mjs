@@ -34,6 +34,7 @@ const runtimeFiles = [
   'csv-data-worker.js',
   'wip-table-excel-filter-precision-patch.js',
   'wip-final-regression-fixes-patch.js',
+  'wip-undercarriage-home-route-polish-patch.js',
   'wip-stack-guard-patch.js'
 ];
 
