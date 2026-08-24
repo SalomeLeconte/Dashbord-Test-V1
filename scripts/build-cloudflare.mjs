@@ -31,7 +31,8 @@ const runtimeFiles = [
   'index.html',
   'dashboard-wip.html',
   'wip-runtime.bundle.js',
-  'csv-data-worker.js'
+  'csv-data-worker.js',
+  'wip-table-excel-filter-precision-patch.js'
 ];
 
 runtimeFiles.forEach(copyFileIfExists);
