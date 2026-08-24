@@ -25,7 +25,11 @@
       const MAX_RIBBON_MS=30000;
       let frameReady=false;
       let ribbonTimer=null;
-      const runtimePatches=['wip-table-excel-filter-precision-patch.js'];
+      const runtimePatches=[
+        'wip-table-excel-filter-precision-patch.js',
+        'wip-final-regression-fixes-patch.js',
+        'wip-stack-guard-patch.js'
+      ];
 
       function isDesktop(){return window.matchMedia('(min-width:1024px)').matches;}
       function ribbonTimeAllowed(){return Date.now()-ribbonStartedAt<=MAX_RIBBON_MS;}
