@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-safe-undercarriage-home-route-2026-08-24';
+  const PATCH_ID = 'wip-safe-undercarriage-home-route-2026-08-24-v2';
   if (window.__WIP_SAFE_UNDERCARRIAGE_HOME_ROUTE_PATCH__ === PATCH_ID) return;
   window.__WIP_SAFE_UNDERCARRIAGE_HOME_ROUTE_PATCH__ = PATCH_ID;
 
@@ -33,10 +33,6 @@
     localStorage.setItem(MODE_KEY, mode === 'home' ? 'home' : 'current');
   }
 
-  function getMode() {
-    return localStorage.getItem(MODE_KEY) || 'current';
-  }
-
   function parseLatLng(value) {
     const match = String(value || '').trim().match(/^(-?\d+(?:[.,]\d+)?)\s*[,; ]\s*(-?\d+(?:[.,]\d+)?)$/);
     if (!match) return null;
@@ -50,10 +46,8 @@
     const text = String(value || '').trim();
     if (!text) return { ok: false, message: 'Indique une adresse : rue, ville.' };
     if (parseLatLng(text)) return { ok: true };
-
     const parts = text.split(/[,;]+/).map((part) => part.trim()).filter(Boolean);
     if (parts.length < 2) return { ok: false, message: 'Format attendu : rue, ville.' };
-
     const street = parts[0];
     const city = parts.slice(1).join(' ');
     if (street.length < 4 || city.length < 2) return { ok: false, message: 'Indique au minimum une rue et une ville.' };
@@ -63,14 +57,12 @@
   async function resolveAddress(value) {
     const latLng = parseLatLng(value);
     if (latLng) return latLng;
-
     try {
       if (typeof window.requestGeocode === 'function') {
         const result = await window.requestGeocode(`${value}, France`);
         if (result && Number.isFinite(result.lat) && Number.isFinite(result.lon)) return { lat: result.lat, lon: result.lon };
       }
     } catch (error) {}
-
     const response = await fetch(`https://api-adresse.data.gouv.fr/search/?limit=1&q=${encodeURIComponent(value)}`, {
       headers: { Accept: 'application/json' },
       cache: 'force-cache'
@@ -103,18 +95,15 @@
   function ensureHomeOption() {
     const select = routeSelect();
     if (!select) return null;
-
     const currentStart = [...select.options].find((option) => {
       const text = norm(option.textContent || '');
       return text.includes('ma position au depart') || (text.includes('position') && text.includes('depart') && !text.includes('arrivee'));
     });
-
     let homeOption = [...select.options].find((option) => option.dataset?.wipHomeStart === 'true' || norm(option.textContent || '').includes('domicile'));
     if (!homeOption) {
       homeOption = document.createElement('option');
       select.appendChild(homeOption);
     }
-
     homeOption.dataset.wipHomeStart = 'true';
     homeOption.value = currentStart?.value || 'start';
     homeOption.textContent = 'DOMICILE AU DÉPART';
@@ -143,12 +132,10 @@
           <span id="wip-safe-home-route-status"></span>
         </div>
       `;
-
       const select = routeSelect();
       const anchor = select?.closest?.('label, .route-control, .leaflet-control, div') || select?.parentElement;
       if (anchor?.parentElement) anchor.insertAdjacentElement('afterend', panel);
-      else document.body.appendChild(panel);
-
+      else return null;
       panel.querySelector('#wip-safe-home-route-save')?.addEventListener('click', saveHomeFromPanel);
       panel.querySelector('#wip-safe-home-route-input')?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
@@ -157,7 +144,6 @@
         }
       });
     }
-
     const home = readHome();
     const input = panel.querySelector('#wip-safe-home-route-input');
     if (home?.address && input && !input.value) input.value = home.address;
@@ -173,12 +159,6 @@
         return true;
       }
     } catch (error) {}
-
-    try {
-      window.userLocation = { lat: home.lat, lon: home.lon, accuracy: 25, sourceLabel: 'Domicile' };
-      if (typeof window.renderUserLocationMarker === 'function') window.renderUserLocationMarker(true);
-      return true;
-    } catch (error) {}
     return false;
   }
 
@@ -190,7 +170,6 @@
       setStatus(validation.message, true);
       return null;
     }
-
     setStatus('Recherche du domicile...', false);
     try {
       const coords = await resolveAddress(value);
@@ -210,11 +189,11 @@
     const select = ensureHomeOption();
     if (!select) return;
     const panel = ensureHomePanel();
+    if (!panel) return;
     const isHome = selectedHome();
     panel.style.display = isHome ? 'block' : 'none';
     panel.classList.toggle('is-active', isHome);
     setMode(isHome ? 'home' : 'current');
-
     if (!isHome) return;
     const home = readHome();
     if (home?.address) {
@@ -280,7 +259,7 @@
 
   function replaceTextNode(node) {
     const before = node.nodeValue || '';
-    let after = before
+    const after = before
       .replace(/Travel\s+hours\s+EXCA/gi, 'H déplacement EXCA')
       .replace(/Travel\s+EXCA\s*%/gi, '% déplacement EXCA')
       .replace(/Travel\s+%/gi, '% déplacement EXCA')
@@ -290,34 +269,30 @@
 
   function walkText(root) {
     if (!root) return;
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
-    const nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(replaceTextNode);
+    try {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+      const nodes = [];
+      while (walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(replaceTextNode);
+    } catch (error) {}
   }
 
-  function removeFieldByText(root, patterns) {
-    if (!root) return;
-    root.querySelectorAll('label, .wip-uc-field, .field, div, p').forEach((node) => {
-      if (!node.isConnected) return;
-      const text = norm(node.textContent || '');
-      if (!patterns.some((pattern) => pattern.test(text))) return;
-      const candidate = node.closest?.('label, .wip-uc-field, .field') || node;
-      const rect = candidate.getBoundingClientRect?.();
-      if (candidate.id === 'wip-undercarriage-filter') return;
-      if (rect && rect.height > 220) return;
-      candidate.remove();
-    });
+  function removeSmallField(node) {
+    if (!node || node.id === 'wip-undercarriage-filter') return;
+    const candidate = node.closest?.('label, .wip-uc-field, .field') || node;
+    const rect = candidate.getBoundingClientRect?.();
+    if (rect && (rect.height > 120 || rect.width > 520)) return;
+    candidate.remove();
   }
 
   function cleanUndercarriage() {
     const filter = document.getElementById('wip-undercarriage-filter');
     if (filter) {
-      ['class', 'activity'].forEach((key) => {
-        const field = filter.querySelector(`[data-uc="${key}"]`)?.closest?.('label, .wip-uc-field, .field, div');
-        field?.remove();
+      ['class', 'activity'].forEach((key) => removeSmallField(filter.querySelector(`[data-uc="${key}"]`)));
+      filter.querySelectorAll('label, .wip-uc-field, .field').forEach((node) => {
+        const text = norm(node.textContent || '');
+        if (/\bmvm\b/.test(text) || /\bscore\b/.test(text) || /\bclasse\b/.test(text) || text.includes('activite moyenne') || text.includes('trier par potentiel')) removeSmallField(node);
       });
-      removeFieldByText(filter, [/\bmvm\b/, /\bscore\b/, /\bclasse\b/, /activite moyenne/, /trier par potentiel/]);
       filter.querySelectorAll('option').forEach((option) => {
         const text = norm(option.textContent || option.value || '');
         if (text.includes('mvm')) option.remove();
@@ -325,16 +300,18 @@
       walkText(filter);
     }
 
-    document.querySelectorAll('table, .wip-uc-modal-card, #wip-uc-detail-modal, [id*="undercarriage"], [class*="undercarriage"], [class*="wip-uc"]').forEach(walkText);
+    document.querySelectorAll('.wip-uc-modal-card, #wip-uc-detail-modal, #wip-undercarriage-integrated-accordion, #wip-undercarriage-filter').forEach((root) => {
+      walkText(root);
+      root.querySelectorAll('th, td').forEach((cell) => {
+        const text = norm(cell.textContent || '');
+        if (text === 'mvm' || text === 'score') cell.style.display = 'none';
+      });
+    });
 
-    document.querySelectorAll('th, td, label, .wip-uc-field, p, div').forEach((node) => {
+    document.querySelectorAll('[id*="undercarriage"], [class*="undercarriage"], [class*="wip-uc"]').forEach((node) => {
       const text = norm(node.textContent || '');
-      if (text === 'mvm' || text === 'score') node.style.display = 'none';
-      if (text.includes('filtre non fonctionnel') || text.includes('in progress') || text.includes('train de roulement / undercarriage')) {
-        const candidate = node.closest?.('details, section, .rounded-xl, .rounded-2xl, .wip-uc-field, label, div') || node;
-        if (!candidate.closest?.('#wip-undercarriage-integrated-accordion') && !candidate.closest?.('#wip-undercarriage-filter')) {
-          candidate.style.display = 'none';
-        }
+      if (text.includes('filtre non fonctionnel') || text.includes('in progress')) {
+        node.style.display = 'none';
       }
     });
   }
@@ -346,44 +323,37 @@
     style.textContent = `
       .wip-route-start-home{display:none!important}
       #${PANEL_ID}{display:none;margin:6px 0 10px;padding:10px;border:1px solid #e5e7eb;border-radius:12px;background:#fffdf3;color:#334155;font-size:11px;box-shadow:0 8px 18px rgba(15,23,42,.08)}
-      #${PANEL_ID}.is-active{display:block}
       .dark #${PANEL_ID}{background:rgba(234,179,8,.08);border-color:#334155;color:#e2e8f0}
-      .wip-safe-home-label{display:grid;gap:5px;font-size:10px;font-weight:1000;text-transform:uppercase;letter-spacing:.06em;color:#92400e}.dark .wip-safe-home-label{color:#facc15}
-      .wip-safe-home-label input{border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;background:#fff;color:#111827;font-size:11px;font-weight:700;text-transform:none;letter-spacing:0}.dark .wip-safe-home-label input{background:#0f172a;border-color:#334155;color:#e2e8f0}
-      .wip-safe-home-actions{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}.wip-safe-home-actions button{border:1px solid #eab308;background:#facc15;color:#111827;border-radius:10px;padding:7px 10px;font-size:10px;font-weight:1000;text-transform:uppercase;letter-spacing:.06em;cursor:pointer}
-      #wip-safe-home-route-status{font-size:10px;font-weight:800;color:#64748b}.dark #wip-safe-home-route-status{color:#94a3b8}#wip-safe-home-route-status.is-error{color:#dc2626}
+      #${PANEL_ID}.is-active{display:block}
+      .wip-safe-home-label{display:grid;gap:5px;font-size:10px;font-weight:1000;text-transform:uppercase;letter-spacing:.08em;color:#92400e}.dark .wip-safe-home-label{color:#facc15}
+      #wip-safe-home-route-input{width:100%;box-sizing:border-box;border:1px solid #e5e7eb;border-radius:10px;padding:7px 9px;background:#fff;color:#334155;font-size:11px;text-transform:none;letter-spacing:0;font-weight:700}.dark #wip-safe-home-route-input{background:#0f172a;border-color:#334155;color:#e2e8f0}
+      .wip-safe-home-actions{display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap}.wip-safe-home-actions button{border:1px solid #eab308;border-radius:10px;background:#facc15;color:#111827;padding:7px 10px;font-size:10px;font-weight:1000;text-transform:uppercase;letter-spacing:.06em}.wip-safe-home-actions span{font-size:10px;font-weight:800;color:#64748b}.wip-safe-home-actions span.is-error{color:#dc2626}
     `;
     document.head.appendChild(style);
   }
 
-  function bind() {
-    const select = ensureHomeOption();
-    if (select && select.dataset.wipSafeHomeBound !== 'true') {
-      select.dataset.wipSafeHomeBound = 'true';
-      select.addEventListener('change', () => setTimeout(syncHomeUi, 0), true);
-    }
-    document.addEventListener('click', (event) => {
-      if (event.target?.id === 'wip-safe-home-route-save') saveHomeFromPanel();
-    }, true);
+  let scheduled = false;
+  function scheduleInstall() {
+    if (scheduled) return;
+    scheduled = true;
+    setTimeout(() => {
+      scheduled = false;
+      install();
+    }, 120);
   }
 
   function install() {
-    installStyle();
-    bind();
-    syncHomeUi();
-    patchRouteFunctions();
-    cleanUndercarriage();
+    try { installStyle(); } catch (error) {}
+    try { syncHomeUi(); } catch (error) { console.warn('Domicile départ indisponible', error); }
+    try { patchRouteFunctions(); } catch (error) { console.warn('Patch route domicile indisponible', error); }
+    try { cleanUndercarriage(); } catch (error) { console.warn('Nettoyage undercarriage indisponible', error); }
   }
 
-  install();
-  document.addEventListener('DOMContentLoaded', () => [100, 350, 800, 1600, 3000, 6000, 10000].forEach((delay) => setTimeout(install, delay)));
-  [150, 500, 1200, 2400, 4800, 8000, 13000, 20000].forEach((delay) => setTimeout(install, delay));
-  try {
-    let queued = false;
-    new MutationObserver(() => {
-      if (queued) return;
-      queued = true;
-      setTimeout(() => { queued = false; install(); }, 120);
-    }).observe(document.documentElement, { childList: true, subtree: true });
-  } catch (error) {}
+  document.addEventListener('change', (event) => {
+    if (event.target === routeSelect()) scheduleInstall();
+  }, true);
+  document.addEventListener('click', () => scheduleInstall(), true);
+  document.addEventListener('dashboard:grid-rendered', scheduleInstall);
+  document.addEventListener('DOMContentLoaded', () => [300, 800, 1800, 3600, 7000, 12000].forEach((delay) => setTimeout(install, delay)));
+  [500, 1200, 2400, 5200, 9000, 15000].forEach((delay) => setTimeout(install, delay));
 })();
