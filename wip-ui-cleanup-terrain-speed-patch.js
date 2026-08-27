@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-ui-cleanup-terrain-speed-2026-08-27';
+  const PATCH_ID = 'wip-ui-cleanup-terrain-speed-2026-08-27-v2';
   if (window.__WIP_UI_CLEANUP_TERRAIN_SPEED_PATCH__ === PATCH_ID) return;
   window.__WIP_UI_CLEANUP_TERRAIN_SPEED_PATCH__ = PATCH_ID;
 
@@ -27,7 +27,6 @@
 
   function isUndercarriageHeader(node) {
     const text = norm(ownHeaderText(node));
-    if (!text) return false;
     return /^7\s*[.)-]?\s*undercarriage\b/.test(text) && text.length <= 60;
   }
 
@@ -53,16 +52,19 @@
     return score;
   }
 
+  function removeNode(node) {
+    if (!node || !node.isConnected || node.tagName === 'BODY' || node.id === 'filters-panel') return;
+    node.remove();
+  }
+
   function removeFirstUndercarriageDuplicate() {
-    const candidates = [...document.querySelectorAll('summary,button,[role="button"],div')]
-      .filter(isUndercarriageHeader);
+    const candidates = [...document.querySelectorAll('summary,button,[role="button"],div')].filter(isUndercarriageHeader);
     const blocks = [];
     candidates.forEach((header) => {
       const block = blockForHeader(header);
       if (!block || blocks.includes(block)) return;
       blocks.push(block);
     });
-
     if (blocks.length <= 1) return;
 
     let keep = blocks[blocks.length - 1];
@@ -76,28 +78,18 @@
     });
 
     blocks.forEach((block) => {
-      if (block === keep) {
-        block.classList.remove('wip-uc-duplicate-hidden');
-        block.style.removeProperty('display');
-        return;
-      }
-      block.classList.add('wip-uc-duplicate-hidden');
-      block.setAttribute('aria-hidden', 'true');
+      if (block !== keep) removeNode(block);
     });
   }
 
-  function hideLegacyRouteStartPanel() {
-    document.querySelectorAll('#wip-route-start-home,.wip-route-start-home').forEach((node) => {
-      node.classList.add('wip-legacy-route-start-hidden');
-      node.setAttribute('aria-hidden', 'true');
-    });
-
+  function removeLegacyRouteStartPanel() {
+    document.querySelectorAll('#wip-route-start-home,.wip-route-start-home').forEach(removeNode);
     document.querySelectorAll('input[name="wip-route-start-mode"]').forEach((input) => {
       const root = input.closest?.('#wip-route-start-home,.wip-route-start-home')
         || input.closest?.('section,details,label,.rounded-xl,.rounded-2xl,div');
       if (!root || root.id === 'wip-safe-home-route-panel' || root.closest?.('#wip-safe-home-route-panel')) return;
-      root.classList.add('wip-legacy-route-start-hidden');
-      root.setAttribute('aria-hidden', 'true');
+      const text = norm(root.textContent || '');
+      if (text.includes('point de depart') || text.includes('position actuelle') || text.includes('domicile')) removeNode(root);
     });
   }
 
@@ -113,13 +105,13 @@
 
   function prefetchTerrainGeojson() {
     if (terrainGeojsonPromise || typeof fetch !== 'function') return terrainGeojsonPromise;
-    terrainGeojsonPromise = fetch(`https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements.geojson`, { cache: 'force-cache' })
+    terrainGeojsonPromise = fetch('https://raw.githubusercontent.com/gregoiredavid/france-geojson/master/departements.geojson', { cache: 'force-cache' })
       .then((response) => response.ok ? response.clone().json() : Promise.reject(new Error(`HTTP ${response.status}`)))
       .then((json) => {
         terrainGeojsonData = json;
         return json;
       })
-      .catch((error) => {
+      .catch(() => {
         terrainGeojsonPromise = null;
         return null;
       });
@@ -188,22 +180,8 @@
     }
   }
 
-  function installStyles() {
-    if (document.getElementById('wip-ui-cleanup-terrain-speed-style')) return;
-    const style = document.createElement('style');
-    style.id = 'wip-ui-cleanup-terrain-speed-style';
-    style.textContent = `
-      .wip-uc-duplicate-hidden{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;pointer-events:none!important}
-      #wip-route-start-home.wip-legacy-route-start-hidden,
-      .wip-route-start-home.wip-legacy-route-start-hidden,
-      .wip-legacy-route-start-hidden{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;pointer-events:none!important}
-    `;
-    document.head.appendChild(style);
-  }
-
   function install() {
-    installStyles();
-    hideLegacyRouteStartPanel();
+    removeLegacyRouteStartPanel();
     removeFirstUndercarriageDuplicate();
     installTerrainSpeed();
   }
