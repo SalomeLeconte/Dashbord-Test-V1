@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard WIP</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#0f172a;color:#fff;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
+    .card{max-width:620px;padding:28px;border:1px solid rgba(255,255,255,.15);border-radius:18px;background:rgba(255,255,255,.06)}
+    .muted{color:#cbd5e1;font-size:13px;line-height:1.5}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Chargement de la version WIP…</h1>
+    <p class="muted">Cette page applique les ajustements WIP au fichier index.html et charge data11.csv depuis la même branche.</p>
+  </div>
+  <script>
+    function replaceOnce(html, search, replacement){ return html.includes(search) ? html.replace(search, replacement) : html; }
+    function replaceFunction(html, signature, replacement){
+      const start = html.indexOf(signature);
+      if(start < 0) return html;
+      const brace = html.indexOf('{', start);
+      let depth = 0;
+      for(let i = brace; i < html.length; i++){
+        if(html[i] === '{') depth++;
+        if(html[i] === '}'){
+          depth--;
+          if(depth === 0) return html.slice(0,start) + replacement + html.slice(i+1);
+        }
+      }
+      return html;
+    }
+    function applyWipPatches(html){
+      html = replaceOnce(html, 'const PATCH_ID = "v18-2026-06-29";', 'const PATCH_ID = "v19-WIP-2026-06-29";');
+      html = replaceOnce(html, '/* v18 - ajustements demandés */', '/* v19 - ajustements WIP avant publication */');
+      html = replaceOnce(html,
+        '.v18-info-btn { width: 36px; height: 36px; border-radius: 999px; border:1px solid #d1d5db; background:#fff; color:#334155; font-weight:900; display:inline-flex; align-items:center; justify-content:center; }\n.dark .v18-info-btn { background:#0f172a; color:#e2e8f0; border-color:#334155; }',
+        '.v18-info-btn { width: 36px; height: 36px; border-radius: 999px; border:1px solid #facc15; background:#fefce8; color:#92400e; font-weight:900; display:inline-flex; align-items:center; justify-content:center; font-size:17px; box-shadow:0 0 0 rgba(250,204,21,0.0); animation:v19-bulb-pulse 1.6s ease-in-out infinite; }\n.dark .v18-info-btn { background:#422006; color:#fde68a; border-color:#ca8a04; }\n@keyframes v19-bulb-pulse { 0%,100% { opacity:.75; transform:scale(1); box-shadow:0 0 0 rgba(250,204,21,0.0); } 50% { opacity:1; transform:scale(1.08); box-shadow:0 0 18px rgba(250,204,21,.55); } }'
+      );
+      html = replaceOnce(html,
+        'item._searchVille = normalizeText(item[COL.ville]);\n                    item._searchMachines = normalizeText([',
+        'item._searchVille = normalizeText(item[COL.ville]);\n                    item._searchCanton = normalizeText([item["Canton"], item["Canton (Nom)"], item["Client_Irium.Canton"], item["Client_Irium.Canton (Nom)"], item["canton"], item["canton_nom"]].filter(Boolean).join(" "));\n                    item._searchMachines = normalizeText(['
+      );
+      html = replaceOnce(html,
+        'if (searchVille && !item._searchVille.includes(searchVille)) return false;',
+        'if (searchVille && ![item._searchVille, item._searchCanton].filter(Boolean).join(" ").includes(searchVille)) return false;'
+      );
+      const oldCanton = `  function addCantonFilter(){
+    if (document.getElementById('f-canton-select')) return;
+    const ville = document.getElementById('f-ville');
+    const parent = ville?.closest('div');
+    if (!parent) return;
+    parent.insertAdjacentHTML('afterend', ` + '`' + `
+      <div>
+        <label class="modern-label">Canton</label>
+        <select id="f-canton-select" onchange="runFilter()" class="modern-input"><option value="">Tous les cantons</option></select>
+        <input type="text" id="f-canton-text" oninput="runFilter()" placeholder="Ou écrire un canton" class="modern-input mt-2">
+      </div>` + '`' + `);
+  }
+`;
+      const newCanton = `  function addCantonFilter(){
+    if (document.getElementById('f-canton-select')) return;
+    const ville = document.getElementById('f-ville');
+    const parent = ville?.closest('div');
+    if (!parent) return;
+    ville.setAttribute('placeholder', 'Ex: LYON, NANTES ou canton...');
+    parent.insertAdjacentHTML('beforeend', ` + '`' + `
+      <div class="mt-2">
+        <label class="modern-label">Cantons disponibles</label>
+        <select id="f-canton-select" onchange="runFilter()" class="modern-input"><option value="">Tous les cantons</option></select>
+      </div>` + '`' + `);
+  }
+`;
+      html = replaceOnce(html, oldCanton, newCanton);
+      html = html.replace("    const cantonText = safeNorm(document.getElementById('f-canton-text')?.value || '');\n", '');
+      html = html.replace("    if (cantonText) data = data.filter(item => safeNorm(getItemCanton(item)).includes(cantonText));\n", '');
+      html = replaceOnce(html,
+        "priorityBlock.insertAdjacentHTML('afterend', `\n      <div>\n        <button onclick=\"toggleAccordion('acc-undercarriage')\"",
+        "priorityBlock.insertAdjacentHTML('afterend', `\n      <div class=\"mt-4\">\n        <button onclick=\"toggleAccordion('acc-undercarriage')\""
+      );
+      html = replaceFunction(html, '  function updateNafOptionLabels(){', "  function updateNafOptionLabels(){ /* secteur d'activité : affichage précédent conservé */ }");
+      html = html.replace('title="Nouveautés">i</button>', 'title="Nouveautés">💡</button>');
+      html = replaceOnce(html,
+        '              <ul class="list-disc pl-5 space-y-2">\n                <li>Filtre flotte détaillé de 1 à 5 machines.</li>',
+        '              <ul class="list-disc pl-5 space-y-2">\n                <li>Ville/Canton dans une seule recherche avec liste déroulante de cantons.</li>\n                <li>Filtre secteur d’activité remis en affichage précédent.</li>\n                <li>Filtre flotte détaillé de 1 à 5 machines.</li>'
+      );
+      html = html.replace('Tutoriel nouveautés : 1) utilise N° client Irium dans les filtres, 2) ouvre Mon terrain pour la synthèse par département, 3) dans Cartographie, supprime une étape avec la poubelle, 4) ouvre Google Maps après calcul de l’itinéraire.', 'Tutoriel nouveautés : 1) utilise Ville/Canton dans la même recherche, 2) choisis un canton dans la liste limitée à ton terrain, 3) ouvre Mon terrain pour la synthèse par département, 4) dans Cartographie, supprime une étape avec la poubelle, 5) ouvre Google Maps après calcul de l’itinéraire.');
+      return html;
+    }
+    (async function(){
+      const response = await fetch('index.html?base=' + Date.now(), {cache:'no-store'});
+      const html = applyWipPatches(await response.text());
+      document.open();
+      document.write(html);
+      document.close();
+    })().catch(error => {
+      document.body.innerHTML = '<div class="card"><h1>Erreur chargement WIP</h1><p class="muted">' + String(error) + '</p></div>';
+    });
+  </script>
+</body>
+</html>

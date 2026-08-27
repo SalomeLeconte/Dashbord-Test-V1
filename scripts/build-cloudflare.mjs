@@ -27,21 +27,30 @@ function copyDirectoryIfExists(directoryName) {
   }
 }
 
-// Main application entry point.
-copyFileIfExists('index.html');
+const runtimeFiles = [
+  'index.html',
+  'dashboard-wip.html',
+  'wip-runtime.bundle.js',
+  'csv-data-worker.js',
+  'wip-table-excel-filter-precision-patch.js',
+  'wip-final-regression-fixes-patch.js',
+  'wip-safe-undercarriage-home-route-patch.js',
+  'wip-ui-cleanup-terrain-speed-patch.js',
+  'wip-canton-cleanup-patch.js',
+  'wip-stack-guard-patch.js'
+];
 
-// Cloudflare Pages configuration files. They must be present in the output directory.
+runtimeFiles.forEach(copyFileIfExists);
+
 copyFileIfExists('_headers');
 copyFileIfExists('_redirects');
 
-// CSV data files used by the dashboard.
 for (const fileName of readdirSync(rootDir)) {
   if (fileName.toLowerCase().endsWith('.csv')) {
     copyFileIfExists(fileName);
   }
 }
 
-// Static assets and optional modular JS source files.
 copyDirectoryIfExists('assets');
 copyDirectoryIfExists('src');
 

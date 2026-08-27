@@ -1,8 +1,8 @@
 # Dashbord-Test-V1
 
-Dashboard de prospection commerciale permettant d’analyser les clients, prospects, machines et opportunités à partir de fichiers de données CSV / Power BI.
+Dashboard de prospection commerciale permettant d’analyser les clients, prospects, machines, visites, chiffres d’affaires et données terrain à partir du fichier `data11.csv`.
 
-L’objectif principal est d’aider les PSSR à prioriser les visites clients grâce à des filtres, indicateurs, tableaux et visualisations simples.
+L’objectif principal est d’aider les PSSR à prioriser les visites clients grâce à des filtres, indicateurs, tableaux, cartographie et outils de préparation d’itinéraire.
 
 ---
 
@@ -11,12 +11,84 @@ L’objectif principal est d’aider les PSSR à prioriser les visites clients g
 Ce dashboard permet de :
 
 - visualiser les clients et prospects prioritaires ;
-- filtrer les données par PSSR, agence, secteur, NAF / APE, âge machine, CA, etc. ;
+- filtrer les données par PSSR, département, ville, canton, secteur d’activité, NAF / APE, CA et flotte machine ;
 - identifier les clients à visiter en priorité ;
-- afficher les machines récentes ou anciennes ;
-- analyser le CA PDR et Service sur 2024 / 2025 / 2026 ;
+- suivre les machines récentes, anciennes, en fin de garantie ou liées à l’undercarriage ;
+- analyser le CA PDR, Service et Global ;
 - préparer une liste de visites commerciales ;
-- faciliter la prospection terrain.
+- organiser une tournée terrain sur carte.
+
+---
+
+## Nouveautés WIP — version 07/08/2026 à 15:00
+
+Cette date est volontairement figée jusqu’à demande de mise à jour.
+
+### Filtres type Excel
+
+- Ajout de menus rapides dans les en-têtes de colonnes de l’onglet **TOP 200** :
+  - Client / Prospect ;
+  - Localisation ;
+  - CA 2025 / CA 2026 ;
+  - NB machines ;
+  - Visites 2026 ;
+  - Priorités.
+- Ajout de menus rapides dans l’onglet **Données** :
+  - Client / Prospect ;
+  - Localisation ;
+  - Indicateur financier ;
+  - Flotte identifiée / NB machines.
+- Les petits triangles des en-têtes fonctionnent en toggle : un clic ouvre, un deuxième clic referme.
+
+### TOP 200 et priorisation
+
+- TOP 200 recalculable côté dashboard à partir du CA, des clients éligibles et des machines récentes.
+- Détection des machines récentes restaurée via le flag `NEW` et la colonne `Machines récentes par client`.
+- Lecture améliorée des objectifs de visite 2026 : objectif annuel, déjà fait, reste à faire.
+
+### Undercarriage
+
+- Ajout du filtre **Train de roulement / Undercarriage** dans la section `7. UNDERCARRIAGE`.
+- Lecture des colonnes :
+  - `Machines SMR par client` ;
+  - `Class BULL par client` ;
+  - `Class EXCA par client` ;
+  - `Class MVM par client` ;
+  - `travel pct exca par client` ;
+  - `travel hours exca par client`.
+- Lecture des classes `AA`, `AB`, `AC`, `BA`, `BB`, `BC`, `CA`, `CB`, `CC` avec la logique corrigée :
+  - `AA` = plus prioritaire ;
+  - `CC` = priorité faible.
+- Filtres par type, classe, priorité, SMR, activité moyenne, travel EXCA % et travel hours.
+- Ajout d’un tableau undercarriage dans la fiche détail client.
+
+### Canton adaptatif
+
+- Ajout d’un filtre **Canton adaptatif**.
+- La liste des cantons s’adapte au département sélectionné.
+- Si une ville est saisie, la liste est réduite aux cantons cohérents autour de cette ville.
+- Option GPS **Cantons autour de moi** avec rayon 10 / 25 / 50 km.
+- Déduction automatique du canton depuis commune, département et coordonnées quand disponibles.
+
+### Cartographie et itinéraire
+
+- Remplacement de la heat map peu lisible par une lecture départementale plus claire dans **Mon terrain**.
+- Ajout d’une recherche intelligente sur la cartographie classique pour ajouter un client du PSSR en bleu sur la carte.
+- Les points bleus ajoutés via la recherche intelligente sont pris en compte dans l’itinéraire optimisé.
+- Le bouton Effacer et les poubelles gèrent aussi les points bleus.
+- Simplification du statut itinéraire avec suppression de messages redondants.
+
+### Responsive
+
+- Optimisations d’affichage ordinateur, tablette et mobile.
+
+### Performance du chargement
+
+- Le dashboard est chargé directement dans l’iframe, sans reconstruction via `srcdoc`.
+- Les correctifs `wip-*.js` sont regroupés dans `wip-runtime.bundle.js` pour limiter les requêtes réseau.
+- `data11.csv` est téléchargé et analysé dans `csv-data-worker.js` afin de garder l’interface réactive.
+- La préparation des lignes est découpée en lots et le référentiel cantons est chargé uniquement à la demande.
+- Le cache HTTP est réutilisé tout en revalidant les données auprès de GitHub Pages.
 
 ---
 
@@ -28,30 +100,37 @@ Ce dashboard permet de :
 - Liste filtrable des lignes visibles.
 - Compteurs dynamiques.
 - Affichage du Top 200 clients selon les critères de priorité.
+- Onglet Données trié par CA Global décroissant.
 
 ### Filtres disponibles
 
-- PSSR
-- Agence
-- Client / Prospect
-- Secteur d’activité
-- NAF / APE
-- Âge machine
-- CA PDR
-- CA Service
-- Machines récentes
-- Machines sans visite récente
+- PSSR.
+- Département.
+- Ville.
+- Canton adaptatif.
+- Agence.
+- Client / Prospect.
+- Secteur d’activité.
+- NAF / APE.
+- Âge machine.
+- CA Global, PDR et Service.
+- Machines récentes.
+- Machines anciennes.
+- Fin de garantie.
+- Undercarriage.
+- Visites 2026.
+- Priorités TOP 200.
 
 ### Top 200
 
 Le Top 200 est calculé selon une logique de priorité :
 
-1. Clients avec CA global le plus élevé.
-2. Clients éligibles selon les critères commerciaux.
-3. Clients avec machines récentes.
-4. Clients avec machines anciennes ou sans visite récente.
+1. clients avec CA global le plus élevé ;
+2. clients éligibles selon les critères commerciaux ;
+3. clients avec machines récentes ;
+4. clients avec machines anciennes ou sans visite récente.
 
-L’objectif est de générer une liste exploitable pour les visites commerciales (export .xlsx/pdf in progress).
+L’objectif est de générer une liste exploitable pour les visites commerciales.
 
 ### Données machines
 
@@ -64,7 +143,8 @@ Le dashboard affiche notamment :
 - fin de garantie ;
 - machines récentes ;
 - machines anciennes ;
-- machines de plus d’un an sans visite en 2026 (in progress)
+- machines de 5 ans et plus ;
+- données undercarriage.
 
 ### Données commerciales
 
@@ -72,41 +152,24 @@ Le dashboard permet de suivre :
 
 - CA PDR 2024 / 2025 / 2026 ;
 - CA Service 2024 / 2025 / 2026 ;
+- CA Global ;
 - opportunités CRM ;
 - dernières visites ;
-- prochaines visites ;
+- devis récents ;
 - informations client ;
 - contact, téléphone et e-mail.
 
-### Itinéraire
+### Cartographie et itinéraire
 
-Une partie itinéraire peut être utilisée pour organiser les visites terrain.
+- Affichage des clients sur une carte.
+- Recherche intelligente pour ajouter un client à la carte.
+- Ajout de points bleus à l’itinéraire.
+- Suppression / réintégration des points dans l’itinéraire.
+- Calcul d’un itinéraire optimisé.
+- Ouverture de la tournée dans Google Maps.
+- Vue **Mon terrain** par département.
 
-Fonctionnalités prévues ou disponibles :
-
-- affichage des clients sur une carte ;
-- choix du point de départ ;
-- possibilité d’utiliser sa position actuelle ;
-- possibilité d’utiliser sa position actuelle comme départ et arrivée ;
-- préparation d’une tournée commerciale.
-
-## En cours d'implémentation (Juillet-Août)
-
-Ajout dans le pop-up détail:
-- Numéro de téléphone et du mail (raccourci copier);
-- Informations sur les derniers devis;
-- Informations sur les contrats Shark (maintenance, fin de contrats dans les 6 mois).
-
-Modification du filtre extension garantie qui se base maintenant sur Shark
-
-Ajout d'un filtre (7) Undercarriage:
--Vie moteur;
--TC dozer/excavatrice;
--Translation (en km et pourcentages).
-
-Changement du calcul des KPI dans l'onglet top 200 pour la lecture des visites
-
-Ajout du profil PSSR qui contient une scorecard
+---
 
 ## Structure du projet
 
@@ -114,21 +177,16 @@ Ajout du profil PSSR qui contient une scorecard
 Dashbord-Test-V1/
 │
 ├── index.html
+├── dashboard-wip.html
+├── csv-data-worker.js
+├── wip-runtime.bundle.js
 ├── README.md
-│
-├── assets/
-│   ├── css/
-│   │   └── style.css
-│   ├── js/
-│   │   └── app.js
-│   └── img/
-│
-├── data/
-│   ├── clients.csv
-│   ├── machines.csv
-│   ├── ventes_pdr.csv
-│   ├── ventes_service.csv
-│   ├── crm_activites.csv
-│   └── crm_opportunites.csv
-│
-└── docs/
+├── data11.csv
+├── wip-*.js
+├── scripts/
+│   ├── build-cloudflare.mjs
+│   └── build-runtime-bundle.mjs
+└── assets/
+```
+
+Après la modification d’un correctif `wip-*.js`, exécuter `npm run bundle`. La commande `npm run build` régénère également le bundle avant de préparer le dossier `dist/`.

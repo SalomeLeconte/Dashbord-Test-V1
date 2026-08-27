@@ -1,0 +1,109 @@
+name: Optimized GitHub Pages
+
+on:
+  pull_request:
+    branches: [WIP]
+    paths:
+      - 'index.html'
+      - 'dashboard-wip.html'
+      - 'package.json'
+      - 'tailwind.config.cjs'
+      - '_headers'
+      - '*.csv'
+      - '*.js'
+      - 'assets/**'
+      - 'src/**'
+      - 'perf-runtime/**'
+      - 'scripts/perf-prebuild/**'
+      - 'scripts/perf-transforms/**'
+      - 'scripts/build-pages-optimized.mjs'
+      - '.github/workflows/pages-optimized.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'dashboard-wip.html'
+      - 'package.json'
+      - 'tailwind.config.cjs'
+      - '_headers'
+      - '*.csv'
+      - '*.js'
+      - 'assets/**'
+      - 'src/**'
+      - 'perf-runtime/**'
+      - 'scripts/perf-prebuild/**'
+      - 'scripts/perf-transforms/**'
+      - 'scripts/build-pages-optimized.mjs'
+      - '.github/workflows/pages-optimized.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: optimized-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install production build dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build optimized site
+        run: npm run build:pages
+
+      - name: Validate optimized artifact
+        run: |
+          test -s dist/index.html
+          test -s dist/dashboard-wip.html
+          test -s dist/data11.csv
+          test -s dist/csv-data-worker.js
+          test -s dist/prepared-data-worker.js
+          test -s dist/data/prepared/manifest.json
+          test -s dist/assets/manifest.json
+          test -n "$(find dist/data/prepared -maxdepth 1 -name 'dept-*.json' -print -quit)"
+          test -n "$(find dist/assets -maxdepth 1 -name 'dashboard.*.min.css' -print -quit)"
+          test -n "$(find dist/assets -maxdepth 1 -name 'dashboard-inline.*.min.js' -print -quit)"
+          test -n "$(find dist/assets -maxdepth 1 -name 'wip-shell.*.min.css' -print -quit)"
+          test -n "$(find dist/assets -maxdepth 1 -name 'wip-shell.*.min.js' -print -quit)"
+          grep -q "cache: 'force-cache'" dist/csv-data-worker.js
+          grep -q "cache: 'force-cache'" dist/prepared-data-worker.js
+          grep -Eq 'assets/dashboard\.[0-9a-f]{12}\.min\.css' dist/dashboard-wip.html
+          grep -Eq 'assets/dashboard-inline\.[0-9a-f]{12}\.min\.js' dist/dashboard-wip.html
+          grep -Eq 'assets/wip-shell\.[0-9a-f]{12}\.min\.css' dist/index.html
+          grep -Eq 'assets/wip-shell\.[0-9a-f]{12}\.min\.js' dist/index.html
+          grep -R -q 'p2-prepared-data.js' dist/assets/wip-shell.*.min.js
+          ! test -e dist/assets/dashboard.min.css
+          ! test -e dist/assets/dashboard-inline.min.js
+          ! grep -q '<script src="https://cdn.tailwindcss.com"' dist/dashboard-wip.html
+          ! grep -q '<script src="https://unpkg.com/leaflet' dist/dashboard-wip.html
+          ! grep -q '<link rel="stylesheet" href="https://unpkg.com/leaflet' dist/dashboard-wip.html
+
+      - name: Configure Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
