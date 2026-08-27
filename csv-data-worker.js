@@ -2,12 +2,16 @@
 
 self.onmessage = event => {
   const message = event.data || {};
-  if (!message.url) return;
+  const urls = Array.isArray(message.urls)
+    ? message.urls.filter(Boolean)
+    : message.url
+      ? [message.url]
+      : [];
 
-  const task = message.type === 'load-canton'
+  const task = message.type === 'load-canton' && message.url
     ? loadAndPrepareCantonReference(message.url)
-    : message.type === 'load'
-      ? loadAndParseCSV(message.url)
+    : message.type === 'load' && urls.length
+      ? loadAndParseCSV(urls)
       : null;
   if (!task) return;
 
@@ -19,12 +23,23 @@ self.onmessage = event => {
   });
 };
 
-async function loadAndParseCSV(url) {
-  const text = await fetchTextWithRetry(url, 'fichier de données');
-  self.postMessage({ type: 'status', message: 'Analyse des données...' });
-  const rows = parseCSV(text);
-  if (!rows.length) throw new Error('CSV vide');
-  self.postMessage({ type: 'result', rows });
+async function loadAndParseCSV(urls) {
+  const mergedRows = [];
+
+  for (let index = 0; index < urls.length; index++) {
+    const label = urls.length === 1
+      ? 'fichier de données'
+      : `segment de données ${index + 1}/${urls.length}`;
+    const text = await fetchTextWithRetry(urls[index], label);
+    self.postMessage({ type: 'status', message: `Analyse des données ${index + 1}/${urls.length}...` });
+    const rows = parseCSV(text);
+    if (!rows.length) continue;
+    if (!mergedRows.length) mergedRows.push(...rows);
+    else mergedRows.push(...rows.slice(1));
+  }
+
+  if (!mergedRows.length) throw new Error('CSV vide');
+  self.postMessage({ type: 'result', rows: mergedRows });
 }
 
 async function loadAndPrepareCantonReference(url) {
