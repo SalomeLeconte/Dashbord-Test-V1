@@ -1,0 +1,82 @@
+name: Optimized GitHub Pages
+
+on:
+  pull_request:
+    branches: [WIP]
+    paths:
+      - 'index.html'
+      - 'dashboard-wip.html'
+      - '*.csv'
+      - '*.js'
+      - 'assets/**'
+      - 'src/**'
+      - 'perf-runtime/**'
+      - 'scripts/perf-prebuild/**'
+      - 'scripts/perf-transforms/**'
+      - 'scripts/build-pages-optimized.mjs'
+      - '.github/workflows/pages-optimized.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'dashboard-wip.html'
+      - '*.csv'
+      - '*.js'
+      - 'assets/**'
+      - 'src/**'
+      - 'perf-runtime/**'
+      - 'scripts/perf-prebuild/**'
+      - 'scripts/perf-transforms/**'
+      - 'scripts/build-pages-optimized.mjs'
+      - '.github/workflows/pages-optimized.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: optimized-pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build optimized site
+        run: node scripts/build-pages-optimized.mjs
+
+      - name: Validate optimized artifact
+        run: |
+          test -s dist/index.html
+          test -s dist/dashboard-wip.html
+          test -s dist/data11.csv
+          test -s dist/csv-data-worker.js
+          grep -q "cache: 'force-cache'" dist/csv-data-worker.js
+          grep -q 'cache: "force-cache"' dist/dashboard-wip.html
+
+      - name: Configure Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
