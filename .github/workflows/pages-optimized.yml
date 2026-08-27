@@ -1,0 +1,71 @@
+name: Optimized GitHub Pages
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - index.html
+      - '*.csv'
+      - 'assets/**'
+      - 'src/**'
+      - 'scripts/build-github-pages.mjs'
+      - '.github/workflows/pages-optimized.yml'
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - '*.csv'
+      - 'assets/**'
+      - 'src/**'
+      - 'scripts/build-github-pages.mjs'
+      - '.github/workflows/pages-optimized.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Build optimized static site
+        run: node scripts/build-github-pages.mjs
+
+      - name: Validate production output
+        run: |
+          test -s dist/index.html
+          test -s dist/data11.csv
+          test -s dist/assets/komatsu-logo.svg
+          grep -q 'cache: "force-cache"' dist/index.html
+          ! grep -q 'class="brand-logo-large"' <(grep 'data:image/png;base64' dist/index.html || true)
+
+      - name: Configure GitHub Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./dist
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
