@@ -5,7 +5,9 @@ on:
     branches: [WIP]
     paths:
       - index.html
+      - dashboard-wip.html
       - '*.csv'
+      - '*.js'
       - 'assets/**'
       - 'src/**'
       - 'scripts/build-github-pages.mjs'
@@ -14,7 +16,9 @@ on:
     branches: [main]
     paths:
       - index.html
+      - dashboard-wip.html
       - '*.csv'
+      - '*.js'
       - 'assets/**'
       - 'src/**'
       - 'scripts/build-github-pages.mjs'
@@ -43,10 +47,14 @@ jobs:
       - name: Validate production output
         run: |
           test -s dist/index.html
+          test -s dist/dashboard-wip.html
           test -s dist/data11.csv
+          test -s dist/csv-data-worker.js
           test -s dist/assets/komatsu-logo.svg
-          grep -q 'cache: "force-cache"' dist/index.html
-          ! grep -q 'class="brand-logo-large"' <(grep 'data:image/png;base64' dist/index.html || true)
+          grep -q 'dashboard-wip.html' dist/index.html
+          grep -q 'cache: "force-cache"' dist/dashboard-wip.html
+          grep -q '<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>' dist/dashboard-wip.html
+          ! grep -q 'class="brand-logo-large"' <(grep 'data:image/png;base64' dist/dashboard-wip.html || true)
 
       - name: Configure GitHub Pages
         if: github.event_name != 'pull_request'
