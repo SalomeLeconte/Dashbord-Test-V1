@@ -17,7 +17,7 @@ export function transform(context) {
     html,
     'loadCSVData scope handling',
     `        async function loadCSVData() {\n            if (globalData.length) return true;\n            if (csvLoadPromise) return csvLoadPromise;\n\n            csvLoadPromise = (async () => {\n                const startedAt = performance.now();`,
-    `        function getRequestedDataScopeKey() {\n            const depts = [...new Set(selectedSectorDepts.map(normalizeDept).filter(Boolean))].sort();\n            return depts.length ? \`dept:${depts.join(",")}\` : "all";\n        }\n\n        async function loadCSVData() {\n            const requestedScopeKey = getRequestedDataScopeKey();\n            if (globalData.length && csvLoadedScopeKey === requestedScopeKey) return true;\n            if (csvLoadPromise && csvLoadScopeKey === requestedScopeKey) return csvLoadPromise;\n            if (csvLoadPromise) {\n                await csvLoadPromise;\n                if (globalData.length && csvLoadedScopeKey === requestedScopeKey) return true;\n                csvLoadPromise = null;\n            }\n\n            csvLoadScopeKey = requestedScopeKey;\n            csvLoadPromise = (async () => {\n                const startedAt = performance.now();`
+    `        function getRequestedDataScopeKey() {\n            const depts = [...new Set(selectedSectorDepts.map(normalizeDept).filter(Boolean))].sort();\n            return depts.length ? "dept:" + depts.join(",") : "all";\n        }\n\n        async function loadCSVData() {\n            const requestedScopeKey = getRequestedDataScopeKey();\n            if (globalData.length && csvLoadedScopeKey === requestedScopeKey) return true;\n            if (csvLoadPromise && csvLoadScopeKey === requestedScopeKey) return csvLoadPromise;\n            if (csvLoadPromise) {\n                await csvLoadPromise;\n                if (globalData.length && csvLoadedScopeKey === requestedScopeKey) return true;\n                csvLoadPromise = null;\n            }\n\n            csvLoadScopeKey = requestedScopeKey;\n            csvLoadPromise = (async () => {\n                const startedAt = performance.now();`
   );
 
   html = replaceRequired(
@@ -38,7 +38,7 @@ export function transform(context) {
     html,
     'worker chunk urls',
     `                const workerUrl = new URL("./csv-data-worker.js", document.baseURI);\n                const csvUrl = new URL(CSV_FILE, document.baseURI);`,
-    `                const workerUrl = new URL("./csv-data-worker.js", document.baseURI);\n                const scopedDepts = [...new Set(selectedSectorDepts.map(normalizeDept).filter(Boolean))];\n                const dataUrls = scopedDepts.length\n                    ? scopedDepts.map(dept => new URL(\`./data/dept-${dept.replace(/[^0-9A-Z_-]/g, "_")}.csv\`, document.baseURI).href)\n                    : [new URL(CSV_FILE, document.baseURI).href];`
+    `                const workerUrl = new URL("./csv-data-worker.js", document.baseURI);\n                const scopedDepts = [...new Set(selectedSectorDepts.map(normalizeDept).filter(Boolean))];\n                const dataUrls = scopedDepts.length\n                    ? scopedDepts.map(dept => new URL("./data/dept-" + dept.replace(/[^0-9A-Z_-]/g, "_") + ".csv", document.baseURI).href)\n                    : [new URL(CSV_FILE, document.baseURI).href];`
   );
 
   html = replaceRequired(
