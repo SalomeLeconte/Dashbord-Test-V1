@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-canton-cleanup-2026-08-27';
+  const PATCH_ID = 'wip-canton-cleanup-2026-08-27-v2';
   if (window.__WIP_CANTON_CLEANUP_PATCH__ === PATCH_ID) return;
   window.__WIP_CANTON_CLEANUP_PATCH__ = PATCH_ID;
 
@@ -14,17 +14,16 @@
       .trim();
   }
 
-  function hide(node) {
-    if (!node || !node.isConnected) return;
-    node.classList.add('wip-canton-legacy-hidden');
-    node.setAttribute('aria-hidden', 'true');
-  }
-
   function compactText(node) {
     if (!node) return '';
     const clone = node.cloneNode(true);
     clone.querySelectorAll('option').forEach((option) => option.remove());
     return norm(clone.textContent || '');
+  }
+
+  function removeNode(node) {
+    if (!node || !node.isConnected || node.tagName === 'BODY') return;
+    node.remove();
   }
 
   function findSafeContainer(node) {
@@ -40,7 +39,7 @@
     ].filter(Boolean);
 
     for (const candidate of candidates) {
-      if (candidate.id === 'sidebar' || candidate.id === 'filters' || candidate.tagName === 'BODY') continue;
+      if (candidate.id === 'sidebar' || candidate.id === 'filters' || candidate.id === 'filters-panel' || candidate.tagName === 'BODY') continue;
       const text = norm(candidate.textContent || '');
       if (!text.includes('canton') && !text.includes('in progress')) continue;
       const rect = candidate.getBoundingClientRect?.();
@@ -50,16 +49,17 @@
     return node;
   }
 
-  function hideLegacyCantonBlock() {
+  function removeLegacyCantonBlock() {
     document.querySelectorAll('select').forEach((select) => {
       const selected = norm(select.selectedOptions?.[0]?.textContent || select.value || '');
       const allOptions = norm([...select.options].map((option) => option.textContent || '').join(' '));
       if (selected.includes('in progress') || allOptions.includes('in progress non fonctionnel')) {
-        hide(findSafeContainer(select));
+        removeNode(findSafeContainer(select));
       }
     });
 
     document.querySelectorAll('label,div,p,section,details').forEach((node) => {
+      if (!node.isConnected) return;
       const text = compactText(node);
       if (!text) return;
 
@@ -70,23 +70,12 @@
         || text.includes('utilisez uniquement le champ ville / canton au-dessus');
 
       if (!isLegacyTitle && !isLegacyNote) return;
-      hide(findSafeContainer(node));
+      removeNode(findSafeContainer(node));
     });
   }
 
-  function installStyles() {
-    if (document.getElementById('wip-canton-cleanup-style')) return;
-    const style = document.createElement('style');
-    style.id = 'wip-canton-cleanup-style';
-    style.textContent = `
-      .wip-canton-legacy-hidden{display:none!important;visibility:hidden!important;height:0!important;min-height:0!important;margin:0!important;padding:0!important;border:0!important;overflow:hidden!important;pointer-events:none!important}
-    `;
-    document.head.appendChild(style);
-  }
-
   function install() {
-    installStyles();
-    hideLegacyCantonBlock();
+    removeLegacyCantonBlock();
   }
 
   function queueInstall() {
