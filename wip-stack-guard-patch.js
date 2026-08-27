@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-stack-guard-2026-08-10-v2';
+  const PATCH_ID = 'wip-stack-guard-2026-08-27-v3';
   if (window.__WIP_STACK_GUARD_PATCH__ === PATCH_ID) return;
   window.__WIP_STACK_GUARD_PATCH__ = PATCH_ID;
 
@@ -59,6 +59,18 @@
     }, 0);
   }
 
+  function loadPostMergeHotfix() {
+    if (document.getElementById('wip-postmerge-performance-hotfix-loader')) return;
+    const script = document.createElement('script');
+    script.id = 'wip-postmerge-performance-hotfix-loader';
+    script.src = './wip-postmerge-performance-hotfix.js?v=20260827h1';
+    script.async = false;
+    script.addEventListener('error', () => {
+      console.error('Chargement du hotfix performance WIP impossible.');
+    }, { once: true });
+    document.body.appendChild(script);
+  }
+
   const guardedFunctionNames = [
     'runFilter',
     'renderTop200',
@@ -71,4 +83,8 @@
   if (!window.renderGrid?.__wipPerformanceGridLimit) guardedFunctionNames.push('renderGrid');
   guardedFunctionNames.forEach(guardFunction);
   guardedBadgeRefresh();
+
+  // Les patches WIP sont injectés dynamiquement et peuvent finir dans un ordre
+  // différent selon le réseau. On pose le limiteur final après leur installation.
+  window.setTimeout(loadPostMergeHotfix, 900);
 })();
