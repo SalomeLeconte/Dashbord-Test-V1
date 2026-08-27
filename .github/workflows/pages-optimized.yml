@@ -6,6 +6,8 @@ on:
     paths:
       - 'index.html'
       - 'dashboard-wip.html'
+      - 'package.json'
+      - 'tailwind.config.cjs'
       - '*.csv'
       - '*.js'
       - 'assets/**'
@@ -20,6 +22,8 @@ on:
     paths:
       - 'index.html'
       - 'dashboard-wip.html'
+      - 'package.json'
+      - 'tailwind.config.cjs'
       - '*.csv'
       - '*.js'
       - 'assets/**'
@@ -47,8 +51,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Install production build dependencies
+        run: npm install --no-audit --no-fund
+
       - name: Build optimized site
-        run: node scripts/build-pages-optimized.mjs
+        run: npm run build:pages
 
       - name: Validate optimized artifact
         run: |
@@ -56,8 +63,17 @@ jobs:
           test -s dist/dashboard-wip.html
           test -s dist/data11.csv
           test -s dist/csv-data-worker.js
+          test -s dist/assets/dashboard.min.css
+          test -s dist/assets/dashboard-inline.min.js
+          test -s dist/assets/wip-shell.min.css
+          test -s dist/assets/wip-shell.min.js
           grep -q "cache: 'force-cache'" dist/csv-data-worker.js
-          grep -q 'cache: "force-cache"' dist/dashboard-wip.html
+          grep -q 'force-cache' dist/assets/dashboard-inline.min.js
+          grep -q 'assets/dashboard.min.css' dist/dashboard-wip.html
+          grep -q 'assets/dashboard-inline.min.js' dist/dashboard-wip.html
+          ! grep -q '<script src="https://cdn.tailwindcss.com"' dist/dashboard-wip.html
+          ! grep -q '<script src="https://unpkg.com/leaflet' dist/dashboard-wip.html
+          ! grep -q '<link rel="stylesheet" href="https://unpkg.com/leaflet' dist/dashboard-wip.html
 
       - name: Configure Pages
         if: github.event_name != 'pull_request'

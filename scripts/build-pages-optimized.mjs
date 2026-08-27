@@ -31,26 +31,29 @@ async function runModules(directoryName, exportName) {
   }
 }
 
+function injectRuntimePatches() {
+  const runtimeDir = join(rootDir, 'perf-runtime');
+  if (!existsSync(runtimeDir)) return;
+  const runtimeFiles = readdirSync(runtimeDir).filter(name => name.endsWith('.js')).sort();
+  if (!runtimeFiles.length) return;
+
+  const startMarker = 'const runtimePatches=[';
+  const start = context.indexHtml.indexOf(startMarker);
+  if (start < 0) throw new Error('WIP runtimePatches array not found in index.html');
+  const end = context.indexHtml.indexOf('];', start);
+  if (end < 0) throw new Error('WIP runtimePatches array closing marker not found');
+  const additions = runtimeFiles.map(file => `        'perf-runtime/${file}'`).join(',\n');
+  const before = context.indexHtml.slice(0, end).replace(/\s*$/, '');
+  const needsComma = !before.endsWith('[') && !before.endsWith(',');
+  context.indexHtml = `${before}${needsComma ? ',' : ''}\n${additions}\n      ${context.indexHtml.slice(end)}`;
+  context.indexHtml = context.indexHtml.replace('script.defer=true;', 'script.async=false;script.defer=false;');
+}
+
 await runModules('scripts/perf-prebuild', 'run');
+injectRuntimePatches();
 await runModules('scripts/perf-transforms', 'transform');
 
 const runtimeDir = join(rootDir, 'perf-runtime');
-if (existsSync(runtimeDir)) {
-  const runtimeFiles = readdirSync(runtimeDir).filter(name => name.endsWith('.js')).sort();
-  if (runtimeFiles.length) {
-    const startMarker = 'const runtimePatches=[';
-    const start = context.indexHtml.indexOf(startMarker);
-    if (start < 0) throw new Error('WIP runtimePatches array not found in index.html');
-    const end = context.indexHtml.indexOf('];', start);
-    if (end < 0) throw new Error('WIP runtimePatches array closing marker not found');
-    const additions = runtimeFiles.map(file => `        'perf-runtime/${file}'`).join(',\n');
-    const before = context.indexHtml.slice(0, end).replace(/\s*$/, '');
-    const needsComma = !before.endsWith('[') && !before.endsWith(',');
-    context.indexHtml = `${before}${needsComma ? ',' : ''}\n${additions}\n      ${context.indexHtml.slice(end)}`;
-    context.indexHtml = context.indexHtml.replace('script.defer=true;', 'script.async=false;script.defer=false;');
-  }
-}
-
 const excluded = new Set(['.git', '.github', 'dist', 'node_modules', 'scripts', 'perf-runtime']);
 for (const name of readdirSync(rootDir)) {
   if (excluded.has(name) || name === 'index.html' || name === 'dashboard-wip.html') continue;
@@ -67,5 +70,5 @@ writeFileSync(join(distDir, '.nojekyll'), '', 'utf8');
 
 const sourceBytes = readFileSync(dashboardPath).byteLength;
 const outputBytes = readFileSync(join(distDir, 'dashboard-wip.html')).byteLength;
-console.log(`Optimized Pages build complete: dist/`);
+console.log('Optimized Pages build complete: dist/');
 console.log(`dashboard-wip.html: ${sourceBytes} -> ${outputBytes} bytes`);
