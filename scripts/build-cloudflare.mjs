@@ -35,6 +35,7 @@ const runtimeFiles = [
   'wip-table-excel-filter-precision-patch.js',
   'wip-final-regression-fixes-patch.js',
   'wip-safe-undercarriage-home-route-patch.js',
+  'wip-ui-cleanup-terrain-speed-patch.js',
   'wip-stack-guard-patch.js'
 ];
 
