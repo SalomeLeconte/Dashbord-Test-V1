@@ -76,7 +76,7 @@ async function fetchTextWithRetry(url, label) {
       });
 
       const response = await fetch(url, {
-        cache: 'force-cache',
+        cache: 'no-cache',
         credentials: 'same-origin'
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
