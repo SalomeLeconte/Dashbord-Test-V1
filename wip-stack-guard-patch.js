@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-stack-guard-2026-08-27-v3';
+  const PATCH_ID = 'wip-stack-guard-2026-09-01-v4';
   if (window.__WIP_STACK_GUARD_PATCH__ === PATCH_ID) return;
   window.__WIP_STACK_GUARD_PATCH__ = PATCH_ID;
 
@@ -60,13 +60,17 @@
   }
 
   function loadPostMergeHotfix() {
-    if (document.getElementById('wip-postmerge-performance-hotfix-loader')) return;
+    // Nouveau loader ID : un ancien <script> en erreur (404) ne doit jamais
+    // empêcher une nouvelle tentative après un déploiement corrigé.
+    const loaderId = 'wip-postmerge-performance-hotfix-loader-v2';
+    if (document.getElementById(loaderId)) return;
     const script = document.createElement('script');
-    script.id = 'wip-postmerge-performance-hotfix-loader';
-    script.src = './wip-postmerge-performance-hotfix.js?v=20260827h1';
+    script.id = loaderId;
+    script.src = './wip-postmerge-performance-hotfix.js?v=20260901b';
     script.async = false;
     script.addEventListener('error', () => {
       console.error('Chargement du hotfix performance WIP impossible.');
+      script.remove();
     }, { once: true });
     document.body.appendChild(script);
   }
