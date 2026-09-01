@@ -24,3 +24,18 @@
 
 /*.js
   Cache-Control: public, max-age=3600
+
+/wip-runtime.bundle.js
+  Cache-Control: no-cache
+
+/wip-stack-guard-patch.js
+  Cache-Control: no-cache
+
+/wip-postmerge-performance-hotfix.js
+  Cache-Control: no-cache
+
+/wip-city-filter-input-fix-patch.js
+  Cache-Control: no-cache
+
+/wip-shell-recovery-patch.js
+  Cache-Control: no-cache
