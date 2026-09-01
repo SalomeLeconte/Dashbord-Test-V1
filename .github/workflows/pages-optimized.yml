@@ -16,6 +16,7 @@ on:
       - 'perf-runtime/**'
       - 'scripts/perf-prebuild/**'
       - 'scripts/perf-transforms/**'
+      - 'scripts/build-cloudflare.mjs'
       - 'scripts/build-pages-optimized.mjs'
       - '.github/workflows/pages-optimized.yml'
   push:
@@ -33,6 +34,7 @@ on:
       - 'perf-runtime/**'
       - 'scripts/perf-prebuild/**'
       - 'scripts/perf-transforms/**'
+      - 'scripts/build-cloudflare.mjs'
       - 'scripts/build-pages-optimized.mjs'
       - '.github/workflows/pages-optimized.yml'
   workflow_dispatch:
@@ -55,6 +57,20 @@ jobs:
 
       - name: Install production build dependencies
         run: npm install --no-audit --no-fund
+
+      - name: Validate Cloudflare WIP artifact
+        run: |
+          npm run build
+          test -s dist/index.html
+          test -s dist/dashboard-wip.html
+          test -s dist/wip-runtime.bundle.js
+          test -s dist/wip-city-filter-input-fix-patch.js
+          test -s dist/wip-shell-recovery-patch.js
+          test -s dist/wip-postmerge-performance-hotfix.js
+          test -s dist/perf-runtime/p0-04-grid-windowing.js
+          test -s dist/perf-runtime/p0-05-responsive-render.js
+          grep -q 'wip-shell-recovery-patch.js' dist/index.html
+          grep -q 'wip-city-filter-input-fix-patch.js' dist/index.html
 
       - name: Build optimized site
         run: npm run build:pages
@@ -80,6 +96,15 @@ jobs:
           grep -Eq 'assets/wip-shell\.[0-9a-f]{12}\.min\.css' dist/index.html
           grep -Eq 'assets/wip-shell\.[0-9a-f]{12}\.min\.js' dist/index.html
           grep -R -q 'p2-prepared-data.js' dist/assets/wip-shell.*.min.js
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path('dist/dashboard-wip.html').read_text()
+          inline = re.search(r'<script src="(assets/dashboard-inline\.[0-9a-f]{12}\.min\.js)"></script>', html)
+          runtime = re.search(r'<script src="\.\/wip-runtime\.bundle\.js[^\"]*"></script>', html)
+          assert inline and runtime, 'runtime markers missing'
+          assert inline.start() < runtime.start(), 'dashboard base JS must load before WIP runtime bundle'
+          PY
           ! test -e dist/assets/dashboard.min.css
           ! test -e dist/assets/dashboard-inline.min.js
           ! grep -q '<script src="https://cdn.tailwindcss.com"' dist/dashboard-wip.html

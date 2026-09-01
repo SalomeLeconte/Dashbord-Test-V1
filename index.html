@@ -25,15 +25,16 @@
       const MAX_RIBBON_MS=30000;
       let frameReady=false;
       let ribbonTimer=null;
+      let runtimeLoadPromise=null;
       const runtimePatches=[
-        'wip-table-excel-filter-precision-patch.js?v=20260827b',
-        'wip-final-regression-fixes-patch.js?v=20260827b',
-        'wip-safe-undercarriage-home-route-patch.js?v=20260827b',
-        'wip-ui-cleanup-terrain-speed-patch.js?v=20260827b',
-        'wip-canton-cleanup-patch.js?v=20260827b',
-        'wip-stack-guard-patch.js?v=20260827b',
-        'wip-city-filter-input-fix-patch.js?v=20260827c',
-        'wip-shell-recovery-patch.js?v=20260901a'
+        'wip-table-excel-filter-precision-patch.js?v=20260901a',
+        'wip-final-regression-fixes-patch.js?v=20260901a',
+        'wip-safe-undercarriage-home-route-patch.js?v=20260901a',
+        'wip-ui-cleanup-terrain-speed-patch.js?v=20260901a',
+        'wip-canton-cleanup-patch.js?v=20260901a',
+        'wip-stack-guard-patch.js?v=20260901a',
+        'wip-city-filter-input-fix-patch.js?v=20260901a',
+        'wip-shell-recovery-patch.js?v=20260901b'
       ];
 
       function isDesktop(){return window.matchMedia('(min-width:1024px)').matches;}
@@ -54,24 +55,40 @@
         ribbon?.classList.toggle('is-hidden',!show);
         if(!show&&Date.now()-ribbonStartedAt>MAX_RIBBON_MS){clearInterval(ribbonTimer);ribbonTimer=null;}
       }
-      function injectRuntimePatches(){
-        try{
-          const doc=frame.contentDocument;
-          if(!doc?.body)return;
-          runtimePatches.forEach((file)=>{
-            const id=`wip-runtime-${file.replace(/[^a-z0-9_-]/gi,'-')}`;
-            if(doc.getElementById(id))return;
-            const script=doc.createElement('script');
-            script.id=id;
-            script.src=`./${file}`;
-            script.defer=true;
-            doc.body.appendChild(script);
-          });
-        }catch(error){console.warn('Injection patch WIP impossible.',error);}
+      function loadRuntimePatch(doc,file){
+        return new Promise((resolve)=>{
+          const id=`wip-runtime-${file.replace(/[^a-z0-9_-]/gi,'-')}`;
+          const existing=doc.getElementById(id);
+          if(existing){resolve(existing.dataset.loadState!=='error');return;}
+          const script=doc.createElement('script');
+          script.id=id;
+          script.src=`./${file}`;
+          script.async=false;
+          script.defer=false;
+          script.addEventListener('load',()=>{script.dataset.loadState='loaded';resolve(true);},{once:true});
+          script.addEventListener('error',()=>{script.dataset.loadState='error';console.error(`Patch WIP introuvable: ${file}`);resolve(false);},{once:true});
+          doc.body.appendChild(script);
+        });
       }
-      frame.addEventListener('load',()=>{
+      function injectRuntimePatches(){
+        if(runtimeLoadPromise)return runtimeLoadPromise;
+        runtimeLoadPromise=(async()=>{
+          try{
+            const doc=frame.contentDocument;
+            if(!doc?.body)return false;
+            for(const file of runtimePatches)await loadRuntimePatch(doc,file);
+            doc.dispatchEvent(new CustomEvent('wip:runtime-ready'));
+            return true;
+          }catch(error){
+            console.error('Injection patch WIP impossible.',error);
+            return false;
+          }
+        })();
+        return runtimeLoadPromise;
+      }
+      frame.addEventListener('load',async()=>{
         frameReady=true;
-        injectRuntimePatches();
+        await injectRuntimePatches();
         syncRibbon();
         clearInterval(ribbonTimer);
         ribbonTimer=setInterval(syncRibbon,300);
