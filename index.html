@@ -5,98 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard WIP — Version expérimentale</title>
   <style>
-    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0f172a;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0f172a}
     #app-frame{position:fixed;inset:0;width:100%;height:100%;border:0;display:block;background:#f8fafc}
-    #wip-corner-ribbon{position:fixed;z-index:20000;top:18px;right:18px;pointer-events:none;max-width:285px;padding:10px 16px 10px 18px;text-align:left;background:linear-gradient(135deg,#fff7cc 0%,#facc15 58%,#eab308 100%);color:#111827;border:1px solid rgba(17,24,39,.18);border-radius:0 18px 0 16px;box-shadow:0 14px 30px rgba(2,6,23,.24);font-size:12px;font-weight:1000;letter-spacing:.055em;text-transform:uppercase;line-height:1.25;opacity:1;visibility:visible;transform:translateY(0);transition:opacity .2s ease,visibility .2s ease,transform .2s ease}
-    #wip-corner-ribbon.is-hidden{opacity:0;visibility:hidden;transform:translateY(-8px)}
-    #wip-corner-ribbon::before{content:"";position:absolute;top:100%;right:-1px;width:0;height:0;border-top:14px solid #b45309;border-left:14px solid transparent;filter:drop-shadow(-2px 3px 2px rgba(2,6,23,.14))}
-    #wip-corner-ribbon::after{content:"";position:absolute;top:-1px;right:-1px;width:18px;height:18px;background:#111827;clip-path:polygon(100% 0,0 0,100% 100%);opacity:.16;border-radius:0 16px 0 0}
-    @media(max-width:1023px){#wip-corner-ribbon{display:none!important}}
   </style>
 </head>
 <body>
   <iframe id="app-frame" title="Dashboard WIP" src="./dashboard-wip.html"></iframe>
-  <div id="wip-corner-ribbon" class="is-hidden" aria-label="Mise à jour data et contenu">MAJ data + contenu 7 Août 15:00</div>
-  <script>
-    (()=>{
-      const frame=document.getElementById('app-frame');
-      const ribbon=document.getElementById('wip-corner-ribbon');
-      const ribbonStartedAt=Date.now();
-      const MAX_RIBBON_MS=30000;
-      let frameReady=false;
-      let ribbonTimer=null;
-      let runtimeLoadPromise=null;
-      const runtimePatches=[
-        'wip-table-excel-filter-precision-patch.js?v=20260901a',
-        'wip-final-regression-fixes-patch.js?v=20260901a',
-        'wip-safe-undercarriage-home-route-patch.js?v=20260901a',
-        'wip-ui-cleanup-terrain-speed-patch.js?v=20260901a',
-        'wip-canton-cleanup-patch.js?v=20260901a',
-        'wip-stack-guard-patch.js?v=20260901b',
-        'wip-city-filter-input-fix-patch.js?v=20260901b',
-        'wip-shell-recovery-patch.js?v=20260901c'
-      ];
-
-      function isDesktop(){return window.matchMedia('(min-width:1024px)').matches;}
-      function ribbonTimeAllowed(){return Date.now()-ribbonStartedAt<=MAX_RIBBON_MS;}
-      function isPortfolioSelectionVisible(){
-        if(!isDesktop()||!frameReady||!ribbonTimeAllowed())return false;
-        try{
-          const doc=frame.contentDocument;
-          const win=frame.contentWindow;
-          const overlay=doc?.getElementById('nominative-overlay');
-          if(!overlay)return false;
-          const style=win.getComputedStyle(overlay);
-          return style.display!=='none'&&style.visibility!=='hidden'&&style.opacity!=='0'&&overlay.getBoundingClientRect().height>0;
-        }catch(error){return false;}
-      }
-      function syncRibbon(){
-        const show=isPortfolioSelectionVisible();
-        ribbon?.classList.toggle('is-hidden',!show);
-        if(!show&&Date.now()-ribbonStartedAt>MAX_RIBBON_MS){clearInterval(ribbonTimer);ribbonTimer=null;}
-      }
-      function loadRuntimePatch(doc,file){
-        return new Promise((resolve)=>{
-          const id=`wip-runtime-${file.replace(/[^a-z0-9_-]/gi,'-')}`;
-          const existing=doc.getElementById(id);
-          if(existing){resolve(existing.dataset.loadState!=='error');return;}
-          const script=doc.createElement('script');
-          script.id=id;
-          script.src=`./${file}`;
-          script.async=false;
-          script.defer=false;
-          script.addEventListener('load',()=>{script.dataset.loadState='loaded';resolve(true);},{once:true});
-          script.addEventListener('error',()=>{script.dataset.loadState='error';console.error(`Patch WIP introuvable: ${file}`);resolve(false);},{once:true});
-          doc.body.appendChild(script);
-        });
-      }
-      function injectRuntimePatches(){
-        if(runtimeLoadPromise)return runtimeLoadPromise;
-        runtimeLoadPromise=(async()=>{
-          try{
-            const doc=frame.contentDocument;
-            if(!doc?.body)return false;
-            for(const file of runtimePatches)await loadRuntimePatch(doc,file);
-            doc.dispatchEvent(new CustomEvent('wip:runtime-ready'));
-            return true;
-          }catch(error){
-            console.error('Injection patch WIP impossible.',error);
-            return false;
-          }
-        })();
-        return runtimeLoadPromise;
-      }
-      frame.addEventListener('load',async()=>{
-        frameReady=true;
-        await injectRuntimePatches();
-        syncRibbon();
-        clearInterval(ribbonTimer);
-        ribbonTimer=setInterval(syncRibbon,300);
-        window.setTimeout(syncRibbon,MAX_RIBBON_MS+100);
-      });
-      window.addEventListener('resize',syncRibbon);
-      ribbonTimer=setInterval(syncRibbon,300);
-    })();
-  </script>
 </body>
 </html>
