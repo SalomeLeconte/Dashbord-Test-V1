@@ -77,21 +77,16 @@ jobs:
           test -n "$(find dist/assets -maxdepth 1 -name 'dashboard-inline.*.min.js' -print -quit)"
           test -n "$(find dist/assets -maxdepth 1 -name 'wip-runtime.*.js' -print -quit)"
           ! test -e dist/wip-runtime.bundle.js
-          ! test -e dist/wip-city-filter-input-fix-patch.js
           ! grep -q 'wip-corner-ribbon' dist/index.html
           ! grep -q 'runtimePatches' dist/index.html
           ! grep -q 'wip-shell-recovery-patch' dist/index.html
           ! grep -q 'wip-postmerge-performance-hotfix' dist/index.html
           ! grep -q 'perf-runtime/' dist/index.html
-          grep -q 'id="f-ville-search"' dist/dashboard-wip.html
-          grep -q 'id="f-ville-value"' dist/dashboard-wip.html
-          ! grep -q 'id="f-ville"' dist/dashboard-wip.html
           grep -Eq 'assets/wip-runtime\.[0-9a-f]{12}\.js' dist/dashboard-wip.html
           RUNTIME_FILE="$(find dist/assets -maxdepth 1 -name 'wip-runtime.*.js' -print -quit)"
           INLINE_FILE="$(find dist/assets -maxdepth 1 -name 'dashboard-inline.*.min.js' -print -quit)"
           grep -q '__p2PreparedDataInstalled' "$RUNTIME_FILE"
-          grep -q '__WIP_CITY_COMBOBOX__' "$RUNTIME_FILE"
-          ! grep -q '__WIP_CITY_FILTER_INPUT_CRASH_FIX__' "$RUNTIME_FILE"
+          grep -q '__WIP_CITY_FILTER_INPUT_CRASH_FIX__' "$RUNTIME_FILE"
           grep -q 'wip-stack-guard-2026-09-03-v5' "$RUNTIME_FILE"
           ! grep -q 'MVM' "$RUNTIME_FILE"
           ! grep -q 'data-uc="sort"' "$RUNTIME_FILE"
@@ -117,22 +112,6 @@ jobs:
           runtime = re.search(r'<script src="(assets/wip-runtime\.[0-9a-f]{12}\.js)"></script>', html)
           assert inline and runtime, 'runtime markers missing'
           assert inline.start() < runtime.start(), 'dashboard base JS must load before WIP runtime'
-          inline_text = Path('dist', inline.group(1)).read_text()
-          runtime_text = Path('dist', runtime.group(1)).read_text()
-          legacy_city_markers = [
-              'id="f-ville"',
-              "getElementById('f-ville')",
-              'getElementById("f-ville")',
-              "'#f-ville'",
-              '"#f-ville"',
-              '__WIP_CITY_FILTER_INPUT_CRASH_FIX__'
-          ]
-          for marker in legacy_city_markers:
-              assert marker not in html, f'legacy Ville marker remains in HTML: {marker}'
-              assert marker not in inline_text, f'legacy Ville marker remains in base JS: {marker}'
-              assert marker not in runtime_text, f'legacy Ville marker remains in runtime: {marker}'
-          assert '__WIP_CITY_COMBOBOX__' in runtime_text, 'city combobox runtime missing'
-          assert 'f-ville-value' in inline_text, 'base filter does not read the selected city key'
           PY
           ! grep -q '<script src="https://cdn.tailwindcss.com"' dist/dashboard-wip.html
           ! grep -q '<script src="https://unpkg.com/leaflet' dist/dashboard-wip.html

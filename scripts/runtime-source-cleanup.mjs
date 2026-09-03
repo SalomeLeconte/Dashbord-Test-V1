@@ -136,46 +136,6 @@ function cleanupReleaseNotes(source) {
   return source;
 }
 
-function cleanupCantonCityReferences(source) {
-  source = replaceRequired(
-    source,
-    'canton selected city key',
-    "  function selectedDept() {\n    const raw = String(document.getElementById('f-dept')?.value || '').trim();\n    return raw ? raw.padStart(2, '0') : '';\n  }\n  function citySearch() { return norm(document.getElementById('f-ville')?.value || ''); }",
-    "  function selectedCityKey() { return String(document.getElementById('f-ville-value')?.value || ''); }\n  function selectedDept() {\n    const explicit = String(document.getElementById('f-dept')?.value || '').trim();\n    const cityDept = selectedCityKey().split('|', 2)[0] || '';\n    const raw = explicit || cityDept;\n    return raw ? raw.padStart(2, '0') : '';\n  }\n  function citySearch() { return norm(selectedCityKey().split('|', 2)[1] || ''); }"
-  );
-  source = replaceRequired(
-    source,
-    'canton city anchor',
-    "    const cityField = document.getElementById('f-ville');\n    const anchor = cityField?.closest('label,div') || deptField?.closest('label,div') || document.getElementById('filters-panel') || document.querySelector('aside');",
-    "    const cityField = document.getElementById('wip-city-combobox');\n    const anchor = cityField || deptField?.closest('label,div') || document.getElementById('filters-panel') || document.querySelector('aside');"
-  );
-  source = replaceRequired(
-    source,
-    'canton city listeners',
-    "    [deptField, cityField].forEach(field => field?.addEventListener('input', () => computeOptions()));\n    [deptField, cityField].forEach(field => field?.addEventListener('change', () => computeOptions()));",
-    "    deptField?.addEventListener('change', () => computeOptions());\n    document.addEventListener('dashboard:city-changed', () => computeOptions());"
-  );
-  return source;
-}
-
-function cleanupFollowupCityTarget(source) {
-  return replaceRequired(
-    source,
-    'followup city/canton target',
-    "        return document.getElementById('f-canton-select') || document.getElementById('f-ville');",
-    "        return document.getElementById('f-canton-adaptive-select') || document.getElementById('f-ville-search');"
-  );
-}
-
-function cleanupReleaseCityTarget(source) {
-  return replaceRequired(
-    source,
-    'release city target',
-    "        return first(['#f-ville', '#filter-ville', 'input[placeholder*=\"ville\" i]', 'input[placeholder*=\"commune\" i]']) || inputNearLabel('ville');",
-    "        return first(['#f-ville-search', '#wip-city-combobox']) || inputNearLabel('ville');"
-  );
-}
-
 export function sanitizeRuntimeSource(fileName, source) {
   let cleaned = source;
   if (fileName === 'wip-final-regression-fixes-patch.js') cleaned = cleanupFinalRegression(cleaned);
@@ -185,17 +145,11 @@ export function sanitizeRuntimeSource(fileName, source) {
   if (fileName === 'wip-undercarriage-model-rules-patch.js') cleaned = cleanupUndercarriageModelRules(cleaned);
   if (fileName === 'wip-undercarriage-smr-filter-patch.js') cleaned = cleanupUndercarriageSmr(cleaned);
   if (fileName === 'wip-release-refine-patch.js') cleaned = cleanupReleaseNotes(cleaned);
-  if (fileName === 'wip-canton-adaptive-filter-patch.js') cleaned = cleanupCantonCityReferences(cleaned);
-  if (fileName === 'wip-followup-patch.js') cleaned = cleanupFollowupCityTarget(cleaned);
-  if (fileName === 'wip-release-target-precision-patch.js') cleaned = cleanupReleaseCityTarget(cleaned);
 
   if (cleaned.includes('MVM')) throw new Error(`Runtime cleanup: ${fileName} still contains MVM`);
   if (cleaned.includes('data-uc="sort"')) throw new Error(`Runtime cleanup: ${fileName} still contains sort UI`);
   if (cleaned.includes('Trier par potentiel')) throw new Error(`Runtime cleanup: ${fileName} still contains legacy sort wording`);
   if (cleaned.includes('<th>Score</th>')) throw new Error(`Runtime cleanup: ${fileName} still contains Score column`);
   if (cleaned.includes('wip-route-start-home')) throw new Error(`Runtime cleanup: ${fileName} still contains legacy route start UI`);
-  if (cleaned.includes("getElementById('f-ville')") || cleaned.includes('getElementById("f-ville")') || cleaned.includes("'#f-ville'")) {
-    throw new Error(`Runtime cleanup: ${fileName} still contains legacy Ville selector`);
-  }
   return cleaned;
 }
