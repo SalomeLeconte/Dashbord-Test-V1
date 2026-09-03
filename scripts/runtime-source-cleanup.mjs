@@ -61,6 +61,19 @@ function cleanupUndercarriageFilter(source) {
   source = removeAll(source, '    state.sort = !!root.querySelector(\'[data-uc="sort"]\')?.checked;\n');
   source = replaceRequired(source, 'undercarriage MVM option', "${opt('MVM', 'MVM')}", '');
   source = removeAll(source, '          <label class="flex items-center gap-2 font-bold"><input data-uc="sort" type="checkbox"> Trier par potentiel undercarriage</label>\n');
+
+  source = replaceRequired(
+    source,
+    'legacy undercarriage detail row MVM/Score',
+    "    const rows = list.map(m => `<tr><td>${esc(m.label)}</td><td>${m.smr ? Math.round(m.smr).toLocaleString('fr-FR') + ' h' : ''}</td><td>${esc(m.bull)}</td><td>${esc(m.exca)}</td><td>${esc(m.mvm)}</td><td>${m.travelPct ? m.travelPct.toLocaleString('fr-FR') + ' %' : ''}</td><td>${m.travelHours ? Math.round(m.travelHours).toLocaleString('fr-FR') + ' h' : ''}</td><td>${Math.round(m.score || 0)}</td></tr>`).join('');",
+    "    const rows = list.map(m => `<tr><td>${esc(m.label)}</td><td>${m.smr ? Math.round(m.smr).toLocaleString('fr-FR') + ' h' : ''}</td><td>${esc(m.bull)}</td><td>${esc(m.exca)}</td><td>${m.travelPct ? m.travelPct.toLocaleString('fr-FR') + ' %' : ''}</td><td>${m.travelHours ? Math.round(m.travelHours).toLocaleString('fr-FR') + ' h' : ''}</td></tr>`).join('');"
+  );
+  source = replaceRequired(
+    source,
+    'legacy undercarriage detail headers MVM/Score',
+    '<thead><tr><th>Machine</th><th>SMR</th><th>BULL</th><th>EXCA</th><th>MVM</th><th>Travel %</th><th>Travel h</th><th>Score</th></tr></thead>',
+    '<thead><tr><th>Machine</th><th>SMR</th><th>BULL</th><th>EXCA</th><th>Travel %</th><th>Travel h</th></tr></thead>'
+  );
   return source;
 }
 
@@ -130,6 +143,8 @@ export function sanitizeRuntimeSource(fileName, source) {
 
   if (cleaned.includes('MVM')) throw new Error(`Runtime cleanup: ${fileName} still contains MVM`);
   if (cleaned.includes('data-uc="sort"')) throw new Error(`Runtime cleanup: ${fileName} still contains sort UI`);
+  if (cleaned.includes('Trier par potentiel')) throw new Error(`Runtime cleanup: ${fileName} still contains legacy sort wording`);
+  if (cleaned.includes('<th>Score</th>')) throw new Error(`Runtime cleanup: ${fileName} still contains Score column`);
   if (cleaned.includes('wip-route-start-home')) throw new Error(`Runtime cleanup: ${fileName} still contains legacy route start UI`);
   return cleaned;
 }
