@@ -30,7 +30,6 @@ const runtimeFiles = [
   'wip-undercarriage-detail-ui-patch.js',
   'wip-release-target-precision-patch.js',
   'wip-undercarriage-modal-clean-patch.js',
-  'wip-canton-note-cleanup-patch.js',
   'wip-undercarriage-model-rules-patch.js',
   'wip-undercarriage-smr-filter-patch.js',
   'wip-undercarriage-custom-select-patch.js',
@@ -40,7 +39,6 @@ const runtimeFiles = [
   'wip-final-regression-fixes-patch.js',
   'wip-safe-undercarriage-home-route-patch.js',
   'wip-ui-cleanup-terrain-speed-patch.js',
-  'wip-canton-cleanup-patch.js',
   'wip-stack-guard-patch.js'
 ];
 
