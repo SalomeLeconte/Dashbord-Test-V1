@@ -93,10 +93,10 @@
     if (typeof csvLoadPromise !== 'undefined') csvLoadPromise = null;
     loadedPreparedScopeKey = requestedScopeKey;
 
-    if (typeof populateFilterOptions === 'function') populateFilterOptions();
+    // Ne pas rendre ici : selectSector/bypassSelection est l'unique point de
+    // finalisation de l'initialisation. Cela évite deux runFilter() consécutifs.
     if (typeof setupCARange === 'function') setupCARange();
     if (typeof invalidateTop200Ranks === 'function') invalidateTop200Ranks();
-    if (typeof runFilter === 'function') runFilter();
     document.dispatchEvent(new CustomEvent('dashboard:data-ready', {
       detail: { rows: globalData.length, prepared: true, departments: depts }
     }));
