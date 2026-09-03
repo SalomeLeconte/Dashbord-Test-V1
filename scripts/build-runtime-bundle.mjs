@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { sanitizeRuntimeSource } from './runtime-source-cleanup.mjs';
 
 const rootDir = process.cwd();
 const outputFile = join(rootDir, 'wip-runtime.bundle.js');
@@ -28,7 +29,6 @@ const runtimeFiles = [
   'wip-undercarriage-detail-ui-patch.js',
   'wip-release-target-precision-patch.js',
   'wip-undercarriage-modal-clean-patch.js',
-  'wip-canton-note-cleanup-patch.js',
   'wip-undercarriage-model-rules-patch.js',
   'wip-undercarriage-smr-filter-patch.js',
   'wip-undercarriage-custom-select-patch.js',
@@ -38,7 +38,6 @@ const runtimeFiles = [
   'wip-final-regression-fixes-patch.js',
   'wip-safe-undercarriage-home-route-patch.js',
   'wip-ui-cleanup-terrain-speed-patch.js',
-  'wip-canton-cleanup-patch.js',
   'wip-city-filter-input-fix-patch.js',
   'wip-stack-guard-patch.js'
 ];
@@ -54,7 +53,8 @@ const banner = [
 
 const bundle = runtimeFiles.map(fileName => {
   const source = readFileSync(join(rootDir, fileName), 'utf8').trim();
-  return `/* ${fileName} */\n${source}\n;`;
+  const cleaned = sanitizeRuntimeSource(fileName, source).trim();
+  return `/* ${fileName} */\n${cleaned}\n;`;
 }).join('\n\n');
 
 writeFileSync(outputFile, `${banner}${bundle}\n`, 'utf8');

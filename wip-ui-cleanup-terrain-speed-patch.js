@@ -1,10 +1,9 @@
 (() => {
-  const PATCH_ID = 'wip-ui-cleanup-terrain-speed-2026-08-27-v2';
+  const PATCH_ID = 'wip-terrain-speed-2026-09-03-v3';
   if (window.__WIP_UI_CLEANUP_TERRAIN_SPEED_PATCH__ === PATCH_ID) return;
   window.__WIP_UI_CLEANUP_TERRAIN_SPEED_PATCH__ = PATCH_ID;
 
   const GEOJSON_URL_PART = 'france-geojson/master/departements.geojson';
-  let installQueued = false;
   let terrainGeojsonPromise = null;
   let terrainGeojsonData = null;
   let terrainSignature = '';
@@ -16,81 +15,6 @@
       .toLowerCase()
       .replace(/\s+/g, ' ')
       .trim();
-  }
-
-  function ownHeaderText(node) {
-    if (!node) return '';
-    const clone = node.cloneNode(true);
-    clone.querySelectorAll('select,input,textarea,option,table,tbody,.wip-undercarriage-integrated-body,#wip-undercarriage-filter').forEach((child) => child.remove());
-    return clone.textContent || '';
-  }
-
-  function isUndercarriageHeader(node) {
-    const text = norm(ownHeaderText(node));
-    return /^7\s*[.)-]?\s*undercarriage\b/.test(text) && text.length <= 60;
-  }
-
-  function blockForHeader(header) {
-    if (!header) return null;
-    const integrated = header.closest?.('#wip-undercarriage-integrated-accordion');
-    if (integrated) return integrated;
-    const details = header.closest?.('details');
-    if (details && norm(details.textContent || '').includes('undercarriage')) return details;
-    const button = header.closest?.('button');
-    if (button && isUndercarriageHeader(button)) return button;
-    return header;
-  }
-
-  function blockScore(block, order) {
-    if (!block) return 0;
-    let score = order;
-    if (block.querySelector?.('#wip-undercarriage-filter')) score += 1000;
-    if (block.id === 'wip-undercarriage-integrated-accordion') score += 900;
-    if (block.matches?.('details')) score += 100;
-    if ((block.textContent || '').length > 120) score += 80;
-    if (block.querySelector?.('select,input,button')) score += 60;
-    return score;
-  }
-
-  function removeNode(node) {
-    if (!node || !node.isConnected || node.tagName === 'BODY' || node.id === 'filters-panel') return;
-    node.remove();
-  }
-
-  function removeFirstUndercarriageDuplicate() {
-    const candidates = [...document.querySelectorAll('summary,button,[role="button"],div')].filter(isUndercarriageHeader);
-    const blocks = [];
-    candidates.forEach((header) => {
-      const block = blockForHeader(header);
-      if (!block || blocks.includes(block)) return;
-      blocks.push(block);
-    });
-    if (blocks.length <= 1) return;
-
-    let keep = blocks[blocks.length - 1];
-    let bestScore = -1;
-    blocks.forEach((block, index) => {
-      const score = blockScore(block, index);
-      if (score >= bestScore) {
-        bestScore = score;
-        keep = block;
-      }
-    });
-
-    blocks.forEach((block) => {
-      if (block !== keep) removeNode(block);
-    });
-  }
-
-  function removeLegacyRouteStartPanel() {
-    document.querySelectorAll('#wip-route-start-home,.wip-route-start-home').forEach(removeNode);
-    document.querySelectorAll('input[name="wip-route-start-mode"]').forEach((input) => {
-      const root = input.closest?.('#wip-route-start-home,.wip-route-start-home')
-        || input.closest?.('section,details,label,.rounded-xl,.rounded-2xl,div');
-      if (!root || root.id === 'wip-safe-home-route-panel' || root.closest?.('#wip-safe-home-route-panel')) return;
-      const text = norm(root.textContent || '');
-      if (text.includes('point de depart') || text.includes('position actuelle') || text.includes('domicile')) removeNode(root);
-    });
   }
 
   function terrainSig() {
@@ -181,26 +105,11 @@
   }
 
   function install() {
-    removeLegacyRouteStartPanel();
-    removeFirstUndercarriageDuplicate();
-    installTerrainSpeed();
-  }
-
-  function queueInstall() {
-    if (installQueued) return;
-    installQueued = true;
-    setTimeout(() => {
-      installQueued = false;
-      try { install(); } catch (error) { console.warn('Patch UI terrain cleanup impossible.', error); }
-    }, 80);
+    try { installTerrainSpeed(); } catch (error) { console.warn('Optimisation Mon terrain impossible.', error); }
   }
 
   install();
   document.addEventListener('DOMContentLoaded', install, { once: true });
-  document.addEventListener('dashboard:data-ready', queueInstall);
-  document.addEventListener('dashboard:grid-rendered', queueInstall);
-  setTimeout(install, 600);
-  setTimeout(install, 1800);
-  setTimeout(install, 4200);
-  try { new MutationObserver(queueInstall).observe(document.documentElement, { childList: true, subtree: true }); } catch (error) {}
+  document.addEventListener('dashboard:data-ready', install);
+  setTimeout(install, 900);
 })();

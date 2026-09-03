@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-undercarriage-smr-filter-2026-08-10-v2';
+  const PATCH_ID = 'wip-undercarriage-smr-filter-2026-09-03-v3';
   if (window.__WIP_UNDERCARRIAGE_SMR_FILTER_PATCH__ === PATCH_ID) return;
   window.__WIP_UNDERCARRIAGE_SMR_FILTER_PATCH__ = PATCH_ID;
 
@@ -36,20 +36,17 @@
     if (!panel) {
       current.cls = '';
       current.activityMin = 0;
-      current.sort = false;
       return current;
     }
 
     current.enabled = !!panel.querySelector('[data-uc="enabled"]')?.checked;
     current.type = panel.querySelector('[data-uc="type"]')?.value || '';
-    if (current.type === 'MVM') current.type = '';
     current.priority = panel.querySelector('[data-uc="priority"]')?.value || '';
     current.smrMin = Number(panel.querySelector('[data-uc="smr"]')?.value || 0);
     current.travelPctMin = Number(panel.querySelector('[data-uc="travelPct"]')?.value || 0);
     current.travelHoursMin = Number(panel.querySelector('[data-uc="travelHours"]')?.value || 0);
     current.cls = '';
     current.activityMin = 0;
-    current.sort = false;
     try { window.__wipSyncUndercarriageRangeUi?.(); } catch (error) {}
     try { window.__wipSyncUndercarriageCustomSelects?.(); } catch (error) {}
     try { window.__wipSyncUndercarriagePriorityUi?.(); } catch (error) {}
@@ -79,27 +76,20 @@
     const panel = root();
     if (!panel) return;
 
-    const classSelect = panel.querySelector('[data-uc="class"]');
-    fieldFor(classSelect)?.remove();
-
-    const activitySelect = panel.querySelector('[data-uc="activity"]');
-    fieldFor(activitySelect)?.remove();
+    fieldFor(panel.querySelector('[data-uc="class"]'))?.remove();
+    fieldFor(panel.querySelector('[data-uc="activity"]'))?.remove();
 
     panel.querySelectorAll('label, .wip-uc-field').forEach((node) => {
       const text = String(node.textContent || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       if (text.includes('classe') || text.includes('activite moyenne')) node.remove();
-      if (/\bmvm\b/i.test(node.textContent || '')) node.remove();
-      if (text.includes('trier par potentiel') || text.includes('score')) node.remove();
     });
 
     const type = panel.querySelector('[data-uc="type"]');
     if (type) {
       [...type.options].forEach((option) => {
-        if (option.value === 'MVM') option.remove();
         if (option.value === 'BULL' && option.textContent !== 'BULL / Dozer D*') option.textContent = 'BULL / Dozer D*';
         if (option.value === 'EXCA' && option.textContent !== 'EXCA PC* / HB*') option.textContent = 'EXCA PC* / HB*';
       });
-      if (type.value === 'MVM') type.value = '';
     }
 
     updateSmrOptions();

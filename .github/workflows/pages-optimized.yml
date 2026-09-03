@@ -16,6 +16,7 @@ on:
       - 'perf-runtime/**'
       - 'scripts/perf-prebuild/**'
       - 'scripts/perf-transforms/**'
+      - 'scripts/runtime-source-cleanup.mjs'
       - 'scripts/build-runtime-bundle.mjs'
       - 'scripts/build-pages-optimized.mjs'
       - '.github/workflows/pages-optimized.yml'
@@ -34,6 +35,7 @@ on:
       - 'perf-runtime/**'
       - 'scripts/perf-prebuild/**'
       - 'scripts/perf-transforms/**'
+      - 'scripts/runtime-source-cleanup.mjs'
       - 'scripts/build-runtime-bundle.mjs'
       - 'scripts/build-pages-optimized.mjs'
       - '.github/workflows/pages-optimized.yml'
@@ -82,9 +84,25 @@ jobs:
           ! grep -q 'perf-runtime/' dist/index.html
           grep -Eq 'assets/wip-runtime\.[0-9a-f]{12}\.js' dist/dashboard-wip.html
           RUNTIME_FILE="$(find dist/assets -maxdepth 1 -name 'wip-runtime.*.js' -print -quit)"
+          INLINE_FILE="$(find dist/assets -maxdepth 1 -name 'dashboard-inline.*.min.js' -print -quit)"
           grep -q '__p2PreparedDataInstalled' "$RUNTIME_FILE"
           grep -q '__WIP_CITY_FILTER_INPUT_CRASH_FIX__' "$RUNTIME_FILE"
           grep -q 'wip-stack-guard-2026-09-03-v5' "$RUNTIME_FILE"
+          ! grep -q 'MVM' "$RUNTIME_FILE"
+          ! grep -q 'data-uc="sort"' "$RUNTIME_FILE"
+          ! grep -q 'Trier par potentiel' "$RUNTIME_FILE"
+          ! grep -q '<th>MVM</th>' "$RUNTIME_FILE"
+          ! grep -q '<th>Score</th>' "$RUNTIME_FILE"
+          ! grep -q 'wip-route-start-home' "$RUNTIME_FILE"
+          ! grep -q 'wip-canton-cleanup-patch' "$RUNTIME_FILE"
+          ! grep -q 'wip-canton-note-cleanup-patch' "$RUNTIME_FILE"
+          ! grep -q 'v20-undercarriage-card' "$INLINE_FILE"
+          ! grep -q 'v25-canton-progress' "$INLINE_FILE"
+          ! grep -q 'In progress — non fonctionnel' "$INLINE_FILE"
+          ! grep -q 'Filtre non fonctionnel' "$INLINE_FILE"
+          ! grep -q 'addUndercarriageBox' "$INLINE_FILE"
+          ! grep -q 'patchUndercarriageV20' "$INLINE_FILE"
+          ! grep -q 'patchCantonInProgress' "$INLINE_FILE"
           node --check "$RUNTIME_FILE"
           python - <<'PY'
           from pathlib import Path
