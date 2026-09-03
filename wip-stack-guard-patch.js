@@ -59,6 +59,23 @@
     }, 0);
   }
 
+  // La source de contact actuelle dans data11.csv est data22.Téléphone.
+  // Plusieurs générations de la fiche détails lisent encore d'anciens alias
+  // (datap2/datav2). On synchronise uniquement ces alias depuis la source
+  // officielle afin que le libellé « Téléphone » affiche toujours la bonne valeur.
+  function normalizeContactPhoneSources(rows = window.globalData) {
+    if (!Array.isArray(rows)) return;
+    rows.forEach((row) => {
+      if (!row || typeof row !== 'object') return;
+      const phone = String(row['data22.Téléphone'] ?? '').trim();
+      if (!phone) return;
+      row['datap2.Téléphone'] = phone;
+      row['datav2.Téléphone'] = phone;
+      row['Téléphone'] = phone;
+      row.Telephone = phone;
+    });
+  }
+
   const guardedFunctionNames = [
     'runFilter',
     'renderTop200',
@@ -71,4 +88,6 @@
   if (!window.renderGrid?.__wipPerformanceGridLimit) guardedFunctionNames.push('renderGrid');
   guardedFunctionNames.forEach(guardFunction);
   guardedBadgeRefresh();
+  normalizeContactPhoneSources();
+  document.addEventListener('dashboard:data-ready', () => normalizeContactPhoneSources(), { passive: true });
 })();
