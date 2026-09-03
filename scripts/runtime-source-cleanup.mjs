@@ -25,6 +25,12 @@ function cleanupFinalRegression(source) {
     '  // ---------------------------------------------------------------------------\n  // 3) Noms Inconnu : fallback sur les autres colonnes exploitables.\n  // ---------------------------------------------------------------------------\n'
   );
   source = removeAll(source, '    installRouteStartFix();\n');
+  source = removeSection(
+    source,
+    'legacy route-start styles',
+    '      .wip-route-start-home{',
+    '    `;\n    document.head.appendChild(style);'
+  );
   return source;
 }
 
@@ -61,7 +67,6 @@ function cleanupUndercarriageFilter(source) {
   source = removeAll(source, '    state.sort = !!root.querySelector(\'[data-uc="sort"]\')?.checked;\n');
   source = replaceRequired(source, 'undercarriage MVM option', "${opt('MVM', 'MVM')}", '');
   source = removeAll(source, '          <label class="flex items-center gap-2 font-bold"><input data-uc="sort" type="checkbox"> Trier par potentiel undercarriage</label>\n');
-
   source = replaceRequired(
     source,
     'legacy undercarriage detail row MVM/Score',
