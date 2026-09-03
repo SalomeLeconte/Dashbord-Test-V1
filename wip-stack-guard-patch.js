@@ -1,11 +1,11 @@
 (() => {
-  const PATCH_ID = 'wip-stack-guard-2026-09-01-v4';
+  const PATCH_ID = 'wip-stack-guard-2026-09-03-v5';
   if (window.__WIP_STACK_GUARD_PATCH__ === PATCH_ID) return;
   window.__WIP_STACK_GUARD_PATCH__ = PATCH_ID;
 
-  // A guard must sit once at the base of the wrapper chain. Reinstalling a guard
-  // around every later wrapper makes normal delegation look like recursion and
-  // prevents the original render function from ever running.
+  // Le garde reste uniquement chargé de bloquer une vraie récursion. Les anciens
+  // hotfixes différés ont été supprimés : le runtime final est désormais construit
+  // dans un ordre déterministe avant publication.
   const guardedNames = window.__wipStackGuardedNames || new Set();
   const running = window.__wipStackGuardRunning || new Set();
   const lastResult = window.__wipStackGuardLastResult || Object.create(null);
@@ -59,22 +59,6 @@
     }, 0);
   }
 
-  function loadPostMergeHotfix() {
-    // Nouveau loader ID : un ancien <script> en erreur (404) ne doit jamais
-    // empêcher une nouvelle tentative après un déploiement corrigé.
-    const loaderId = 'wip-postmerge-performance-hotfix-loader-v2';
-    if (document.getElementById(loaderId)) return;
-    const script = document.createElement('script');
-    script.id = loaderId;
-    script.src = './wip-postmerge-performance-hotfix.js?v=20260901b';
-    script.async = false;
-    script.addEventListener('error', () => {
-      console.error('Chargement du hotfix performance WIP impossible.');
-      script.remove();
-    }, { once: true });
-    document.body.appendChild(script);
-  }
-
   const guardedFunctionNames = [
     'runFilter',
     'renderTop200',
@@ -87,8 +71,4 @@
   if (!window.renderGrid?.__wipPerformanceGridLimit) guardedFunctionNames.push('renderGrid');
   guardedFunctionNames.forEach(guardFunction);
   guardedBadgeRefresh();
-
-  // Les patches WIP sont injectés dynamiquement et peuvent finir dans un ordre
-  // différent selon le réseau. On pose le limiteur final après leur installation.
-  window.setTimeout(loadPostMergeHotfix, 900);
 })();
