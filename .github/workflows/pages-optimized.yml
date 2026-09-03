@@ -1,4 +1,4 @@
-name: Optimized GitHub Pages
+name: Unified optimized dashboard build
 
 on:
   pull_request:
@@ -16,7 +16,7 @@ on:
       - 'perf-runtime/**'
       - 'scripts/perf-prebuild/**'
       - 'scripts/perf-transforms/**'
-      - 'scripts/build-cloudflare.mjs'
+      - 'scripts/build-runtime-bundle.mjs'
       - 'scripts/build-pages-optimized.mjs'
       - '.github/workflows/pages-optimized.yml'
   push:
@@ -34,7 +34,7 @@ on:
       - 'perf-runtime/**'
       - 'scripts/perf-prebuild/**'
       - 'scripts/perf-transforms/**'
-      - 'scripts/build-cloudflare.mjs'
+      - 'scripts/build-runtime-bundle.mjs'
       - 'scripts/build-pages-optimized.mjs'
       - '.github/workflows/pages-optimized.yml'
   workflow_dispatch:
@@ -55,27 +55,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install production build dependencies
+      - name: Install build dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Validate Cloudflare WIP artifact
-        run: |
-          npm run build
-          test -s dist/index.html
-          test -s dist/dashboard-wip.html
-          test -s dist/wip-runtime.bundle.js
-          test -s dist/wip-city-filter-input-fix-patch.js
-          test -s dist/wip-shell-recovery-patch.js
-          test -s dist/wip-postmerge-performance-hotfix.js
-          test -s dist/perf-runtime/p0-04-grid-windowing.js
-          test -s dist/perf-runtime/p0-05-responsive-render.js
-          grep -q 'wip-shell-recovery-patch.js' dist/index.html
-          grep -q 'wip-city-filter-input-fix-patch.js' dist/index.html
+      - name: Build unified optimized site
+        run: npm run build
 
-      - name: Build optimized site
-        run: npm run build:pages
-
-      - name: Validate optimized artifact
+      - name: Validate unified artifact
         run: |
           test -s dist/index.html
           test -s dist/dashboard-wip.html
@@ -87,26 +73,28 @@ jobs:
           test -n "$(find dist/data/prepared -maxdepth 1 -name 'dept-*.json' -print -quit)"
           test -n "$(find dist/assets -maxdepth 1 -name 'dashboard.*.min.css' -print -quit)"
           test -n "$(find dist/assets -maxdepth 1 -name 'dashboard-inline.*.min.js' -print -quit)"
-          test -n "$(find dist/assets -maxdepth 1 -name 'wip-shell.*.min.css' -print -quit)"
-          test -n "$(find dist/assets -maxdepth 1 -name 'wip-shell.*.min.js' -print -quit)"
-          grep -q "cache: 'force-cache'" dist/csv-data-worker.js
-          grep -q "cache: 'force-cache'" dist/prepared-data-worker.js
-          grep -Eq 'assets/dashboard\.[0-9a-f]{12}\.min\.css' dist/dashboard-wip.html
-          grep -Eq 'assets/dashboard-inline\.[0-9a-f]{12}\.min\.js' dist/dashboard-wip.html
-          grep -Eq 'assets/wip-shell\.[0-9a-f]{12}\.min\.css' dist/index.html
-          grep -Eq 'assets/wip-shell\.[0-9a-f]{12}\.min\.js' dist/index.html
-          grep -R -q 'p2-prepared-data.js' dist/assets/wip-shell.*.min.js
+          test -n "$(find dist/assets -maxdepth 1 -name 'wip-runtime.*.js' -print -quit)"
+          ! test -e dist/wip-runtime.bundle.js
+          ! grep -q 'wip-corner-ribbon' dist/index.html
+          ! grep -q 'runtimePatches' dist/index.html
+          ! grep -q 'wip-shell-recovery-patch' dist/index.html
+          ! grep -q 'wip-postmerge-performance-hotfix' dist/index.html
+          ! grep -q 'perf-runtime/' dist/index.html
+          grep -Eq 'assets/wip-runtime\.[0-9a-f]{12}\.js' dist/dashboard-wip.html
+          RUNTIME_FILE="$(find dist/assets -maxdepth 1 -name 'wip-runtime.*.js' -print -quit)"
+          grep -q '__p2PreparedDataInstalled' "$RUNTIME_FILE"
+          grep -q '__WIP_CITY_FILTER_INPUT_CRASH_FIX__' "$RUNTIME_FILE"
+          grep -q 'wip-stack-guard-2026-09-03-v5' "$RUNTIME_FILE"
+          node --check "$RUNTIME_FILE"
           python - <<'PY'
           from pathlib import Path
           import re
           html = Path('dist/dashboard-wip.html').read_text()
           inline = re.search(r'<script src="(assets/dashboard-inline\.[0-9a-f]{12}\.min\.js)"></script>', html)
-          runtime = re.search(r'<script src="\.\/wip-runtime\.bundle\.js[^\"]*"></script>', html)
+          runtime = re.search(r'<script src="(assets/wip-runtime\.[0-9a-f]{12}\.js)"></script>', html)
           assert inline and runtime, 'runtime markers missing'
-          assert inline.start() < runtime.start(), 'dashboard base JS must load before WIP runtime bundle'
+          assert inline.start() < runtime.start(), 'dashboard base JS must load before WIP runtime'
           PY
-          ! test -e dist/assets/dashboard.min.css
-          ! test -e dist/assets/dashboard-inline.min.js
           ! grep -q '<script src="https://cdn.tailwindcss.com"' dist/dashboard-wip.html
           ! grep -q '<script src="https://unpkg.com/leaflet' dist/dashboard-wip.html
           ! grep -q '<link rel="stylesheet" href="https://unpkg.com/leaflet' dist/dashboard-wip.html
