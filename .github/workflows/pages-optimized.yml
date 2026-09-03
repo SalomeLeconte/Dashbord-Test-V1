@@ -1,4 +1,4 @@
-name: Unified optimized dashboard build
+name: WIP optimized GitHub Pages
 
 on:
   pull_request:
@@ -21,7 +21,7 @@ on:
       - 'scripts/build-pages-optimized.mjs'
       - '.github/workflows/pages-optimized.yml'
   push:
-    branches: [main]
+    branches: [WIP]
     paths:
       - 'index.html'
       - 'dashboard-wip.html'
@@ -47,7 +47,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: optimized-pages-${{ github.ref }}
+  group: github-pages-wip
   cancel-in-progress: true
 
 jobs:
@@ -118,17 +118,17 @@ jobs:
           ! grep -q '<link rel="stylesheet" href="https://unpkg.com/leaflet' dist/dashboard-wip.html
 
       - name: Configure Pages
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/WIP'
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/WIP'
         uses: actions/upload-pages-artifact@v4
         with:
           path: ./dist
 
   deploy:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/WIP'
     needs: build
     runs-on: ubuntu-latest
     environment:
