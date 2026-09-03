@@ -1,11 +1,12 @@
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  X-Frame-Options: DENY
+  X-Frame-Options: SAMEORIGIN
+  Content-Security-Policy: frame-ancestors 'self'
   Permissions-Policy: geolocation=(self)
 
 /*.html
-  Cache-Control: no-cache
+  Cache-Control: no-cache, max-age=0, must-revalidate
 
 /data11.csv
   Cache-Control: public, max-age=3600
