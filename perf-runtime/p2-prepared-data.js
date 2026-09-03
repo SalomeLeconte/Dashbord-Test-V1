@@ -18,6 +18,12 @@
     return depts.length ? `prepared:${depts.join(',')}` : 'all';
   }
 
+  function portfolioSelectionPending() {
+    const overlay = document.getElementById('nominative-overlay');
+    if (!overlay) return false;
+    return !overlay.classList.contains('hidden') && !overlay.hidden;
+  }
+
   async function getManifest() {
     if (!manifestPromise) {
       const url = new URL('./data/prepared/manifest.json', document.baseURI);
@@ -105,7 +111,14 @@
 
   loadCSVData = async function p2LoadCSVData() {
     const depts = scopeDepartments();
-    if (!depts.length) return baseLoadCSVData.apply(this, arguments);
+
+    // Certains anciens modules appellent loadCSVData() dès le chargement du
+    // runtime. Tant que le sélecteur PSSR est affiché, on refuse ce préchargement
+    // global afin de ne jamais télécharger/parser data11.csv en entier inutilement.
+    if (!depts.length) {
+      if (portfolioSelectionPending()) return false;
+      return baseLoadCSVData.apply(this, arguments);
+    }
 
     const requestedScopeKey = scopeKey(depts);
     if (globalData.length && loadedPreparedScopeKey === requestedScopeKey) return true;
