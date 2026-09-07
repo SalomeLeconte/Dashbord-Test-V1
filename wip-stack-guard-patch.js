@@ -113,56 +113,6 @@
     });
   }
 
-  function dedupeLikeVisibleTop200(rows) {
-    if (!Array.isArray(rows)) return [];
-    try {
-      if (typeof window.dedupeRowsBySiret === 'function') {
-        return window.dedupeRowsBySiret(rows);
-      }
-    } catch (error) {}
-
-    const seen = new Set();
-    return rows.filter((row, index) => {
-      const key = siretKey(row) || `__row_${row?._rowIndex ?? index}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  }
-
-  // Top 10/20/25/50/100 doit être une simple vue tronquée du Top 200 final.
-  // On calcule donc exactement la liste Top 200 complète avec tous les wrappers
-  // actifs, on applique le même dédoublonnage SIRET que la vue visible, puis on
-  // prend les N premières lignes. Ainsi une entreprise dupliquée dans data11 ne
-  // peut plus transformer un Top 10 en 9 lignes : la ligne suivante remonte.
-  function installTopNFromFinalTop200() {
-    const current = window.getTop200Data;
-    if (typeof current !== 'function' || current.__wipTopNFromFinalTop200) return;
-
-    const wrapped = function getTop200DataFromFinalVisibleList(...args) {
-      let requestedLimit = 200;
-      try { requestedLimit = Number(top200Limit || 200); } catch (error) {}
-      const safeLimit = [10, 20, 25, 50, 100, 200].includes(requestedLimit) ? requestedLimit : 200;
-      let previousLimit = safeLimit;
-
-      try {
-        previousLimit = Number(top200Limit || safeLimit);
-        top200Limit = 200;
-        const fullTop200 = current.apply(this, args);
-        const visibleTop200 = dedupeLikeVisibleTop200(Array.isArray(fullTop200) ? fullTop200 : []);
-        return visibleTop200.slice(0, safeLimit);
-      } finally {
-        try { top200Limit = previousLimit; } catch (error) {}
-      }
-    };
-
-    wrapped.__wipTopNFromFinalTop200 = true;
-    wrapped.__wipTopNFromFinalTop200Original = current;
-    assignGlobal('getTop200Data', wrapped);
-  }
-
-  installTopNFromFinalTop200();
-
   const guardedFunctionNames = [
     'runFilter',
     'renderTop200',

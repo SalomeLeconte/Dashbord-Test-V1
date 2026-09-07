@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "python -m http.server 4180 --bind 127.0.0.1",
-    "check": "npm run bundle && node --check src/main.js && node --check csv-data-worker.js && node --check wip-runtime.bundle.js",
+    "check": "npm run bundle && node --check src/main.js && node --check csv-data-worker.js && node --check wip-runtime.bundle.js && node scripts/check-top200-ranking-invariants.mjs",
     "bundle": "node scripts/build-runtime-bundle.mjs",
     "build": "npm run build:pages",
     "build:pages": "npm run bundle && node scripts/build-pages-optimized.mjs",

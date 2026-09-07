@@ -2239,15 +2239,52 @@ Adresse : ${item[COL.adresse] || "-"}`);
             else if (!current.split(" + ").includes(reason)) item._pssrTopReason = `${current} + ${reason}`;
         }
 
+        function top200SiretKeyBeforeRanking(item) {
+            if (!item) return "";
+            const raw = item?.[COL.siret]
+                || item?.siret
+                || item?.SIRET
+                || item?.Siret
+                || item?.["Client_Irium.SIRET"]
+                || item?.["Client_Irium.Siret"]
+                || item?.["SIRENE DATA.siret"]
+                || item?.["data23.siret"]
+                || "";
+            const digits = String(raw).replace(/\D/g, "");
+            if (digits.length >= 14) return digits.slice(0, 14);
+            if (digits.length >= 9) return digits;
+            return "";
+        }
+
+        function dedupeTop200ScopeBeforeRanking(items) {
+            const bySiret = new Map();
+            const noSiret = [];
+
+            (Array.isArray(items) ? items : []).forEach((item, index) => {
+                const key = top200SiretKeyBeforeRanking(item);
+                if (!key) {
+                    noSiret.push(item);
+                    return;
+                }
+
+                const current = bySiret.get(key);
+                if (!current || compareTop200Pssr(item, current) < 0) {
+                    bySiret.set(key, item);
+                }
+            });
+
+            return [...bySiret.values(), ...noSiret];
+        }
+
         function buildTop200ForCurrentPssr() {
             globalData.forEach(item => {
                 item._pssrTopRank = "";
                 item._pssrTopReason = "";
             });
 
-            const scope = globalData
-                .filter(itemBelongsToActivePssr)
-                .sort(compareTop200Pssr);
+            const scope = dedupeTop200ScopeBeforeRanking(
+                globalData.filter(itemBelongsToActivePssr)
+            ).sort(compareTop200Pssr);
 
             const selected = [];
             const seen = new Set();
@@ -5633,6 +5670,6 @@ installSectorTree(); wrapRunFilterForSector(); installGridV25(); installDetailsV
 })();
 </script>
 
-<script src="./wip-runtime.bundle.js?v=20260907-branch-pages-v2&fix=topn-final-top200-v2"></script>
+<script src="./wip-runtime.bundle.js?v=20260907-branch-pages-v2&fix=dedupe-before-top200-rank-v3"></script>
 </body>
 </html>
