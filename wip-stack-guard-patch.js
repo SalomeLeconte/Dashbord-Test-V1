@@ -3,9 +3,6 @@
   if (window.__WIP_STACK_GUARD_PATCH__ === PATCH_ID) return;
   window.__WIP_STACK_GUARD_PATCH__ = PATCH_ID;
 
-  // Le garde reste uniquement chargé de bloquer une vraie récursion. Les anciens
-  // hotfixes différés ont été supprimés : le runtime final est désormais construit
-  // dans un ordre déterministe avant publication.
   const guardedNames = window.__wipStackGuardedNames || new Set();
   const running = window.__wipStackGuardRunning || new Set();
   const lastResult = window.__wipStackGuardLastResult || Object.create(null);
@@ -85,12 +82,6 @@
     return keys.reduce((score, key) => score + (String(row?.[key] ?? '').trim() ? 1 : 0), 0);
   }
 
-  // data11.csv peut contenir plusieurs lignes pour un même SIRET. Le dédoublonnage
-  // choisit une ligne métier selon le rang/CA, qui n'est pas nécessairement la ligne
-  // la plus riche en coordonnées de contact. On choisit donc, par SIRET, le téléphone
-  // data22.Téléphone provenant de la ligne de contact la plus riche, puis on synchronise
-  // tous les anciens alias afin que toutes les générations de la fiche Détails affichent
-  // exactement le même numéro.
   function normalizeContactPhoneSources(rows = window.globalData) {
     if (!Array.isArray(rows)) return;
     const groups = new Map();
@@ -122,38 +113,55 @@
     });
   }
 
-  // Le Top N était appliqué dans getTop200Data AVANT les wrappers Excel,
-  // Undercarriage et autres filtres. Ces wrappers pouvaient ensuite retirer des
-  // lignes : "Top 10" finissait donc avec moins de 10 résultats. On demande au
-  // pipeline complet de travailler sur le Top 200, puis on applique la limite
-  // demandée une seule fois, tout à la fin.
-  function installFinalTopLimit() {
-    const current = window.getTop200Data;
-    if (typeof current !== 'function' || current.__wipFinalTopLimit) return;
+  function dedupeLikeVisibleTop200(rows) {
+    if (!Array.isArray(rows)) return [];
+    try {
+      if (typeof window.dedupeRowsBySiret === 'function') {
+        return window.dedupeRowsBySiret(rows);
+      }
+    } catch (error) {}
 
-    const wrapped = function getTop200DataWithFinalLimit(...args) {
+    const seen = new Set();
+    return rows.filter((row, index) => {
+      const key = siretKey(row) || `__row_${row?._rowIndex ?? index}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+
+  // Top 10/20/25/50/100 doit être une simple vue tronquée du Top 200 final.
+  // On calcule donc exactement la liste Top 200 complète avec tous les wrappers
+  // actifs, on applique le même dédoublonnage SIRET que la vue visible, puis on
+  // prend les N premières lignes. Ainsi une entreprise dupliquée dans data11 ne
+  // peut plus transformer un Top 10 en 9 lignes : la ligne suivante remonte.
+  function installTopNFromFinalTop200() {
+    const current = window.getTop200Data;
+    if (typeof current !== 'function' || current.__wipTopNFromFinalTop200) return;
+
+    const wrapped = function getTop200DataFromFinalVisibleList(...args) {
       let requestedLimit = 200;
       try { requestedLimit = Number(top200Limit || 200); } catch (error) {}
       const safeLimit = [10, 20, 25, 50, 100, 200].includes(requestedLimit) ? requestedLimit : 200;
-      if (safeLimit === 200) return current.apply(this, args);
-
       let previousLimit = safeLimit;
+
       try {
         previousLimit = Number(top200Limit || safeLimit);
         top200Limit = 200;
-        const rows = current.apply(this, args);
-        return Array.isArray(rows) ? rows.slice(0, safeLimit) : rows;
+        const fullTop200 = current.apply(this, args);
+        const visibleTop200 = dedupeLikeVisibleTop200(Array.isArray(fullTop200) ? fullTop200 : []);
+        return visibleTop200.slice(0, safeLimit);
       } finally {
         try { top200Limit = previousLimit; } catch (error) {}
       }
     };
 
-    wrapped.__wipFinalTopLimit = true;
-    wrapped.__wipFinalTopLimitOriginal = current;
+    wrapped.__wipTopNFromFinalTop200 = true;
+    wrapped.__wipTopNFromFinalTop200Original = current;
     assignGlobal('getTop200Data', wrapped);
   }
 
-  installFinalTopLimit();
+  installTopNFromFinalTop200();
 
   const guardedFunctionNames = [
     'runFilter',
