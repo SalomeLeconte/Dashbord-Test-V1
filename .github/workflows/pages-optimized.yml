@@ -1,4 +1,4 @@
-name: WIP optimized GitHub Pages
+name: WIP full PR checks
 
 on:
   pull_request:
@@ -20,26 +20,7 @@ on:
       - 'scripts/build-runtime-bundle.mjs'
       - 'scripts/build-pages-optimized.mjs'
       - '.github/workflows/pages-optimized.yml'
-  push:
-    branches: [WIP]
-    paths:
-      - 'index.html'
-      - 'dashboard-wip.html'
-      - 'package.json'
-      - 'tailwind.config.cjs'
-      - '_headers'
-      - '*.csv'
-      - '*.js'
-      - 'assets/**'
-      - 'src/**'
-      - 'perf-runtime/**'
-      - 'scripts/perf-prebuild/**'
-      - 'scripts/perf-transforms/**'
-      - 'scripts/runtime-source-cleanup.mjs'
-      - 'scripts/build-runtime-bundle.mjs'
-      - 'scripts/build-pages-optimized.mjs'
-      - '.github/workflows/pages-optimized.yml'
-  workflow_dispatch:
+      - '.github/workflows/pages-deploy-wip.yml'
 
 permissions:
   contents: read
@@ -47,11 +28,11 @@ permissions:
   id-token: write
 
 concurrency:
-  group: github-pages-wip-${{ github.event_name }}-${{ github.ref }}
+  group: wip-pr-checks-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  full-checks:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -137,7 +118,6 @@ jobs:
           runtime = re.search(r'<script src="(assets/wip-runtime\.[0-9a-f]{12}\.js)"></script>', html)
           assert inline and runtime, 'runtime markers missing'
           assert inline.start() < runtime.start(), 'dashboard base JS must load before WIP runtime'
-
           prepared = json.loads(Path('dist/data/prepared/manifest.json').read_text())
           assets = json.loads(Path('dist/assets/manifest.json').read_text())
           assert prepared, 'prepared manifest empty'
@@ -154,15 +134,3 @@ jobs:
         uses: actions/upload-pages-artifact@v4
         with:
           path: ./dist
-
-  deploy:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/WIP'
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
