@@ -47,7 +47,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: github-pages-wip
+  group: github-pages-wip-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -60,11 +60,25 @@ jobs:
       - name: Install build dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Run project checks
+        run: npm run check
+
+      - name: Check all WIP and build script syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check prepared-data-worker.js
+          find . -maxdepth 1 -type f -name 'wip-*.js' -print0 | xargs -0 -r -n1 node --check
+          find scripts -type f -name '*.mjs' -print0 | xargs -0 -r -n1 node --check
+          find perf-runtime -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+
       - name: Build unified optimized site
         run: npm run build
 
       - name: Validate unified artifact
+        shell: bash
         run: |
+          set -euo pipefail
           test -s dist/index.html
           test -s dist/dashboard-wip.html
           test -s dist/data11.csv
@@ -112,25 +126,31 @@ jobs:
           ! grep -q 'patchUndercarriageV20' "$INLINE_FILE"
           ! grep -q 'patchCantonInProgress' "$INLINE_FILE"
           node --check "$RUNTIME_FILE"
+          node --check "$INLINE_FILE"
           python - <<'PY'
           from pathlib import Path
+          import json
           import re
+
           html = Path('dist/dashboard-wip.html').read_text()
           inline = re.search(r'<script src="(assets/dashboard-inline\.[0-9a-f]{12}\.min\.js)"></script>', html)
           runtime = re.search(r'<script src="(assets/wip-runtime\.[0-9a-f]{12}\.js)"></script>', html)
           assert inline and runtime, 'runtime markers missing'
           assert inline.start() < runtime.start(), 'dashboard base JS must load before WIP runtime'
+
+          prepared = json.loads(Path('dist/data/prepared/manifest.json').read_text())
+          assets = json.loads(Path('dist/assets/manifest.json').read_text())
+          assert prepared, 'prepared manifest empty'
+          assert assets, 'assets manifest empty'
           PY
           ! grep -q '<script src="https://cdn.tailwindcss.com"' dist/dashboard-wip.html
           ! grep -q '<script src="https://unpkg.com/leaflet' dist/dashboard-wip.html
           ! grep -q '<link rel="stylesheet" href="https://unpkg.com/leaflet' dist/dashboard-wip.html
 
-      - name: Configure Pages
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/WIP'
+      - name: Configure Pages artifact
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/WIP'
         uses: actions/upload-pages-artifact@v4
         with:
           path: ./dist
