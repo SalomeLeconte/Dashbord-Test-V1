@@ -1,7 +1,7 @@
-name: WIP full PR checks
+name: WIP full deploy
 
 on:
-  pull_request:
+  push:
     branches: [WIP]
     paths:
       - 'index.html'
@@ -21,6 +21,7 @@ on:
       - 'scripts/build-pages-optimized.mjs'
       - '.github/workflows/pages-optimized.yml'
       - '.github/workflows/pages-deploy-wip.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -28,12 +29,15 @@ permissions:
   id-token: write
 
 concurrency:
-  group: wip-pr-checks-${{ github.ref }}
+  group: github-pages-wip-deploy
   cancel-in-progress: true
 
 jobs:
-  full-checks:
+  full-checks-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -127,10 +131,14 @@ jobs:
           ! grep -q '<script src="https://unpkg.com/leaflet' dist/dashboard-wip.html
           ! grep -q '<link rel="stylesheet" href="https://unpkg.com/leaflet' dist/dashboard-wip.html
 
-      - name: Configure Pages artifact
+      - name: Configure Pages
         uses: actions/configure-pages@v5
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
           path: ./dist
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
