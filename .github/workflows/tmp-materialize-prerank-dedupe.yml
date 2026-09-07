@@ -1,0 +1,107 @@
+name: Temporary materialize pre-ranking SIRET dedupe
+
+on:
+  push:
+    branches: [fix/wip-dedupe-before-top200-ranking-20260907]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: fix/wip-dedupe-before-top200-ranking-20260907
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Materialize branch Pages source
+        run: node scripts/prune-branch-pages-source.mjs
+
+      - name: Regenerate runtime bundle
+        run: npm run bundle
+
+      - name: Validate pre-ranking Top 200 dedupe
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check wip-stack-guard-patch.js
+          node --check wip-runtime.bundle.js
+          node --check scripts/perf-transforms/p0-50-top200-dedupe-before-ranking.mjs
+          grep -q 'function dedupeTop200ScopeBeforeRanking(items)' dashboard-wip.html
+          grep -q 'const scope = dedupeTop200ScopeBeforeRanking(' dashboard-wip.html
+          if grep -q '__wipTopNFromFinalTop200' wip-runtime.bundle.js; then
+            echo 'Legacy post-ranking Top N wrapper is still present.' >&2
+            exit 1
+          fi
+          grep -q 'dedupe-before-top200-rank-v3' dashboard-wip.html
+
+      - name: Validate Ludovic unique SIRET capacity
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const text = fs.readFileSync('data11.csv', 'utf8');
+          function parseCSV(text) {
+            const rows = []; let row = []; let field = ''; let inQuotes = false;
+            for (let i = 0; i < text.length; i++) {
+              const c = text[i], n = text[i + 1];
+              if (c === '"') {
+                if (inQuotes && n === '"') { field += '"'; i++; }
+                else inQuotes = !inQuotes;
+              } else if (c === ',' && !inQuotes) { row.push(field); field = ''; }
+              else if ((c === '\n' || c === '\r') && !inQuotes) {
+                if (c === '\r' && n === '\n') i++;
+                row.push(field); if (row.some(v => String(v).trim())) rows.push(row);
+                row = []; field = '';
+              } else field += c;
+            }
+            if (field.length || row.length) { row.push(field); if (row.some(v => String(v).trim())) rows.push(row); }
+            return rows;
+          }
+          const norm = v => String(v ?? '').replace(/^\ufeff/, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+          const rows = parseCSV(text);
+          if (rows.length < 2) throw new Error('data11.csv empty');
+          const headers = rows[0].map(norm);
+          const siretIndex = headers.findIndex(h => h === 'siret' || h.endsWith('.siret') || h.includes('client_irium.siret'));
+          const deptIndex = headers.findIndex(h => h === 'departement' || h.endsWith('.departement') || h.includes('code departement') || h.includes('code_departement') || h.includes('dep_code'));
+          if (siretIndex < 0) throw new Error('SIRET column not found');
+          if (deptIndex < 0) {
+            console.log('Headers containing dept/departement:', headers.filter(h => h.includes('dept') || h.includes('depart')));
+            throw new Error('Department column not found');
+          }
+          const target = new Set(['04','05','13','84']);
+          const normalizeDept = value => {
+            const raw = String(value ?? '').trim().toUpperCase();
+            const digits = raw.replace(/\D/g, '');
+            if (digits) return digits.padStart(2, '0').slice(-2);
+            return raw;
+          };
+          let scopedRows = 0; const unique = new Set();
+          for (const row of rows.slice(1)) {
+            const dept = normalizeDept(row[deptIndex]);
+            if (!target.has(dept)) continue;
+            scopedRows++;
+            const digits = String(row[siretIndex] ?? '').replace(/\D/g, '');
+            if (digits.length >= 9) unique.add(digits.length >= 14 ? digits.slice(0,14) : digits);
+          }
+          console.log(`Ludovic scope rows=${scopedRows}; unique SIRET=${unique.size}; duplicates=${scopedRows - unique.size}`);
+          if (unique.size < 10) throw new Error(`Only ${unique.size} unique SIRET in Ludovic scope`);
+
+      - name: Commit materialized branch-served files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dashboard-wip.html wip-runtime.bundle.js
+          if git diff --cached --quiet; then
+            echo 'Nothing to commit.'
+            exit 0
+          fi
+          git commit -m 'Materialize SIRET dedupe before Top 200 ranking'
+          git push origin HEAD:fix/wip-dedupe-before-top200-ranking-20260907
