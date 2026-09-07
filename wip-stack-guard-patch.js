@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-stack-guard-2026-09-07-v6';
+  const PATCH_ID = 'wip-stack-guard-2026-09-03-v5';
   if (window.__WIP_STACK_GUARD_PATCH__ === PATCH_ID) return;
   window.__WIP_STACK_GUARD_PATCH__ = PATCH_ID;
 
