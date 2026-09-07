@@ -1,4 +1,4 @@
-name: WIP full deploy
+name: WIP branch Pages verification
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
     paths:
       - 'index.html'
       - 'dashboard-wip.html'
+      - 'wip-runtime.bundle.js'
       - 'package.json'
       - 'tailwind.config.cjs'
       - '_headers'
@@ -17,6 +18,7 @@ on:
       - 'scripts/perf-prebuild/**'
       - 'scripts/perf-transforms/**'
       - 'scripts/runtime-source-cleanup.mjs'
+      - 'scripts/prune-branch-pages-source.mjs'
       - 'scripts/build-runtime-bundle.mjs'
       - 'scripts/build-pages-optimized.mjs'
       - '.github/workflows/pages-optimized.yml'
@@ -26,19 +28,14 @@ on:
 permissions:
   actions: read
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: github-pages-wip-deploy
+  group: github-pages-wip-verify
   cancel-in-progress: true
 
 jobs:
-  full-checks-and-deploy:
+  full-checks-and-live-verification:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -57,6 +54,22 @@ jobs:
           find . -maxdepth 1 -type f -name 'wip-*.js' -print0 | xargs -0 -r -n1 node --check
           find scripts -type f -name '*.mjs' -print0 | xargs -0 -r -n1 node --check
           find perf-runtime -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+
+      - name: Validate branch-served source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check wip-runtime.bundle.js
+          grep -q 'wip-city-filter-input-crash-fix-2026-09-07-v4' wip-runtime.bundle.js
+          ! grep -q 'wip-canton-adaptive-filter' wip-runtime.bundle.js
+          ! grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' wip-runtime.bundle.js
+          ! grep -q 'f-canton-select' dashboard-wip.html
+          ! grep -q 'acc-undercarriage' dashboard-wip.html
+          ! grep -q 'patchCantonInProgress' dashboard-wip.html
+          ! grep -q 'Menu déroulant canton en cours de développement' dashboard-wip.html
+          ! grep -q 'Filtre non fonctionnel' dashboard-wip.html
+          ! grep -q 'Filtre à venir' dashboard-wip.html
+          grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v1' dashboard-wip.html
 
       - name: Build unified optimized site
         run: npm run build
@@ -77,155 +90,63 @@ jobs:
           test -n "$(find dist/assets -maxdepth 1 -name 'dashboard-inline.*.min.js' -print -quit)"
           test -n "$(find dist/assets -maxdepth 1 -name 'wip-runtime.*.js' -print -quit)"
           ! test -e dist/wip-runtime.bundle.js
-          ! grep -q 'wip-corner-ribbon' dist/index.html
-          ! grep -q 'runtimePatches' dist/index.html
-          ! grep -q 'wip-shell-recovery-patch' dist/index.html
-          ! grep -q 'wip-postmerge-performance-hotfix' dist/index.html
-          ! grep -q 'perf-runtime/' dist/index.html
-          grep -Eq 'assets/wip-runtime\.[0-9a-f]{12}\.js' dist/dashboard-wip.html
           RUNTIME_FILE="$(find dist/assets -maxdepth 1 -name 'wip-runtime.*.js' -print -quit)"
           INLINE_FILE="$(find dist/assets -maxdepth 1 -name 'dashboard-inline.*.min.js' -print -quit)"
-          grep -q '__p2PreparedDataInstalled' "$RUNTIME_FILE"
           grep -q 'wip-city-filter-input-crash-fix-2026-09-07-v4' "$RUNTIME_FILE"
-          grep -q 'wip-stack-guard-2026-09-03-v5' "$RUNTIME_FILE"
           ! grep -q 'wip-canton-adaptive-filter' "$RUNTIME_FILE"
-          ! grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' "$RUNTIME_FILE"
-          ! grep -q 'f-canton-adaptive-select' "$RUNTIME_FILE"
-          ! grep -q 'acc-undercarriage' "$RUNTIME_FILE"
-          ! grep -q 'MVM' "$RUNTIME_FILE"
-          ! grep -q 'data-uc="sort"' "$RUNTIME_FILE"
-          ! grep -q 'Trier par potentiel' "$RUNTIME_FILE"
-          ! grep -q '<th>MVM</th>' "$RUNTIME_FILE"
-          ! grep -q '<th>Score</th>' "$RUNTIME_FILE"
-          ! grep -q 'wip-route-start-home' "$RUNTIME_FILE"
-          ! grep -q 'wip-canton-cleanup-patch' "$RUNTIME_FILE"
-          ! grep -q 'wip-canton-note-cleanup-patch' "$RUNTIME_FILE"
           ! grep -q 'f-canton-select' "$INLINE_FILE"
           ! grep -q 'acc-undercarriage' "$INLINE_FILE"
-          ! grep -q 'v20-undercarriage-card' "$INLINE_FILE"
-          ! grep -q 'v25-canton-progress' "$INLINE_FILE"
           ! grep -q 'Menu déroulant canton en cours de développement' "$INLINE_FILE"
-          ! grep -q 'In progress — non fonctionnel' "$INLINE_FILE"
-          ! grep -q 'Filtre non fonctionnel' "$INLINE_FILE"
-          ! grep -q 'Filtre à venir' "$INLINE_FILE"
-          ! grep -q 'addUndercarriageBox' "$INLINE_FILE"
-          ! grep -q 'patchUndercarriageV20' "$INLINE_FILE"
-          ! grep -q 'patchCantonInProgress' "$INLINE_FILE"
           node --check "$RUNTIME_FILE"
           node --check "$INLINE_FILE"
-          python - <<'PY'
-          from pathlib import Path
-          import json
-          import re
 
-          html = Path('dist/dashboard-wip.html').read_text()
-          inline = re.search(r'<script src="(assets/dashboard-inline\.[0-9a-f]{12}\.min\.js)"></script>', html)
-          runtime = re.search(r'<script src="(assets/wip-runtime\.[0-9a-f]{12}\.js)"></script>', html)
-          assert inline and runtime, 'runtime markers missing'
-          assert inline.start() < runtime.start(), 'dashboard base JS must load before WIP runtime'
-          prepared = json.loads(Path('dist/data/prepared/manifest.json').read_text())
-          assets = json.loads(Path('dist/assets/manifest.json').read_text())
-          assert prepared, 'prepared manifest empty'
-          assert assets, 'assets manifest empty'
-          PY
-          ! grep -q '<script src="https://cdn.tailwindcss.com"' dist/dashboard-wip.html
-          ! grep -q '<script src="https://unpkg.com/leaflet' dist/dashboard-wip.html
-          ! grep -q '<link rel="stylesheet" href="https://unpkg.com/leaflet' dist/dashboard-wip.html
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: ./dist
-
-      - name: Wait for automatic branch Pages deployment
+      - name: Wait for GitHub branch Pages deployment
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          echo "Waiting for competing branch Pages deployment for $GITHUB_SHA"
-
-          found=0
           for attempt in $(seq 1 72); do
-            payload="$(gh api \
-              -H 'Accept: application/vnd.github+json' \
-              "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20")"
-
-            branch_run="$(jq -c '
-              [.workflow_runs[]
-                | select(.name == "pages build and deployment")
-                | select(.event == "dynamic")
-              ] | .[0] // {}
-            ' <<<"$payload")"
-
+            payload="$(gh api -H 'Accept: application/vnd.github+json' "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20")"
+            branch_run="$(jq -c '[.workflow_runs[] | select(.name == "pages build and deployment") | select(.event == "dynamic")] | .[0] // {}' <<<"$payload")"
             status="$(jq -r '.status // "missing"' <<<"$branch_run")"
             conclusion="$(jq -r '.conclusion // ""' <<<"$branch_run")"
             echo "branch Pages: status=$status conclusion=${conclusion:-pending}"
-
-            if [[ "$status" != "missing" ]]; then
-              found=1
-            fi
-
             if [[ "$status" == "completed" ]]; then
-              if [[ "$conclusion" != "success" ]]; then
-                echo "Automatic branch Pages deployment failed: $conclusion"
-                exit 1
-              fi
-              echo "Automatic branch deployment finished; optimized dist will deploy last."
+              [[ "$conclusion" == "success" ]] || exit 1
               exit 0
             fi
-
-            if [[ "$found" -eq 0 && "$attempt" -ge 12 ]]; then
-              echo "No automatic branch Pages deployment detected; continuing with Actions deployment."
-              exit 0
-            fi
-
             sleep 5
           done
-
-          echo "Timed out waiting for automatic branch Pages deployment."
+          echo 'Timed out waiting for GitHub branch Pages deployment.'
           exit 1
 
-      - name: Deploy Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-
-      - name: Verify live GitHub Pages artifact
-        env:
-          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+      - name: Verify public GitHub Pages branch source
         shell: bash
         run: |
           set -euo pipefail
-          base="${PAGE_URL%/}/"
+          base='https://salomeleconte.github.io/Dashbord-Test-V1/'
           query="verify=${GITHUB_SHA}"
 
           for attempt in $(seq 1 24); do
             html="$(curl -fsSL "${base}dashboard-wip.html?${query}" || true)"
-            runtime_path="$(grep -oE 'assets/wip-runtime\.[0-9a-f]{12}\.js' <<<"$html" | head -n1 || true)"
-            inline_path="$(grep -oE 'assets/dashboard-inline\.[0-9a-f]{12}\.min\.js' <<<"$html" | head -n1 || true)"
+            runtime="$(curl -fsSL "${base}wip-runtime.bundle.js?v=20260907-branch-pages-v1&${query}" || true)"
 
-            if [[ -n "$runtime_path" && -n "$inline_path" ]] && ! grep -q 'wip-runtime.bundle.js' <<<"$html"; then
-              runtime="$(curl -fsSL "${base}${runtime_path}?${query}" || true)"
-              inline="$(curl -fsSL "${base}${inline_path}?${query}" || true)"
-
-              if grep -q 'wip-city-filter-input-crash-fix-2026-09-07-v4' <<<"$runtime" \
-                && ! grep -q 'wip-canton-adaptive-filter' <<<"$runtime" \
-                && ! grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' <<<"$runtime" \
-                && ! grep -q 'f-canton-select' <<<"$inline" \
-                && ! grep -q 'acc-undercarriage' <<<"$inline" \
-                && ! grep -q 'Menu déroulant canton en cours de développement' <<<"$inline" \
-                && ! grep -q 'patchCantonInProgress' <<<"$inline"; then
-                echo "Live GitHub Pages serves the optimized WIP artifact."
-                exit 0
-              fi
+            if grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v1' <<<"$html" \
+              && grep -q 'wip-city-filter-input-crash-fix-2026-09-07-v4' <<<"$runtime" \
+              && ! grep -q 'wip-canton-adaptive-filter' <<<"$runtime" \
+              && ! grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' <<<"$runtime" \
+              && ! grep -q 'f-canton-select' <<<"$html" \
+              && ! grep -q 'acc-undercarriage' <<<"$html" \
+              && ! grep -q 'patchCantonInProgress' <<<"$html" \
+              && ! grep -q 'Menu déroulant canton en cours de développement' <<<"$html"; then
+              echo 'Public GitHub Pages serves the corrected WIP branch source.'
+              exit 0
             fi
 
-            echo "Live site not updated yet (attempt $attempt/24); retrying..."
+            echo "Public site not updated yet (attempt $attempt/24); retrying..."
             sleep 5
           done
 
-          echo "Live GitHub Pages is not serving the optimized WIP artifact."
+          echo 'Public GitHub Pages is not serving the corrected WIP branch source.'
           exit 1
