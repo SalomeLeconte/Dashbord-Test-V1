@@ -1,0 +1,48 @@
+name: Temporary materialize detail potential removal
+
+on:
+  push:
+    branches: [fix/wip-remove-detail-commercial-potential-20260907]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: fix/wip-remove-detail-commercial-potential-20260907
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Materialize branch Pages source
+        run: node scripts/prune-branch-pages-source.mjs
+
+      - name: Validate Details removal
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check scripts/perf-transforms/p0-61-remove-detail-commercial-potential.mjs
+          ! grep -q 'title: "Potentiel commercial"' dashboard-wip.html
+          ! grep -q "title:'Potentiel commercial'" dashboard-wip.html
+          ! grep -q "sectionV25('Potentiel commercial'" dashboard-wip.html
+          grep -q '3. Potentiel commercial' dashboard-wip.html
+
+      - name: Commit materialized dashboard
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dashboard-wip.html
+          if git diff --cached --quiet; then
+            echo 'Nothing to commit.'
+            exit 0
+          fi
+          git commit -m 'Materialize removal of commercial potential Details section'
+          git push origin HEAD:fix/wip-remove-detail-commercial-potential-20260907
