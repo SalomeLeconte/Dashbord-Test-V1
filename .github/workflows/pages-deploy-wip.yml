@@ -1,0 +1,144 @@
+name: WIP full deploy
+
+on:
+  push:
+    branches: [WIP]
+    paths:
+      - 'index.html'
+      - 'dashboard-wip.html'
+      - 'package.json'
+      - 'tailwind.config.cjs'
+      - '_headers'
+      - '*.csv'
+      - '*.js'
+      - 'assets/**'
+      - 'src/**'
+      - 'perf-runtime/**'
+      - 'scripts/perf-prebuild/**'
+      - 'scripts/perf-transforms/**'
+      - 'scripts/runtime-source-cleanup.mjs'
+      - 'scripts/build-runtime-bundle.mjs'
+      - 'scripts/build-pages-optimized.mjs'
+      - '.github/workflows/pages-optimized.yml'
+      - '.github/workflows/pages-deploy-wip.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages-wip-deploy
+  cancel-in-progress: true
+
+jobs:
+  full-checks-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install build dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run project checks
+        run: npm run check
+
+      - name: Check all WIP and build script syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check prepared-data-worker.js
+          find . -maxdepth 1 -type f -name 'wip-*.js' -print0 | xargs -0 -r -n1 node --check
+          find scripts -type f -name '*.mjs' -print0 | xargs -0 -r -n1 node --check
+          find perf-runtime -type f -name '*.js' -print0 | xargs -0 -r -n1 node --check
+
+      - name: Build unified optimized site
+        run: npm run build
+
+      - name: Validate unified artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/index.html
+          test -s dist/dashboard-wip.html
+          test -s dist/data11.csv
+          test -s dist/csv-data-worker.js
+          test -s dist/prepared-data-worker.js
+          test -s dist/data/prepared/manifest.json
+          test -s dist/assets/manifest.json
+          test -n "$(find dist/data/prepared -maxdepth 1 -name 'dept-*.json' -print -quit)"
+          test -n "$(find dist/assets -maxdepth 1 -name 'dashboard.*.min.css' -print -quit)"
+          test -n "$(find dist/assets -maxdepth 1 -name 'dashboard-inline.*.min.js' -print -quit)"
+          test -n "$(find dist/assets -maxdepth 1 -name 'wip-runtime.*.js' -print -quit)"
+          ! test -e dist/wip-runtime.bundle.js
+          ! grep -q 'wip-corner-ribbon' dist/index.html
+          ! grep -q 'runtimePatches' dist/index.html
+          ! grep -q 'wip-shell-recovery-patch' dist/index.html
+          ! grep -q 'wip-postmerge-performance-hotfix' dist/index.html
+          ! grep -q 'perf-runtime/' dist/index.html
+          grep -Eq 'assets/wip-runtime\.[0-9a-f]{12}\.js' dist/dashboard-wip.html
+          RUNTIME_FILE="$(find dist/assets -maxdepth 1 -name 'wip-runtime.*.js' -print -quit)"
+          INLINE_FILE="$(find dist/assets -maxdepth 1 -name 'dashboard-inline.*.min.js' -print -quit)"
+          grep -q '__p2PreparedDataInstalled' "$RUNTIME_FILE"
+          grep -q 'wip-city-filter-input-crash-fix-2026-09-07-v4' "$RUNTIME_FILE"
+          grep -q 'wip-stack-guard-2026-09-03-v5' "$RUNTIME_FILE"
+          ! grep -q 'wip-canton-adaptive-filter' "$RUNTIME_FILE"
+          ! grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' "$RUNTIME_FILE"
+          ! grep -q 'f-canton-adaptive-select' "$RUNTIME_FILE"
+          ! grep -q 'acc-undercarriage' "$RUNTIME_FILE"
+          ! grep -q 'MVM' "$RUNTIME_FILE"
+          ! grep -q 'data-uc="sort"' "$RUNTIME_FILE"
+          ! grep -q 'Trier par potentiel' "$RUNTIME_FILE"
+          ! grep -q '<th>MVM</th>' "$RUNTIME_FILE"
+          ! grep -q '<th>Score</th>' "$RUNTIME_FILE"
+          ! grep -q 'wip-route-start-home' "$RUNTIME_FILE"
+          ! grep -q 'wip-canton-cleanup-patch' "$RUNTIME_FILE"
+          ! grep -q 'wip-canton-note-cleanup-patch' "$RUNTIME_FILE"
+          ! grep -q 'f-canton-select' "$INLINE_FILE"
+          ! grep -q 'acc-undercarriage' "$INLINE_FILE"
+          ! grep -q 'v20-undercarriage-card' "$INLINE_FILE"
+          ! grep -q 'v25-canton-progress' "$INLINE_FILE"
+          ! grep -q 'Menu déroulant canton en cours de développement' "$INLINE_FILE"
+          ! grep -q 'In progress — non fonctionnel' "$INLINE_FILE"
+          ! grep -q 'Filtre non fonctionnel' "$INLINE_FILE"
+          ! grep -q 'Filtre à venir' "$INLINE_FILE"
+          ! grep -q 'addUndercarriageBox' "$INLINE_FILE"
+          ! grep -q 'patchUndercarriageV20' "$INLINE_FILE"
+          ! grep -q 'patchCantonInProgress' "$INLINE_FILE"
+          node --check "$RUNTIME_FILE"
+          node --check "$INLINE_FILE"
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          import re
+
+          html = Path('dist/dashboard-wip.html').read_text()
+          inline = re.search(r'<script src="(assets/dashboard-inline\.[0-9a-f]{12}\.min\.js)"></script>', html)
+          runtime = re.search(r'<script src="(assets/wip-runtime\.[0-9a-f]{12}\.js)"></script>', html)
+          assert inline and runtime, 'runtime markers missing'
+          assert inline.start() < runtime.start(), 'dashboard base JS must load before WIP runtime'
+          prepared = json.loads(Path('dist/data/prepared/manifest.json').read_text())
+          assets = json.loads(Path('dist/assets/manifest.json').read_text())
+          assert prepared, 'prepared manifest empty'
+          assert assets, 'assets manifest empty'
+          PY
+          ! grep -q '<script src="https://cdn.tailwindcss.com"' dist/dashboard-wip.html
+          ! grep -q '<script src="https://unpkg.com/leaflet' dist/dashboard-wip.html
+          ! grep -q '<link rel="stylesheet" href="https://unpkg.com/leaflet' dist/dashboard-wip.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./dist
+
+      - name: Deploy Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
