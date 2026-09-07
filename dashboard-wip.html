@@ -1940,16 +1940,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
                     ])
                 },
                 {
-                    title: "Potentiel commercial",
-                    rows: rowsFrom([
-                        ["CA Global", COL.caGlobal],
-                        ["CA 2025", COL.ca2025],
-                        ["CA PDR cumulé", COL.pcsTotal],
-                        ["CA SERVICE cumulé", COL.savTotal],
-                        ["Priorité client", COL.priorite],
-                    ])
-                },
-                {
                     title: "Parc machines",
                     rows: rowsFrom([
                         ["Nombre de machines", COL.nbMachines],
@@ -4845,7 +4835,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
       const sections=[
         {title:'Synthèse visite', rows:[["Rang TOP 200 PSSR", Number.isFinite(topRank) ? formatNumber(topRank) : '', true],["Badge TOP", getTopBandLabel(item), true],["Visites obligatoires", getObjectiveVisits(item) ? formatNumber(getObjectiveVisits(item)) : '', true],["Visites effectuées 2026", item[COL.visits2026] !== undefined && item[COL.visits2026] !== '' ? formatNumber(getVisits2026(item)) : '', true],["Visites restantes", getRemainingVisits(item) > 0 ? formatNumber(getRemainingVisits(item)) : '', true],["Nouvelle machine", hasNewMachine(item) ? `Oui${getRecentMachineAgeLabel(item) ? ' — ' + getRecentMachineAgeLabel(item) : ''}` : '', true],["Machine 5 ans et +", hasOldMachine(item) ? 'Oui' : '', true],["Client éligible", isGrandCompte(item) ? 'Oui' : '', true]].filter(([,value])=>!isEmptyDetailValue(value))},
         {title:'Identité et localisation', rows: rowsFrom([["Entreprise", COL.nom],["SIRET", COL.siret],["Client Irium", COL.clientNumero],["Statut client", COL.position],["Groupe", COL.groupe],["Agence", COL.agence],["PSSR", COL.pssr],["Adresse", COL.adresse],["Département", COL.dept],["Ville", COL.ville],["Nombre de salariés", COL.salaries]])},
-        {title:'Potentiel commercial', rows: rowsFrom([["CA Global", COL.caGlobal],["CA 2025", COL.ca2025],["CA PDR cumulé", COL.pcsTotal],["CA SERVICE cumulé", COL.savTotal]])},
         {title:'Parc machines', rows: rowsFrom([["Nombre de machines", COL.nbMachines],["Liste machines", COL.machines],["N° série", COL.series],["Machines récentes", COL.machinesRecentes],["Flag machine récente", COL.newMachineFlag],["Machines 5 ans et +", COL.oldMachineFlag],["Âge machine", COL.ageMachineAll],["Machines fin garantie", 'Machines fin garantie par client'],["Nb machines source", 'Somme de .Nb Machines/clients']])},
         {title:'CRM et opportunités', rows: rowsFrom([["Dernier contact - date", COL.crmDate],["Dernier contact - vendeur", COL.crmVendeur],["Dernier contact - sujet", COL.crmSujet],["Dernier contact - note", COL.crmNote],["Dernière opportunité - vendeur", 'CRM_DerniereOpp_Vendeur'],["Dernière opportunité - type matériel", 'CRM_DerniereOpp_TypeMateriel'],["Dernière opportunité - date", 'CRM_DerniereOppDate'],["Dernière opportunité - statut", 'CRM_DerniereOpp_Status'],["Dernière opportunité - nature matériel", 'CRM_DerniereOpp_NatureMateriel']])},
         {title:'Secteur d’activité', rows: rowsFrom([["Catégorie", COL.categorie],["NAF", COL.naf],["Description", COL.description]])}
@@ -5067,7 +5056,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
       const sections=[
         {title:'Synthèse visite', rows:[["Rang TOP 200 PSSR", Number.isFinite(topRank) ? formatNumber(topRank) : '', true],["Badge TOP", getTopBandLabel(item), true],["Visites obligatoires", getObjectiveVisits(item) ? formatNumber(getObjectiveVisits(item)) : '', true],["Visites effectuées 2026", item[COL.visits2026] !== undefined && item[COL.visits2026] !== '' ? formatNumber(getVisits2026(item)) : '', true],["Visites restantes", getRemainingVisits(item) > 0 ? formatNumber(getRemainingVisits(item)) : '', true],["Nouvelle machine", hasNewMachine(item) ? `Oui${getRecentMachineAgeLabel(item) ? ' — ' + getRecentMachineAgeLabel(item) : ''}` : '', true],["Machine 5 ans et +", hasOldMachine(item) ? 'Oui' : '', true],["Client éligible", isGrandCompte(item) ? 'Oui' : '', true]].filter(([,value])=>!isEmptyDetailValue(value))},
         {title:'Identité et localisation', rows: identRows},
-        {title:'Potentiel commercial', rows: rowsFrom([["CA Global", COL.caGlobal],["CA 2025", COL.ca2025],["CA PDR cumulé", COL.pcsTotal],["CA SERVICE cumulé", COL.savTotal]])},
         {title:'Parc machines', rows: rowsFrom([["Nombre de machines", COL.nbMachines],["Liste machines", COL.machines],["N° série", COL.series],["Machines récentes", COL.machinesRecentes],["Flag machine récente", COL.newMachineFlag],["Machines 5 ans et +", COL.oldMachineFlag],["Âge machine", COL.ageMachineAll],["Machines fin garantie", 'Machines fin garantie par client'],["Nb machines source", 'Somme de .Nb Machines/clients']])},
         {title:'CRM et opportunités', rows: rowsFrom([["Dernier contact - date", COL.crmDate],["Dernier contact - vendeur", COL.crmVendeur],["Dernier contact - sujet", COL.crmSujet],["Dernier contact - note", COL.crmNote],["Dernière opportunité - vendeur", 'CRM_DerniereOpp_Vendeur'],["Dernière opportunité - type matériel", 'CRM_DerniereOpp_TypeMateriel'],["Dernière opportunité - date", 'CRM_DerniereOppDate'],["Dernière opportunité - statut", 'CRM_DerniereOpp_Status'],["Dernière opportunité - nature matériel", 'CRM_DerniereOpp_NatureMateriel']])},
         {title:'Secteur d’activité', rows: rowsFrom([["Catégorie", COL.categorie],["NAF", COL.naf],["Description", COL.description]])}
@@ -5271,7 +5259,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
       const html = [
         sectionV25('Synthèse visite', synth),
         sectionV25('Identité et localisation', identity),
-        sectionV25('Potentiel commercial', rowsFrom([['CA Global', COL.caGlobal], ['CA 2025', COL.ca2025], ['CA PDR cumulé', COL.pcsTotal], ['CA SERVICE cumulé', COL.savTotal]])),
         sectionV25('Parc machines', rowsFrom([['Nombre de machines', COL.nbMachines], ['Liste machines', COL.machines], ['N° série', COL.series], ['Machines récentes', COL.machinesRecentes], ['Flag machine récente', COL.newMachineFlag], ['Machines 5 ans et +', COL.oldMachineFlag], ['Âge machine', COL.ageMachineAll], ['Machines fin garantie', 'Machines fin garantie par client']])),
         sectionV25('CRM et opportunités', rowsFrom([['Dernier contact - date', COL.crmDate], ['Dernier contact - vendeur', COL.crmVendeur], ['Dernier contact - sujet', COL.crmSujet], ['Dernier contact - note', COL.crmNote], ['Dernière opportunité - vendeur', 'CRM_DerniereOpp_Vendeur'], ['Dernière opportunité - type matériel', 'CRM_DerniereOpp_TypeMateriel'], ['Dernière opportunité - date', 'CRM_DerniereOppDate'], ['Dernière opportunité - statut', 'CRM_DerniereOpp_Status'], ['Dernière opportunité - nature matériel', 'CRM_DerniereOpp_NatureMateriel']])),
         sectionV25('Secteur d’activité', rowsFrom([['Catégorie', COL.categorie], ['NAF', COL.naf], ['Description', COL.description]]))
