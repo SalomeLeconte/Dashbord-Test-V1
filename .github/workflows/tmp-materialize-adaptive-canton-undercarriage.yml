@@ -1,0 +1,55 @@
+name: Temporary materialize adaptive canton and undercarriage
+
+on:
+  push:
+    branches:
+      - fix/wip-restore-adaptive-canton-undercarriage-details-20260907
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: fix/wip-restore-adaptive-canton-undercarriage-details-20260907
+
+      - name: Install build dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Materialize branch Pages dashboard
+        run: node scripts/prune-branch-pages-source.mjs
+
+      - name: Regenerate runtime bundle
+        run: npm run bundle
+
+      - name: Validate requested UI behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check wip-runtime.bundle.js
+          grep -q '/\* wip-canton-adaptive-filter-patch.js \*/' wip-runtime.bundle.js
+          grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' wip-runtime.bundle.js
+          grep -q 'f-canton-adaptive-select' wip-runtime.bundle.js
+          grep -q 'wip-filter-placeholder-cleanup-2026-09-07-v9' wip-runtime.bundle.js
+          grep -q 'nestedSummary.hidden = true' wip-runtime.bundle.js
+          grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v2' dashboard-wip.html
+          ! grep -q 'f-canton-select' dashboard-wip.html
+          ! grep -q 'acc-undercarriage' dashboard-wip.html
+
+      - name: Commit materialized source files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dashboard-wip.html wip-runtime.bundle.js
+          if git diff --cached --quiet; then
+            echo 'Branch source already materialized.'
+            exit 0
+          fi
+          git commit -m 'Materialize adaptive canton and flat undercarriage runtime'
+          git push origin HEAD:fix/wip-restore-adaptive-canton-undercarriage-details-20260907
