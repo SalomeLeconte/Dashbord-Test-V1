@@ -24,7 +24,7 @@ if (!runtimePattern.test(dashboardHtml)) {
 }
 dashboardHtml = dashboardHtml.replace(
   runtimePattern,
-  '<script src="./wip-runtime.bundle.js?v=20260907-branch-pages-v2&fix=city-local-v5"></script>'
+  '<script src="./wip-runtime.bundle.js?v=20260907-branch-pages-v2&fix=city-local-v5-route-scroll-v1"></script>'
 );
 
 const forbidden = [
@@ -56,4 +56,4 @@ if (/id="f-ville"[^>]*oninput="runFilter\(\)"/.test(dashboardHtml)) {
 }
 
 writeFileSync(dashboardPath, dashboardHtml, 'utf8');
-console.log('Materialized branch-compatible dashboard with local Ville filtering, pre-ranking SIRET dedupe and no commercial-potential Details section.');
+console.log('Materialized branch-compatible dashboard with local Ville filtering, route-panel scrolling, pre-ranking SIRET dedupe and no commercial-potential Details section.');
