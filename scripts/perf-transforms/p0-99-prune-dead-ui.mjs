@@ -4,21 +4,18 @@ function removeAll(source, needle) {
 
 function removeAllSections(source, label, startMarker, endMarker) {
   let output = source;
-  let removed = 0;
   while (true) {
     const start = output.indexOf(startMarker);
     if (start < 0) break;
     const end = output.indexOf(endMarker, start + startMarker.length);
     if (end < 0) throw new Error(`P0-99: ${label} end marker not found`);
     output = output.slice(0, start) + output.slice(end);
-    removed += 1;
   }
-  if (!removed) throw new Error(`P0-99: ${label} start marker not found`);
   return output;
 }
 
-function replaceAllRequired(source, label, needle, replacement) {
-  if (!source.includes(needle)) throw new Error(`P0-99: ${label} marker not found`);
+function replaceAllRequired(source, _label, needle, replacement) {
+  if (!source.includes(needle)) return source;
   return source.split(needle).join(replacement);
 }
 

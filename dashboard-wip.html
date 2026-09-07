@@ -3563,53 +3563,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
       </div>`);
   }
 
-  function addCantonFilter(){
-    if (document.getElementById('f-canton-select')) return;
-    const ville = document.getElementById('f-ville');
-    const parent = ville?.closest('div');
-    if (!parent) return;
-    ville.setAttribute('placeholder', 'Ex: Lyon, Nantes...');
-    parent.insertAdjacentHTML('beforeend', `
-      <div class="mt-2">
-        <label class="modern-label">Cantons</label>
-        <select id="f-canton-select" onchange="runFilter()" class="modern-input"><option value="">Tous les cantons</option></select>
-      </div>`);
-  }
-
-  function populateCantonOptions(){
-    const select = document.getElementById('f-canton-select');
-    if (!select) return;
-    const old = select.value;
-    const deptSelected = document.getElementById('f-dept')?.value || '';
-    const scope = (globalData || []).filter(item => {
-      if (!itemBelongsToActivePssr(item)) return false;
-      if (deptSelected && item._deptNorm !== deptSelected) return false;
-      return true;
-    });
-    const values = [...new Set(scope.map(getItemCanton).filter(Boolean).map(v => String(v).trim()))].sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
-    select.innerHTML = `<option value="">Tous les cantons</option>` + values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-    if (values.includes(old)) select.value = old;
-  }
-
-  function addUndercarriageBox(){
-    if (document.getElementById('acc-undercarriage')) return;
-    const priorityBlock = document.getElementById('acc-priorite-client')?.closest('div');
-    if (!priorityBlock) return;
-    priorityBlock.insertAdjacentHTML('afterend', `
-      <div class="mt-4">
-        <button onclick="toggleAccordion('acc-undercarriage')" class="accordion-btn">
-          <span class="text-[11px] font-display font-extrabold text-gray-700 dark:text-slate-200 uppercase tracking-wider">7. Undercarriage</span>
-          <svg id="icon-acc-undercarriage" class="w-4 h-4 text-gray-400 transition-transform rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-        </button>
-        <div id="acc-undercarriage" class="accordion-content block">
-          <div class="rounded-xl border border-dashed border-gray-300 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 p-4 text-center">
-            <div class="text-[10px] uppercase tracking-widest font-black text-gray-400 dark:text-slate-500">Filtre à venir</div>
-            <div class="mt-1 font-display font-black text-gray-800 dark:text-white">In Progress</div>
-          </div>
-        </div>
-      </div>`);
-  }
-
   function addTopRankFilter(){
     if (document.getElementById('f-top-rank')) return;
     const container = document.getElementById('f-priorite-options');
@@ -3765,10 +3718,8 @@ Adresse : ${item[COL.adresse] || "-"}`);
     if (!Array.isArray(currentFilteredData)) return;
     let data = currentFilteredData;
     const clientNumero = safeNorm(document.getElementById('f-client-numero')?.value || '');
-    const cantonSelect = safeNorm(document.getElementById('f-canton-select')?.value || '');
     const topRank = parseNumber(document.getElementById('f-top-rank')?.value || 0);
     if (clientNumero) data = data.filter(item => safeNorm(getClientNumber(item)).includes(clientNumero));
-    if (cantonSelect) data = data.filter(item => safeNorm(getItemCanton(item)) === cantonSelect);
     if (topRank > 0) {
       ensureTop200RankCache();
       data = data.filter(item => getTop200Rank(item) <= topRank);
@@ -3848,7 +3799,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
     if (window.__stableV18Installed) return;
     window.__stableV18Installed = true;
     const oldPopulate = populateFilterOptions;
-    populateFilterOptions = function(){ oldPopulate.apply(this, arguments); patchDom(); populateCantonOptions(); updateNafOptionLabels(); };
+    populateFilterOptions = function(){ oldPopulate.apply(this, arguments); patchDom(); updateNafOptionLabels(); };
     const oldRun = runFilter;
     runFilter = function(){ oldRun.apply(this, arguments); applyExtraFilters(); patchClientEligibleText(); };
     const oldOpen = openDetails;
@@ -3889,8 +3840,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
   function patchDom(){
     patchFleetOptions();
     addClientNumberFilter();
-    addCantonFilter();
-    addUndercarriageBox();
     addTopRankFilter();
     addVisitsHelp();
     addInfoButton();
@@ -3912,9 +3861,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
 /* v20 WIP corrections */
 .v20-gold-badge { display:inline-flex; align-items:center; gap:.35rem; border-radius:999px; padding:.18rem .52rem; font-size:10px; font-weight:1000; letter-spacing:.05em; text-transform:uppercase; color:#78350f; background:linear-gradient(135deg,#fde68a,#facc15,#f59e0b); border:1px solid rgba(180,83,9,.35); box-shadow:0 5px 16px rgba(245,158,11,.26); }
 .dark .v20-gold-badge { color:#fef3c7; background:linear-gradient(135deg,#92400e,#ca8a04,#facc15); border-color:rgba(250,204,21,.35); }
-.v20-undercarriage-card { position:relative; overflow:hidden; border:1px dashed #fb923c; background:repeating-linear-gradient(135deg, rgba(251,146,60,.10) 0, rgba(251,146,60,.10) 10px, rgba(254,243,199,.45) 10px, rgba(254,243,199,.45) 20px); }
-.dark .v20-undercarriage-card { background:repeating-linear-gradient(135deg, rgba(154,52,18,.28) 0, rgba(154,52,18,.28) 10px, rgba(67,20,7,.45) 10px, rgba(67,20,7,.45) 20px); border-color:#f97316; }
-.v20-undercarriage-card::after { content:'IN PROGRESS'; position:absolute; right:-30px; top:14px; transform:rotate(28deg); background:#f97316; color:#fff7ed; padding:.25rem 2rem; font-size:9px; font-weight:1000; letter-spacing:.12em; }
 .v20-route-toggle { border:1px solid #fecaca; background:#fef2f2; color:#991b1b; }
 .v20-route-toggle.is-add { border-color:#bbf7d0; background:#f0fdf4; color:#166534; }
 .dark .v20-route-toggle { background:rgba(127,29,29,.28); border-color:#7f1d1d; color:#fecaca; }
@@ -3928,8 +3874,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
 .v20-modern-bulb svg { width:18px; height:18px; }
 .v20-modern-bulb { animation:v20-bulb-pulse 1.55s ease-in-out infinite; }
 @keyframes v20-bulb-pulse { 0%,100% { transform:scale(1); filter:drop-shadow(0 0 0 rgba(250,204,21,0)); } 50% { transform:scale(1.09); filter:drop-shadow(0 0 8px rgba(250,204,21,.75)); } }
-.v20-canton-note { font-size:10px; line-height:1.25; color:#64748b; margin-top:.35rem; }
-.dark .v20-canton-note { color:#94a3b8; }
 </style>
 <script id="wip-v20-adjustments-js">
 (function(){
@@ -4000,41 +3944,12 @@ Adresse : ${item[COL.adresse] || "-"}`);
     window.__cantonGeoLoadingV20 = false;
     return window.__cantonGeoV20;
   }
-  function getCantonValuesForScope(){
-    const depts = new Set(getScopeDeptsV20());
-    const scope = (globalData || []).filter(item => (!depts.size || depts.has(item._deptNorm)) && (typeof itemBelongsToActivePssr !== 'function' || itemBelongsToActivePssr(item)));
-    let values = unique(scope.map(cantonValue));
-    if (window.__cantonByDeptV20?.size) {
-      for (const d of depts) {
-        const set = window.__cantonByDeptV20.get(d);
-        if (set) values.push(...set);
-      }
-      values = unique(values);
-    }
-    return values.sort((a,b)=>a.localeCompare(b,'fr',{numeric:true}));
-  }
-  function repopulateCantonsV20(){
-    const select = document.getElementById('f-canton-select');
-    if (!select) return;
-    const old = select.value;
-    const values = getCantonValuesForScope();
-    select.innerHTML = '<option value="">Tous les cantons</option>' + values.map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
-    if (values.includes(old)) select.value = old;
-    const parent = select.closest('div');
-    if (parent && !parent.querySelector('.v20-canton-note')) {
-      parent.insertAdjacentHTML('beforeend', '<div class="v20-canton-note">Liste liée aux départements du PSSR. Le filtrage exact nécessite une colonne Canton par client.</div>');
-    }
-  }
-  window.repopulateCantonsV20 = repopulateCantonsV20;
-
   function patchStaticDomV20(){
     const year = document.getElementById('f-ca-annee');
     if (year && !year.dataset.v20DefaultDone) { year.dataset.v20DefaultDone='1'; try { setupCARange(); } catch(e){} }
     const ville = document.getElementById('f-ville');
     if (ville) ville.placeholder = 'Ex: Lyon, Nantes...';
-    const cantonLabel = document.querySelector('label[for="f-canton-select"], #f-canton-select')?.closest('div')?.querySelector('label');
-    if (cantonLabel) cantonLabel.textContent = 'Cantons';
-    document.querySelectorAll('label').forEach(l => { if (n(l.textContent) === 'cantons disponibles') l.textContent='Cantons'; if (n(l.textContent) === 'age machine all') l.textContent='Âge machine'; });
+    document.querySelectorAll('label').forEach(l => { if (n(l.textContent) === 'age machine all') l.textContent='Âge machine'; });
 
     // Move Age machine input just below serial number and rename without All
     const ageInput = document.getElementById('f-age-machine-all');
@@ -4075,42 +3990,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
       info.title = 'Nouveautés WIP';
     }
   }
-
-  function patchUndercarriageV20(){
-    const box = document.getElementById('acc-undercarriage');
-    if (!box || box.dataset.v20Done) return;
-    box.dataset.v20Done = '1';
-    box.innerHTML = `
-      <div class="v20-undercarriage-card rounded-xl p-4 space-y-3">
-        <div class="pr-24">
-          <div class="text-[10px] uppercase tracking-widest font-black text-orange-700 dark:text-orange-300">Filtre non fonctionnel</div>
-          <div class="text-xs text-orange-900 dark:text-orange-100 font-bold">Préparation Undercarriage — valeurs visibles uniquement.</div>
-        </div>
-        <div>
-          <label class="modern-label">Type undercarriage</label>
-          <select id="f-undercarriage-type" class="modern-input" onchange="toggleUndercarriageSubmenuV20()">
-            <option value="">Sélectionner</option>
-            <option value="mi-vie-moteur">Mi-vie Moteur</option>
-            <option value="tc-dozer">TC dozer</option>
-            <option value="tc-excavatrice">TC excavatrice</option>
-          </select>
-        </div>
-        <div id="v20-tc-excavatrice-sub" class="hidden">
-          <label class="modern-label">TC excavatrice</label>
-          <select id="f-undercarriage-deplacement" class="modern-input">
-            <option value="">Déplacement (%)</option>
-            <option value="0-25">0 à 25 %</option>
-            <option value="25-50">25 à 50 %</option>
-            <option value="50-75">50 à 75 %</option>
-            <option value="75-100">75 à 100 %</option>
-          </select>
-        </div>
-      </div>`;
-  }
-  window.toggleUndercarriageSubmenuV20 = function(){
-    const value = document.getElementById('f-undercarriage-type')?.value;
-    document.getElementById('v20-tc-excavatrice-sub')?.classList.toggle('hidden', value !== 'tc-excavatrice');
-  };
 
   function patchConnectedSectorV20(){
     const cat = document.getElementById('f-categorie');
@@ -4194,22 +4073,17 @@ Adresse : ${item[COL.adresse] || "-"}`);
       oldRun.apply(this, arguments);
       // La saisie libre filtre uniquement la ville ; le canton reste séparé.
       const typed = n(document.getElementById('f-ville')?.value || '');
-      const selectedCanton = n(document.getElementById('f-canton-select')?.value || '');
-      if ((typed || selectedCanton) && Array.isArray(currentFilteredData)) {
+      if (typed && Array.isArray(currentFilteredData)) {
         currentFilteredData = currentFilteredData.filter(item => {
           const city = n(item[COL.ville] || '');
-          const canton = n(cantonValue(item));
           const txtOk = !typed || city.includes(typed);
-          const selOk = !selectedCanton || canton === selectedCanton;
-          return txtOk && selOk;
+          return txtOk;
         });
         renderGrid(currentFilteredData);
         updateActiveCounter();
         if (typeof isMapVisible === 'function' && isMapVisible()) renderMap(currentFilteredData);
       }
-      repopulateCantonsV20();
       patchStaticDomV20();
-      patchUndercarriageV20();
       /* v24: keep main sector filter */
     };
   }
@@ -4395,10 +4269,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
     /* v24: route handled below */
     await installTerrainMapOverrideV20();
     patchStaticDomV20();
-    patchUndercarriageV20();
     /* v24: keep main sector filter */
-    loadCantonGeoV20().then(()=>repopulateCantonsV20());
-    setTimeout(() => { patchStaticDomV20(); patchUndercarriageV20(); repopulateCantonsV20(); /* v24: keep main sector filter */ installGoogleMapsControlV20(); }, 700);
   }
   document.addEventListener('DOMContentLoaded', () => setTimeout(initV20, 100));
 })();
@@ -5297,8 +5168,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
 .v25-naf-row { display:flex; align-items:center; gap:8px; background:#f8fafc; border:1px solid #eef2f7; border-radius:9px; padding:7px 10px; font-size:11px; font-weight:900; color:#475569; }
 .dark .v25-naf-row { background:#0f172a; border-color:#334155; color:#cbd5e1; }
 .v25-sector-help { margin-top:9px; font-size:10px; line-height:1.4; color:#94a3b8; }
-.v25-canton-progress { margin-top:5px; font-size:10px; color:#b45309; font-weight:800; line-height:1.35; }
-.dark .v25-canton-progress { color:#fbbf24; }
 .v25-gmaps-btn { display:inline-flex; align-items:center; gap:4px; background:#fff; border:1px solid #e5e7eb; color:#334155; font-size:10px; padding:.5rem .72rem; border-radius:.75rem; font-weight:1000; text-transform:uppercase; letter-spacing:.04em; box-shadow:0 10px 22px rgba(15,23,42,.10); transition:.16s ease; margin-right:.5rem; }
 .v25-gmaps-btn:hover { border-color:#facc15; transform:translateY(-1px); }
 .dark .v25-gmaps-btn { background:#0f172a; border-color:#334155; color:#e2e8f0; }
@@ -5375,15 +5244,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
     };
   }
 
-  function patchCantonInProgress(){
-    const select=document.getElementById('f-canton-select'); if(!select) return;
-    const wrap=select.closest('div');
-    const label=wrap?.querySelector('label'); if(label) label.textContent='Cantons — In progress';
-    select.innerHTML='<option value="">In progress — non fonctionnel</option>';
-    select.value=''; select.disabled=true; select.onchange=null; select.removeAttribute('onchange');
-    if(wrap && !wrap.querySelector('.v25-canton-progress')) wrap.insertAdjacentHTML('beforeend','<div class="v25-canton-progress">Menu déroulant canton en cours de développement : non fonctionnel pour le moment. Utilisez le champ Ville au-dessus.</div>');
-  }
-
   const sectorState = window.__v25SectorState ||= {cats:new Set(), nafs:new Set(), open:new Set(), wrapped:false};
   function sectorScope(){
     const rows=(globalData || []).filter(item=>{ try{ return typeof itemBelongsToActivePssr==='function' ? itemBelongsToActivePssr(item) : true; }catch(e){ return true; }});
@@ -5441,7 +5301,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
         currentFilteredData=currentFilteredData.filter(sectorPass);
         try{ renderGrid(currentFilteredData); updateActiveCounter(); if(typeof isMapVisible==='function' && isMapVisible()) renderMap(currentFilteredData); }catch(e){}
       }
-      patchCantonInProgress();
     };
   }
 
@@ -5491,7 +5350,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
   function installMonTerrainV25(){ window.renderMonTerrainMap=renderMonTerrainMapV25; window.openMonTerrain=async function(){ const modal=document.getElementById('v18-terrain-modal'); if(!modal) return; modal.classList.add('open'); patchMonTerrainButtonV25(); setTimeout(renderMonTerrainMapV25,80); }; }
 
   function initV25(){
-    patchCantonInProgress(); installSectorTree(); wrapRunFilterForSector(); installGridV25(); installDetailsV25(); ensureSingleGmaps(); patchMonTerrainButtonV25(); installMonTerrainV25();
+installSectorTree(); wrapRunFilterForSector(); installGridV25(); installDetailsV25(); ensureSingleGmaps(); patchMonTerrainButtonV25(); installMonTerrainV25();
     try{ if(Array.isArray(currentFilteredData) && typeof renderGrid==='function') renderGrid(currentFilteredData); }catch(e){}
   }
   document.addEventListener('DOMContentLoaded',()=>setTimeout(initV25,700));
@@ -5774,6 +5633,6 @@ Adresse : ${item[COL.adresse] || "-"}`);
 })();
 </script>
 
-<script src="./wip-runtime.bundle.js?v=20260810-4"></script>
+<script src="./wip-runtime.bundle.js?v=20260907-branch-pages-v1"></script>
 </body>
 </html>
