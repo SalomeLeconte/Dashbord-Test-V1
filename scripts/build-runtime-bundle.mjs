@@ -23,6 +23,7 @@ const runtimeFiles = [
   'wip-route-status-compact-patch.js',
   'wip-table-excel-filters-date-sort-patch.js',
   'wip-undercarriage-filter-patch.js',
+  'wip-canton-adaptive-filter-patch.js',
   'wip-filter-placeholder-cleanup-patch.js',
   'wip-siret-dedupe-patch.js',
   'wip-undercarriage-detail-ui-patch.js',
