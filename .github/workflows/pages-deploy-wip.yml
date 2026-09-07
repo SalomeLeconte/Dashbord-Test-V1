@@ -61,15 +61,17 @@ jobs:
           set -euo pipefail
           node --check wip-runtime.bundle.js
           grep -q 'wip-city-filter-input-crash-fix-2026-09-07-v4' wip-runtime.bundle.js
-          ! grep -q '/\* wip-canton-adaptive-filter-patch.js \*/' wip-runtime.bundle.js
-          ! grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' wip-runtime.bundle.js
+          grep -q '/\* wip-canton-adaptive-filter-patch.js \*/' wip-runtime.bundle.js
+          grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' wip-runtime.bundle.js
+          grep -q 'f-canton-adaptive-select' wip-runtime.bundle.js
+          grep -q 'wip-filter-placeholder-cleanup-2026-09-07-v9' wip-runtime.bundle.js
           ! grep -q 'f-canton-select' dashboard-wip.html
           ! grep -q 'acc-undercarriage' dashboard-wip.html
           ! grep -q 'patchCantonInProgress' dashboard-wip.html
           ! grep -q 'Menu déroulant canton en cours de développement' dashboard-wip.html
           ! grep -q 'Filtre non fonctionnel' dashboard-wip.html
           ! grep -q 'Filtre à venir' dashboard-wip.html
-          grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v1' dashboard-wip.html
+          grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v2' dashboard-wip.html
 
       - name: Build unified optimized site
         run: npm run build
@@ -93,8 +95,10 @@ jobs:
           RUNTIME_FILE="$(find dist/assets -maxdepth 1 -name 'wip-runtime.*.js' -print -quit)"
           INLINE_FILE="$(find dist/assets -maxdepth 1 -name 'dashboard-inline.*.min.js' -print -quit)"
           grep -q 'wip-city-filter-input-crash-fix-2026-09-07-v4' "$RUNTIME_FILE"
-          ! grep -q '/\* wip-canton-adaptive-filter-patch.js \*/' "$RUNTIME_FILE"
-          ! grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' "$RUNTIME_FILE"
+          grep -q '/\* wip-canton-adaptive-filter-patch.js \*/' "$RUNTIME_FILE"
+          grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' "$RUNTIME_FILE"
+          grep -q 'f-canton-adaptive-select' "$RUNTIME_FILE"
+          grep -q 'wip-filter-placeholder-cleanup-2026-09-07-v9' "$RUNTIME_FILE"
           ! grep -q 'f-canton-select' "$INLINE_FILE"
           ! grep -q 'acc-undercarriage' "$INLINE_FILE"
           ! grep -q 'Menu déroulant canton en cours de développement' "$INLINE_FILE"
@@ -131,17 +135,19 @@ jobs:
 
           for attempt in $(seq 1 24); do
             html="$(curl -fsSL "${base}dashboard-wip.html?${query}" || true)"
-            runtime="$(curl -fsSL "${base}wip-runtime.bundle.js?v=20260907-branch-pages-v1&${query}" || true)"
+            runtime="$(curl -fsSL "${base}wip-runtime.bundle.js?v=20260907-branch-pages-v2&${query}" || true)"
 
-            if grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v1' <<<"$html" \
+            if grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v2' <<<"$html" \
               && grep -q 'wip-city-filter-input-crash-fix-2026-09-07-v4' <<<"$runtime" \
-              && ! grep -q '/\* wip-canton-adaptive-filter-patch.js \*/' <<<"$runtime" \
-              && ! grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' <<<"$runtime" \
+              && grep -q '/\* wip-canton-adaptive-filter-patch.js \*/' <<<"$runtime" \
+              && grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' <<<"$runtime" \
+              && grep -q 'f-canton-adaptive-select' <<<"$runtime" \
+              && grep -q 'wip-filter-placeholder-cleanup-2026-09-07-v9' <<<"$runtime" \
               && ! grep -q 'f-canton-select' <<<"$html" \
               && ! grep -q 'acc-undercarriage' <<<"$html" \
               && ! grep -q 'patchCantonInProgress' <<<"$html" \
               && ! grep -q 'Menu déroulant canton en cours de développement' <<<"$html"; then
-              echo 'Public GitHub Pages serves the corrected WIP branch source.'
+              echo 'Public GitHub Pages serves adaptive canton and flat undercarriage WIP.'
               exit 0
             fi
 
