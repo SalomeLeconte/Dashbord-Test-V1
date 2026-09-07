@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-filter-placeholder-cleanup-2026-09-07-v8';
+  const PATCH_ID = 'wip-filter-placeholder-cleanup-2026-09-07-v9';
   if (window.__WIP_FILTER_PLACEHOLDER_CLEANUP_PATCH__ === PATCH_ID) return;
   window.__WIP_FILTER_PLACEHOLDER_CLEANUP_PATCH__ = PATCH_ID;
 
@@ -39,8 +39,15 @@
     const body = accordion.querySelector(`#${BODY_ID}`);
     if (!body) return;
 
-    if (filter.tagName === 'DETAILS') filter.open = true;
-    filter.querySelector(':scope > summary')?.remove();
+    if (filter.tagName === 'DETAILS') {
+      filter.open = true;
+      const nestedSummary = filter.querySelector(':scope > summary');
+      if (nestedSummary) {
+        nestedSummary.hidden = true;
+        nestedSummary.setAttribute('aria-hidden', 'true');
+        nestedSummary.style.setProperty('display', 'none', 'important');
+      }
+    }
     filter.classList.add('wip-undercarriage-active-filter', 'wip-undercarriage-inline-content');
     filter.classList.remove('bg-orange-50/70', 'dark:bg-orange-500/10');
     if (!body.contains(filter)) body.appendChild(filter);
@@ -102,6 +109,7 @@
       .wip-undercarriage-active-filter{border:0!important;background:transparent!important;box-shadow:none!important}
       .dark .wip-undercarriage-active-filter{background:transparent!important}
       .wip-undercarriage-inline-content{display:block!important;margin:0!important;border-radius:0!important;padding:12px!important}
+      .wip-undercarriage-inline-content>summary{display:none!important}
       .wip-undercarriage-inline-content>div{margin-top:0!important}
     `;
     document.head.appendChild(style);
