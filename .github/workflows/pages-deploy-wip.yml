@@ -60,18 +60,21 @@ jobs:
         run: |
           set -euo pipefail
           node --check wip-runtime.bundle.js
-          grep -q 'wip-city-filter-input-crash-fix-2026-09-07-v4' wip-runtime.bundle.js
+          grep -q 'wip-city-filter-local-2026-09-07-v5' wip-runtime.bundle.js
+          grep -q 'baselineIndex' wip-runtime.bundle.js
+          grep -q 'INPUT_DEBOUNCE_MS = 90' wip-runtime.bundle.js
           grep -q '/\* wip-canton-adaptive-filter-patch.js \*/' wip-runtime.bundle.js
           grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' wip-runtime.bundle.js
           grep -q 'f-canton-adaptive-select' wip-runtime.bundle.js
           grep -q 'wip-filter-placeholder-cleanup-2026-09-07-v9' wip-runtime.bundle.js
+          ! grep -Eq 'id="f-ville"[^>]*oninput="runFilter\(\)"' dashboard-wip.html
           ! grep -q 'f-canton-select' dashboard-wip.html
           ! grep -q 'acc-undercarriage' dashboard-wip.html
           ! grep -q 'patchCantonInProgress' dashboard-wip.html
           ! grep -q 'Menu déroulant canton en cours de développement' dashboard-wip.html
           ! grep -q 'Filtre non fonctionnel' dashboard-wip.html
           ! grep -q 'Filtre à venir' dashboard-wip.html
-          grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v2' dashboard-wip.html
+          grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v2&fix=city-local-v5' dashboard-wip.html
 
       - name: Build unified optimized site
         run: npm run build
@@ -92,9 +95,12 @@ jobs:
           test -n "$(find dist/assets -maxdepth 1 -name 'dashboard-inline.*.min.js' -print -quit)"
           test -n "$(find dist/assets -maxdepth 1 -name 'wip-runtime.*.js' -print -quit)"
           ! test -e dist/wip-runtime.bundle.js
+          ! grep -Eq 'id="f-ville"[^>]*oninput="runFilter\(\)"' dist/dashboard-wip.html
           RUNTIME_FILE="$(find dist/assets -maxdepth 1 -name 'wip-runtime.*.js' -print -quit)"
           INLINE_FILE="$(find dist/assets -maxdepth 1 -name 'dashboard-inline.*.min.js' -print -quit)"
-          grep -q 'wip-city-filter-input-crash-fix-2026-09-07-v4' "$RUNTIME_FILE"
+          grep -q 'wip-city-filter-local-2026-09-07-v5' "$RUNTIME_FILE"
+          grep -q 'baselineIndex' "$RUNTIME_FILE"
+          grep -q 'INPUT_DEBOUNCE_MS = 90' "$RUNTIME_FILE"
           grep -q '/\* wip-canton-adaptive-filter-patch.js \*/' "$RUNTIME_FILE"
           grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' "$RUNTIME_FILE"
           grep -q 'f-canton-adaptive-select' "$RUNTIME_FILE"
@@ -135,19 +141,21 @@ jobs:
 
           for attempt in $(seq 1 24); do
             html="$(curl -fsSL "${base}dashboard-wip.html?${query}" || true)"
-            runtime="$(curl -fsSL "${base}wip-runtime.bundle.js?v=20260907-branch-pages-v2&${query}" || true)"
+            runtime="$(curl -fsSL "${base}wip-runtime.bundle.js?v=20260907-branch-pages-v2&fix=city-local-v5&${query}" || true)"
 
-            if grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v2' <<<"$html" \
-              && grep -q 'wip-city-filter-input-crash-fix-2026-09-07-v4' <<<"$runtime" \
+            if grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v2&fix=city-local-v5' <<<"$html" \
+              && grep -q 'wip-city-filter-local-2026-09-07-v5' <<<"$runtime" \
+              && grep -q 'baselineIndex' <<<"$runtime" \
               && grep -q '/\* wip-canton-adaptive-filter-patch.js \*/' <<<"$runtime" \
               && grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' <<<"$runtime" \
               && grep -q 'f-canton-adaptive-select' <<<"$runtime" \
               && grep -q 'wip-filter-placeholder-cleanup-2026-09-07-v9' <<<"$runtime" \
+              && ! grep -Eq 'id="f-ville"[^>]*oninput="runFilter\(\)"' <<<"$html" \
               && ! grep -q 'f-canton-select' <<<"$html" \
               && ! grep -q 'acc-undercarriage' <<<"$html" \
               && ! grep -q 'patchCantonInProgress' <<<"$html" \
               && ! grep -q 'Menu déroulant canton en cours de développement' <<<"$html"; then
-              echo 'Public GitHub Pages serves adaptive canton and flat undercarriage WIP.'
+              echo 'Public GitHub Pages serves local city filtering, adaptive canton and flat undercarriage WIP.'
               exit 0
             fi
 
