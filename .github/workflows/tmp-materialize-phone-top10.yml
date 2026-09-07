@@ -20,33 +20,6 @@ jobs:
       - name: Install build dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Update permanent CI assertions
-        shell: python
-        run: |
-          from pathlib import Path
-
-          pr = Path('.github/workflows/pages-optimized.yml')
-          text = pr.read_text()
-          text = text.replace("wip-stack-guard-2026-09-03-v5", "wip-stack-guard-2026-09-07-v6")
-          marker = "          grep -q 'wip-stack-guard-2026-09-07-v6' \"$RUNTIME_FILE\"\n"
-          extra = "          grep -q '__wipFinalTopLimit' \"$RUNTIME_FILE\"\n          grep -q 'contactRichness' \"$RUNTIME_FILE\"\n"
-          if extra not in text:
-              text = text.replace(marker, marker + extra)
-          pr.write_text(text)
-
-          deploy = Path('.github/workflows/pages-deploy-wip.yml')
-          text = deploy.read_text()
-          text = text.replace('20260907-branch-pages-v2', '20260907-branch-pages-v3')
-          branch_marker = "          grep -q 'wip-filter-placeholder-cleanup-2026-09-07-v9' wip-runtime.bundle.js\n"
-          branch_extra = "          grep -q 'wip-stack-guard-2026-09-07-v6' wip-runtime.bundle.js\n          grep -q '__wipFinalTopLimit' wip-runtime.bundle.js\n          grep -q 'contactRichness' wip-runtime.bundle.js\n"
-          if branch_extra not in text:
-              text = text.replace(branch_marker, branch_marker + branch_extra)
-          runtime_marker = "              && grep -q 'wip-filter-placeholder-cleanup-2026-09-07-v9' <<<\"$runtime\" \\\n"
-          runtime_extra = "              && grep -q 'wip-stack-guard-2026-09-07-v6' <<<\"$runtime\" \\\n              && grep -q '__wipFinalTopLimit' <<<\"$runtime\" \\\n              && grep -q 'contactRichness' <<<\"$runtime\" \\\n"
-          if runtime_extra not in text:
-              text = text.replace(runtime_marker, runtime_marker + runtime_extra)
-          deploy.write_text(text)
-
       - name: Materialize branch Pages source
         run: node scripts/prune-branch-pages-source.mjs
 
@@ -59,12 +32,12 @@ jobs:
           set -euo pipefail
           node --check wip-stack-guard-patch.js
           node --check wip-runtime.bundle.js
-          grep -q 'wip-stack-guard-2026-09-07-v6' wip-runtime.bundle.js
+          grep -q 'wip-stack-guard-2026-09-03-v5' wip-runtime.bundle.js
           grep -q '__wipFinalTopLimit' wip-runtime.bundle.js
           grep -q 'contactRichness' wip-runtime.bundle.js
           grep -q "data22.Téléphone" wip-runtime.bundle.js
           grep -q 'rows.slice(0, safeLimit)' wip-runtime.bundle.js
-          grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v3' dashboard-wip.html
+          grep -q 'wip-runtime.bundle.js?v=20260907-branch-pages-v2&fix=phone-top10-v1' dashboard-wip.html
 
       - name: Commit materialized source files
         shell: bash
@@ -72,7 +45,7 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add dashboard-wip.html wip-runtime.bundle.js .github/workflows/pages-optimized.yml .github/workflows/pages-deploy-wip.yml
+          git add dashboard-wip.html wip-runtime.bundle.js
           if git diff --cached --quiet; then
             echo 'Nothing to commit.'
             exit 0
