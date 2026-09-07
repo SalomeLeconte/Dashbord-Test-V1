@@ -14,7 +14,7 @@ if (!runtimePattern.test(dashboardHtml)) {
 }
 dashboardHtml = dashboardHtml.replace(
   runtimePattern,
-  '<script src="./wip-runtime.bundle.js?v=20260907-branch-pages-v3"></script>'
+  '<script src="./wip-runtime.bundle.js?v=20260907-branch-pages-v2&fix=phone-top10-v1"></script>'
 );
 
 const forbidden = [
