@@ -1,15 +1,17 @@
 function removeDetailCommercialPotentialSections(html) {
   let output = html;
 
-  // Detail view variants built with sections=[{ title, rows }].
+  // Detail view variants built with sections=[{ title, rows }]. These objects
+  // contain no nested object braces, so keep the match strictly brace-bounded.
   output = output.replace(
-    /\s*\{\s*title\s*:\s*["']Potentiel commercial["']\s*,\s*rows\s*:\s*rowsFrom\(\[\s*\[["']CA Global["'][\s\S]*?\[["']CA SERVICE cumulé["'][\s\S]*?\]\]\)\s*\}\s*,?/g,
+    /\s*\{\s*title\s*:\s*["']Potentiel commercial["'][^{}]*\}\s*,?/g,
     ''
   );
 
-  // Legacy V25 detail renderer variant.
+  // Legacy V25 detail renderer lives on one source line. Keep the match line-bounded
+  // so it cannot consume unrelated dashboard code.
   output = output.replace(
-    /\s*sectionV25\(\s*["']Potentiel commercial["']\s*,\s*rowsFrom\(\[\s*\[["']CA Global["'][\s\S]*?\[["']CA SERVICE cumulé["'][\s\S]*?\]\]\)\s*\)\s*,?/g,
+    /\s*sectionV25\(\s*["']Potentiel commercial["'][^\n]*\)\s*,?/g,
     ''
   );
 
@@ -33,7 +35,7 @@ export function transform(context) {
     }
   }
 
-  // The commercial-potential FILTER must remain untouched. Only the Details visual is removed.
+  // Keep the commercial-potential FILTER. The request only concerns the Details view.
   if (!dashboardHtml.includes('3. Potentiel commercial')) {
     throw new Error('Commercial potential filter was removed unexpectedly');
   }
