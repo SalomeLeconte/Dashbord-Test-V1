@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-filter-placeholder-cleanup-2026-09-03-v7';
+  const PATCH_ID = 'wip-filter-placeholder-cleanup-2026-09-07-v8';
   if (window.__WIP_FILTER_PLACEHOLDER_CLEANUP_PATCH__ === PATCH_ID) return;
   window.__WIP_FILTER_PLACEHOLDER_CLEANUP_PATCH__ = PATCH_ID;
 
@@ -7,12 +7,6 @@
   const ACCORDION_ID = 'wip-undercarriage-integrated-accordion';
   const BODY_ID = 'wip-undercarriage-integrated-body';
   let activeColumnButtonKey = '';
-
-  function removeLegacyUndercarriageDom() {
-    const legacyBody = document.getElementById('acc-undercarriage');
-    const legacySection = legacyBody?.parentElement;
-    if (legacySection && !legacySection.contains(document.getElementById(FILTER_ID))) legacySection.remove();
-  }
 
   function createIntegratedAccordion() {
     let accordion = document.getElementById(ACCORDION_ID);
@@ -41,7 +35,6 @@
     const filter = document.getElementById(FILTER_ID);
     if (!filter) return;
 
-    removeLegacyUndercarriageDom();
     const accordion = createIntegratedAccordion();
     const body = accordion.querySelector(`#${BODY_ID}`);
     if (!body) return;
