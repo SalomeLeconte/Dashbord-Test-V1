@@ -1,0 +1,52 @@
+name: Temporary materialize Top N final list
+
+on:
+  push:
+    branches: [fix/wip-topn-from-top200-final-list-20260907]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: fix/wip-topn-from-top200-final-list-20260907
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Materialize branch Pages source
+        run: node scripts/prune-branch-pages-source.mjs
+
+      - name: Regenerate runtime bundle
+        run: npm run bundle
+
+      - name: Validate final Top N rule
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check wip-stack-guard-patch.js
+          node --check wip-runtime.bundle.js
+          grep -q '__wipTopNFromFinalTop200' wip-runtime.bundle.js
+          grep -q 'dedupeLikeVisibleTop200' wip-runtime.bundle.js
+          grep -q 'visibleTop200.slice(0, safeLimit)' wip-runtime.bundle.js
+          grep -q 'topn-final-top200-v2' dashboard-wip.html
+
+      - name: Commit materialized files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dashboard-wip.html wip-runtime.bundle.js
+          if git diff --cached --quiet; then
+            echo 'Nothing to commit.'
+            exit 0
+          fi
+          git commit -m 'Materialize final Top N from Top 200 list'
+          git push origin HEAD:fix/wip-topn-from-top200-final-list-20260907
