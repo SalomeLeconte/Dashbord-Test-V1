@@ -17,6 +17,7 @@ const runtimeFiles = [
   'wip-stability-repair-patch.js',
   'wip-route-ui-refine-patch.js',
   'wip-responsive-device-patch.js',
+  'wip-route-panel-scroll-patch.js',
   'wip-map-terrain-search-patch.js',
   'wip-smart-route-sync-patch.js',
   'wip-route-sector-final-fix-patch.js',
