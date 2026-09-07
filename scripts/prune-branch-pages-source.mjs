@@ -11,13 +11,20 @@ let dashboardHtml = dedupeTop200BeforeRanking({ dashboardHtml: source }).dashboa
 dashboardHtml = removeDetailCommercialPotential({ dashboardHtml }).dashboardHtml;
 dashboardHtml = pruneDeadUi({ dashboardHtml }).dashboardHtml;
 
+// Ville v5 : le champ ne doit plus déclencher le pipeline global runFilter() à chaque frappe.
+// Le runtime dédié travaille sur un snapshot déjà filtré par les autres critères.
+dashboardHtml = dashboardHtml.replace(
+  /(<input\s+type="text"\s+id="f-ville")\s+oninput="runFilter\(\)"/,
+  '$1'
+);
+
 const runtimePattern = /<script src="\.\/wip-runtime\.bundle\.js[^\"]*"><\/script>/;
 if (!runtimePattern.test(dashboardHtml)) {
   throw new Error('Branch Pages source: runtime bundle marker missing');
 }
 dashboardHtml = dashboardHtml.replace(
   runtimePattern,
-  '<script src="./wip-runtime.bundle.js?v=20260907-branch-pages-v2&fix=dedupe-before-top200-rank-v3"></script>'
+  '<script src="./wip-runtime.bundle.js?v=20260907-branch-pages-v2&fix=city-local-v5"></script>'
 );
 
 const forbidden = [
@@ -44,6 +51,9 @@ if (!dashboardHtml.includes('const scope = dedupeTop200ScopeBeforeRanking(')) {
 if (!dashboardHtml.includes('3. Potentiel commercial')) {
   throw new Error('Branch Pages source: commercial potential filter was removed unexpectedly');
 }
+if (/id="f-ville"[^>]*oninput="runFilter\(\)"/.test(dashboardHtml)) {
+  throw new Error('Branch Pages source: Ville still triggers global runFilter on input');
+}
 
 writeFileSync(dashboardPath, dashboardHtml, 'utf8');
-console.log('Materialized branch-compatible dashboard-wip.html with pre-ranking SIRET dedupe and no commercial-potential Details section.');
+console.log('Materialized branch-compatible dashboard with local Ville filtering, pre-ranking SIRET dedupe and no commercial-potential Details section.');
