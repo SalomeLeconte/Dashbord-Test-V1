@@ -111,10 +111,15 @@ export function transform(context) {
     'function addUndercarriageBox()',
     'function patchUndercarriageV20()',
     'function patchCantonInProgress()',
+    'f-canton-select',
+    'acc-undercarriage',
     'v20-undercarriage-card',
     'v25-canton-progress',
+    'Cantons — In progress',
+    'Menu déroulant canton en cours de développement',
     'In progress — non fonctionnel',
-    'Filtre non fonctionnel'
+    'Filtre non fonctionnel',
+    'Filtre à venir'
   ];
   forbidden.forEach((marker) => {
     if (dashboardHtml.includes(marker)) throw new Error(`P0-99: legacy marker still present: ${marker}`);
