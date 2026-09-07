@@ -24,6 +24,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
   pages: write
   id-token: write
@@ -139,6 +140,92 @@ jobs:
         with:
           path: ./dist
 
+      - name: Wait for automatic branch Pages deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Waiting for competing branch Pages deployment for $GITHUB_SHA"
+
+          found=0
+          for attempt in $(seq 1 72); do
+            payload="$(gh api \
+              -H 'Accept: application/vnd.github+json' \
+              "/repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$GITHUB_SHA&per_page=20")"
+
+            branch_run="$(jq -c '
+              [.workflow_runs[]
+                | select(.name == "pages build and deployment")
+                | select(.event == "dynamic")
+              ] | .[0] // {}
+            ' <<<"$payload")"
+
+            status="$(jq -r '.status // "missing"' <<<"$branch_run")"
+            conclusion="$(jq -r '.conclusion // ""' <<<"$branch_run")"
+            echo "branch Pages: status=$status conclusion=${conclusion:-pending}"
+
+            if [[ "$status" != "missing" ]]; then
+              found=1
+            fi
+
+            if [[ "$status" == "completed" ]]; then
+              if [[ "$conclusion" != "success" ]]; then
+                echo "Automatic branch Pages deployment failed: $conclusion"
+                exit 1
+              fi
+              echo "Automatic branch deployment finished; optimized dist will deploy last."
+              exit 0
+            fi
+
+            if [[ "$found" -eq 0 && "$attempt" -ge 12 ]]; then
+              echo "No automatic branch Pages deployment detected; continuing with Actions deployment."
+              exit 0
+            fi
+
+            sleep 5
+          done
+
+          echo "Timed out waiting for automatic branch Pages deployment."
+          exit 1
+
       - name: Deploy Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Verify live GitHub Pages artifact
+        env:
+          PAGE_URL: ${{ steps.deployment.outputs.page_url }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="${PAGE_URL%/}/"
+          query="verify=${GITHUB_SHA}"
+
+          for attempt in $(seq 1 24); do
+            html="$(curl -fsSL "${base}dashboard-wip.html?${query}" || true)"
+            runtime_path="$(grep -oE 'assets/wip-runtime\.[0-9a-f]{12}\.js' <<<"$html" | head -n1 || true)"
+            inline_path="$(grep -oE 'assets/dashboard-inline\.[0-9a-f]{12}\.min\.js' <<<"$html" | head -n1 || true)"
+
+            if [[ -n "$runtime_path" && -n "$inline_path" ]] && ! grep -q 'wip-runtime.bundle.js' <<<"$html"; then
+              runtime="$(curl -fsSL "${base}${runtime_path}?${query}" || true)"
+              inline="$(curl -fsSL "${base}${inline_path}?${query}" || true)"
+
+              if grep -q 'wip-city-filter-input-crash-fix-2026-09-07-v4' <<<"$runtime" \
+                && ! grep -q 'wip-canton-adaptive-filter' <<<"$runtime" \
+                && ! grep -q '__WIP_CANTON_ADAPTIVE_FILTER_PATCH__' <<<"$runtime" \
+                && ! grep -q 'f-canton-select' <<<"$inline" \
+                && ! grep -q 'acc-undercarriage' <<<"$inline" \
+                && ! grep -q 'Menu déroulant canton en cours de développement' <<<"$inline" \
+                && ! grep -q 'patchCantonInProgress' <<<"$inline"; then
+                echo "Live GitHub Pages serves the optimized WIP artifact."
+                exit 0
+              fi
+            fi
+
+            echo "Live site not updated yet (attempt $attempt/24); retrying..."
+            sleep 5
+          done
+
+          echo "Live GitHub Pages is not serving the optimized WIP artifact."
+          exit 1
