@@ -1,0 +1,97 @@
+name: Temporary materialize undercarriage French labels
+
+on:
+  push:
+    branches: [fix/wip-undercarriage-fr-labels]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: fix/wip-undercarriage-fr-labels
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Translate undercarriage labels
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('wip-undercarriage-filter-patch.js')
+          text = path.read_text()
+          replacements = {
+              '>Travel hours EXCA<': '>Heures de déplacement EXCA<',
+              'aria-label="Travel hours EXCA minimum"': 'aria-label="Heures de déplacement EXCA minimum"',
+              '>Travel EXCA %<': '>Taux de déplacement EXCA (%)<',
+              'aria-label="Travel EXCA pourcentage minimum"': 'aria-label="Taux de déplacement EXCA minimum"',
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Marker missing in undercarriage filter: {old}')
+              text = text.replace(old, new)
+          path.write_text(text)
+
+          path = Path('wip-safe-undercarriage-home-route-patch.js')
+          text = path.read_text()
+          replacements = {
+              ".replace(/Travel\\s+hours\\s+EXCA/gi, 'H déplacement EXCA')": ".replace(/Travel\\s+hours\\s+EXCA/gi, 'Heures de déplacement EXCA')",
+              ".replace(/Travel\\s+EXCA\\s*%/gi, '% déplacement EXCA')": ".replace(/Travel\\s+EXCA\\s*%/gi, 'Taux de déplacement EXCA (%)')",
+              ".replace(/Travel\\s+%/gi, '% déplacement EXCA')": ".replace(/Travel\\s+%/gi, 'Taux de déplacement EXCA (%)')",
+              ".replace(/Travel\\s+h(?:ours?)?/gi, 'H déplacement EXCA')": ".replace(/Travel\\s+h(?:ours?)?/gi, 'Heures de déplacement EXCA')",
+          }
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f'Marker missing in safe patch: {old}')
+              text = text.replace(old, new)
+          path.write_text(text)
+
+          path = Path('scripts/prune-branch-pages-source.mjs')
+          text = path.read_text()
+          old = 'city-local-v5-route-scroll-v2'
+          new = 'city-local-v5-route-scroll-v2-labels-fr-v1'
+          if old not in text:
+              raise SystemExit('Current branch Pages cache key missing')
+          path.write_text(text.replace(old, new))
+
+      - name: Materialize branch Pages source
+        run: node scripts/prune-branch-pages-source.mjs
+
+      - name: Regenerate runtime bundle
+        run: npm run bundle
+
+      - name: Validate translated labels
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check wip-undercarriage-filter-patch.js
+          node --check wip-safe-undercarriage-home-route-patch.js
+          node --check wip-runtime.bundle.js
+          grep -q 'Heures de déplacement EXCA' wip-undercarriage-filter-patch.js
+          grep -q 'Taux de déplacement EXCA (%)' wip-undercarriage-filter-patch.js
+          grep -q 'Heures de déplacement EXCA' wip-runtime.bundle.js
+          grep -q 'Taux de déplacement EXCA (%)' wip-runtime.bundle.js
+          ! grep -q '>Travel hours EXCA<' wip-undercarriage-filter-patch.js
+          ! grep -q '>Travel EXCA %<' wip-undercarriage-filter-patch.js
+          grep -q 'fix=city-local-v5-route-scroll-v2-labels-fr-v1' dashboard-wip.html
+
+      - name: Commit translated source and branch-served assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add wip-undercarriage-filter-patch.js wip-safe-undercarriage-home-route-patch.js scripts/prune-branch-pages-source.mjs dashboard-wip.html wip-runtime.bundle.js
+          if git diff --cached --quiet; then
+            echo 'Nothing to commit.'
+            exit 0
+          fi
+          git commit -m 'Translate EXCA travel filter labels to French'
+          git push origin HEAD:fix/wip-undercarriage-fr-labels
