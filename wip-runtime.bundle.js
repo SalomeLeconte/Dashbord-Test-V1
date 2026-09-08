@@ -4474,17 +4474,17 @@
           <label class="wip-uc-field">SMR minimum<select data-uc="smr">${opt('0', 'Tous')}${opt('5000', '≥ 5 000 h')}${opt('9000', '≥ 9 000 h')}</select></label>
           <label class="wip-uc-field">Activité moyenne<select data-uc="activity">${opt('0', 'Toutes')}${opt('50', '≥ 50')}${opt('80', '≥ 80')}</select></label>
           <div class="wip-uc-field wip-uc-range-field" data-uc-field="travelHours">
-            <div class="wip-uc-range-head"><span>Travel hours EXCA</span><output data-uc-output="travelHours">Tous</output></div>
+            <div class="wip-uc-range-head"><span>Heures de déplacement EXCA</span><output data-uc-output="travelHours">Tous</output></div>
             <div class="wip-uc-range-control">
-              <input data-uc="travelHours" type="range" min="0" max="200" step="1" value="0" aria-label="Travel hours EXCA minimum">
+              <input data-uc="travelHours" type="range" min="0" max="200" step="1" value="0" aria-label="Heures de déplacement EXCA minimum">
               <div class="wip-uc-range-ticks" aria-hidden="true">${rangeTicks(TRAVEL_HOUR_STEPS, 200)}</div>
             </div>
             <div class="wip-uc-range-scale" aria-hidden="true"><span>0 h</span><span>100 h</span><span>200 h</span></div>
           </div>
           <div class="wip-uc-field wip-uc-range-field" data-uc-field="travelPct">
-            <div class="wip-uc-range-head"><span>Travel EXCA %</span><output data-uc-output="travelPct">Tous</output></div>
+            <div class="wip-uc-range-head"><span>Taux de déplacement EXCA (%)</span><output data-uc-output="travelPct">Tous</output></div>
             <div class="wip-uc-range-control">
-              <input data-uc="travelPct" type="range" min="0" max="100" step="10" value="0" aria-label="Travel EXCA pourcentage minimum">
+              <input data-uc="travelPct" type="range" min="0" max="100" step="10" value="0" aria-label="Taux de déplacement EXCA minimum">
               <div class="wip-uc-range-ticks" aria-hidden="true">${rangeTicks(TRAVEL_PCT_STEPS, 100)}</div>
             </div>
             <div class="wip-uc-range-scale" aria-hidden="true"><span>0 %</span><span>50 %</span><span>100 %</span></div>
@@ -7993,10 +7993,10 @@
   function replaceTextNode(node) {
     const before = node.nodeValue || '';
     const after = before
-      .replace(/Travel\s+hours\s+EXCA/gi, 'H déplacement EXCA')
-      .replace(/Travel\s+EXCA\s*%/gi, '% déplacement EXCA')
-      .replace(/Travel\s+%/gi, '% déplacement EXCA')
-      .replace(/Travel\s+h(?:ours?)?/gi, 'H déplacement EXCA');
+      .replace(/Travel\s+hours\s+EXCA/gi, 'Heures de déplacement EXCA')
+      .replace(/Travel\s+EXCA\s*%/gi, 'Taux de déplacement EXCA (%)')
+      .replace(/Travel\s+%/gi, 'Taux de déplacement EXCA (%)')
+      .replace(/Travel\s+h(?:ours?)?/gi, 'Heures de déplacement EXCA');
     if (after !== before) node.nodeValue = after;
   }
 

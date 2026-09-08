@@ -260,10 +260,10 @@
   function replaceTextNode(node) {
     const before = node.nodeValue || '';
     const after = before
-      .replace(/Travel\s+hours\s+EXCA/gi, 'H déplacement EXCA')
-      .replace(/Travel\s+EXCA\s*%/gi, '% déplacement EXCA')
-      .replace(/Travel\s+%/gi, '% déplacement EXCA')
-      .replace(/Travel\s+h(?:ours?)?/gi, 'H déplacement EXCA');
+      .replace(/Travel\s+hours\s+EXCA/gi, 'Heures de déplacement EXCA')
+      .replace(/Travel\s+EXCA\s*%/gi, 'Taux de déplacement EXCA (%)')
+      .replace(/Travel\s+%/gi, 'Taux de déplacement EXCA (%)')
+      .replace(/Travel\s+h(?:ours?)?/gi, 'Heures de déplacement EXCA');
     if (after !== before) node.nodeValue = after;
   }
 
