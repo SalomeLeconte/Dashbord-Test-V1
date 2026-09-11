@@ -24,7 +24,7 @@ if (!runtimePattern.test(dashboardHtml)) {
 }
 dashboardHtml = dashboardHtml.replace(
   runtimePattern,
-  '<script src="./wip-runtime.bundle.js?v=20260911-branch-pages-v3&fix=reset-excel-filters-v1-financial-2026-v1"></script>'
+  '<script src="./wip-runtime.bundle.js?v=20260911-branch-pages-v3&fix=reset-excel-filters-v1-financial-2026-v2-compact-tables-v1"></script>'
 );
 
 const forbidden = [
@@ -56,4 +56,4 @@ if (/id="f-ville"[^>]*oninput="runFilter\(\)"/.test(dashboardHtml)) {
 }
 
 writeFileSync(dashboardPath, dashboardHtml, 'utf8');
-console.log('Materialized branch-compatible dashboard with resettable Excel header filters, Data CA 2025 + CA 2026 financial display, local Ville filtering, route status removed, route panel capped to map height, pre-ranking SIRET dedupe and no commercial-potential Details section.');
+console.log('Materialized branch-compatible dashboard with resettable Excel filters, refined CA 2025/2026 display, compact/wrapped Data and Top 200 tables, local Ville filtering, route status removed, route panel capped to map height, pre-ranking SIRET dedupe and no commercial-potential Details section.');

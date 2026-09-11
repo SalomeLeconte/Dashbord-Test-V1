@@ -1,5 +1,5 @@
 (() => {
-  const PATCH_ID = 'wip-data-financial-2026-2026-09-11-v1';
+  const PATCH_ID = 'wip-data-financial-2026-2026-09-11-v2';
   if (window.__WIP_DATA_FINANCIAL_2026_PATCH__ === PATCH_ID) return;
   window.__WIP_DATA_FINANCIAL_2026_PATCH__ = PATCH_ID;
 
@@ -80,6 +80,25 @@
     }
   }
 
+  function decoratePrimary2025(cell) {
+    const children = [...cell.children];
+    const primary = children.find((element) => !element.classList.contains('wip-data-ca-2026')) || null;
+    const label = children.find((element) => {
+      const text = norm(element.textContent || '');
+      return text.includes('ca global') && !text.includes('2026');
+    });
+    if (!label) return;
+
+    label.textContent = 'CA Global 2025';
+    label.classList.add('wip-data-ca-2025-label');
+    label.style.fontWeight = '400';
+    label.style.fontSize = '10px';
+    label.style.lineHeight = '1.2';
+    if (primary) {
+      try { label.style.color = window.getComputedStyle(primary).color; } catch (error) {}
+    }
+  }
+
   function decorateFinancialCells() {
     const view = document.getElementById('view-table');
     const table = view?.querySelector('table');
@@ -90,7 +109,11 @@
 
     table.querySelectorAll('tbody tr').forEach((tr) => {
       const cell = tr.cells?.[columnIndex];
-      if (!cell || cell.querySelector('.wip-data-ca-2026')) return;
+      if (!cell) return;
+
+      decoratePrimary2025(cell);
+      if (cell.querySelector('.wip-data-ca-2026')) return;
+
       const row = rowFromTableRow(tr);
       if (!row) return;
 
@@ -101,7 +124,7 @@
       secondary.style.marginTop = '2px';
       secondary.style.fontSize = '10px';
       secondary.style.lineHeight = '1.2';
-      secondary.style.fontWeight = '600';
+      secondary.style.fontWeight = '400';
       secondary.style.color = '#94a3b8';
       secondary.style.whiteSpace = 'nowrap';
       cell.appendChild(secondary);
