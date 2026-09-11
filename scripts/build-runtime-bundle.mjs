@@ -41,7 +41,8 @@ const runtimeFiles = [
   'wip-ui-cleanup-terrain-speed-patch.js',
   'wip-city-filter-input-fix-patch.js',
   'wip-stack-guard-patch.js',
-  'wip-reset-excel-filters-patch.js'
+  'wip-reset-excel-filters-patch.js',
+  'wip-data-financial-2026-patch.js'
 ];
 
 const banner = [
