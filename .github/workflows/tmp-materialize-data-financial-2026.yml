@@ -1,0 +1,53 @@
+name: Temporary materialize Data financial 2026
+
+on:
+  push:
+    branches: [fix/wip-reset-excel-filters]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: fix/wip-reset-excel-filters
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Materialize branch Pages source
+        run: node scripts/prune-branch-pages-source.mjs
+
+      - name: Regenerate runtime bundle
+        run: npm run bundle
+
+      - name: Validate Data financial 2026 display
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check wip-data-financial-2026-patch.js
+          node --check wip-runtime.bundle.js
+          grep -q 'wip-data-financial-2026-2026-09-11-v1' wip-runtime.bundle.js
+          grep -q 'CA 2026 :' wip-runtime.bundle.js
+          grep -q "getAmount(row, 'GLOBAL', '2026')" wip-runtime.bundle.js
+          grep -q 'indicateur financier' wip-runtime.bundle.js
+          grep -q 'fix=reset-excel-filters-v1-financial-2026-v1' dashboard-wip.html
+
+      - name: Commit branch-served assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dashboard-wip.html wip-runtime.bundle.js
+          if git diff --cached --quiet; then
+            echo 'Nothing to commit.'
+            exit 0
+          fi
+          git commit -m 'Materialize Data CA 2026 financial display'
+          git push origin HEAD:fix/wip-reset-excel-filters
