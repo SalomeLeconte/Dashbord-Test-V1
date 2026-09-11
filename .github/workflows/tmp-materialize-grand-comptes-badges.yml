@@ -1,0 +1,52 @@
+name: Temporary materialize Grands Comptes badges
+
+on:
+  push:
+    branches: [fix/wip-badge-grands-comptes]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: fix/wip-badge-grands-comptes
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Materialize branch Pages source
+        run: node scripts/prune-branch-pages-source.mjs
+
+      - name: Regenerate runtime bundle
+        run: npm run bundle
+
+      - name: Validate Grands Comptes badge rename
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check wip-grand-comptes-badge-patch.js
+          node --check wip-runtime.bundle.js
+          grep -q 'wip-grand-comptes-badges-2026-09-11-v1' wip-runtime.bundle.js
+          grep -q "badge.textContent = 'Grands Comptes'" wip-runtime.bundle.js
+          grep -q "Grands Comptes •" wip-runtime.bundle.js
+          grep -q 'grand-comptes-badges-v1' dashboard-wip.html
+
+      - name: Commit branch-served assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add dashboard-wip.html wip-runtime.bundle.js
+          if git diff --cached --quiet; then
+            echo 'Nothing to commit.'
+            exit 0
+          fi
+          git commit -m 'Materialize Grands Comptes badge wording'
+          git push origin HEAD:fix/wip-badge-grands-comptes
