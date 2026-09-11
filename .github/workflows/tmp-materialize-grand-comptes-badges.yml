@@ -34,7 +34,7 @@ jobs:
           node --check wip-runtime.bundle.js
           grep -q 'wip-grand-comptes-badges-2026-09-11-v1' wip-runtime.bundle.js
           grep -q "badge.textContent = 'Grands Comptes'" wip-runtime.bundle.js
-          grep -q "Grands Comptes •" wip-runtime.bundle.js
+          grep -q "text.replace(/^Client éligible/, 'Grands Comptes')" wip-runtime.bundle.js
           grep -q 'grand-comptes-badges-v1' dashboard-wip.html
 
       - name: Commit branch-served assets
