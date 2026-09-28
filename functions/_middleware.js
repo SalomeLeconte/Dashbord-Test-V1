@@ -28,11 +28,8 @@ export async function onRequest(context){
  }
 
  const isCsv=url.pathname==="/data11.csv"||/^\/data\/dept-[^/]+\.csv$/i.test(url.pathname);
- // CSV files are application data, never downloadable documents. Dashboard fetch/worker requests use non-document destinations.
- if(isCsv){
-  const dest=(context.request.headers.get("Sec-Fetch-Dest")||"").toLowerCase();
-  if(["document","iframe"].includes(dest))return new Response("Téléchargement CSV désactivé.",{status:403,headers:{"Cache-Control":"private, no-store","Content-Type":"text/plain; charset=utf-8"}});
- }
+ // CSV delivery is disabled for every role, including admin. Runtime data must use prepared JSON chunks.
+ if(isCsv)return new Response("Accès CSV désactivé.",{status:403,headers:{"Cache-Control":"private, no-store","Content-Type":"text/plain; charset=utf-8"}});
 
  const dept=requestedDepartment(url.pathname);
  if(dept&&session.role!=="admin"){
