@@ -974,6 +974,8 @@
 
         let selectedSectorDepts = [];
         let selectedPssrNorm = "";
+        let authContext = { role: "ADMIN", scope: {} };
+        let authContextPromise = null;
         let globalData = [];
         let csvLoadPromise = null;
         let currentFilteredData = [];
@@ -1005,8 +1007,9 @@
         const ETA_MAX_ITEMS = 120;
         const ETA_MAX_ROUTE_REQUESTS = 40;
 
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", async () => {
             updateDataTabLabel();
+            await loadAuthContext();
             renderCollaboratorGrid();
             loadCSVData();
             initMap();
@@ -1015,6 +1018,51 @@
         document.addEventListener("keydown", event => {
             if (event.key === "Escape") closeDetails();
         });
+
+        async function loadAuthContext() {
+            if (authContextPromise) return authContextPromise;
+            authContextPromise = fetch("/api/me", { credentials: "same-origin", cache: "no-store" })
+                .then(async response => {
+                    if (!response.ok) throw new Error("Session indisponible");
+                    authContext = await response.json();
+                    applyAuthorizedScope();
+                    return authContext;
+                })
+                .catch(error => {
+                    console.error("Chargement du périmètre utilisateur impossible.", error);
+                    window.top.location.replace("/login");
+                    throw error;
+                });
+            return authContextPromise;
+        }
+
+        function applyAuthorizedScope() {
+            const role = String(authContext?.role || "").toUpperCase();
+            const scope = authContext?.scope || {};
+            const changeButton = document.querySelector('[onclick="reopenNominativeSelection()"]');
+            const overlay = document.getElementById("nominative-overlay");
+            if (role === "ADMIN") {
+                if (changeButton) changeButton.classList.remove("hidden");
+                return;
+            }
+            if (changeButton) changeButton.classList.add("hidden");
+            if (role === "PSSR") {
+                const pssr = String(scope.pssr || "").trim();
+                const match = pssrData.find(p => normalizePssrName(`${p.prenom} ${p.nom}`) === normalizePssrName(pssr));
+                selectedPssrNorm = normalizePssrName(pssr);
+                selectedSectorDepts = match ? match.depts.map(normalizeDept) : [];
+                setText("sidebar-active-pssr", pssr || "PSSR");
+                const activeName = document.getElementById("active-user-name");
+                if (activeName) activeName.innerText = pssr || authContext.email;
+                const indicator = document.getElementById("active-user-indicator");
+                if (indicator) indicator.style.display = "flex";
+            } else if (role === "COMMERCIAL") {
+                selectedPssrNorm = "";
+                selectedSectorDepts = (Array.isArray(scope.departments) ? scope.departments : []).map(normalizeDept).filter(Boolean);
+                setText("sidebar-active-pssr", "Périmètre commercial");
+            }
+            if (overlay) overlay.classList.add("hidden");
+        }
 
         function updateDataTabLabel() {
             const tab = document.getElementById("tab-table");
@@ -1384,10 +1432,12 @@
         }
 
         function reopenNominativeSelection() {
+            if (String(authContext?.role || "").toUpperCase() !== "ADMIN") return;
             document.getElementById("nominative-overlay").classList.remove("hidden");
         }
 
         function resetSectorFilter() {
+            if (String(authContext?.role || "").toUpperCase() !== "ADMIN") { applyAuthorizedScope(); runFilter(); return; }
             selectedSectorDepts = [];
             selectedPssrNorm = "";
             top200UseActiveFilters = false;
