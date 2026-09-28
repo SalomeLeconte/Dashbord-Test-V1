@@ -22,10 +22,9 @@ export async function createUser(env,username,pin,role="PSSR",scope={}){
  if(await env.LOGIN_RATE_LIMIT.get(userKey(username)))throw new Error("Cet utilisateur existe déjà.");
  const pssr=String(scope?.pssr||"").trim();
  const departments=[...new Set((Array.isArray(scope?.departments)?scope.departments:[]).map(x=>String(x).trim().toUpperCase()).filter(Boolean))];
- if(role==="PSSR"&&!pssr)throw new Error("Un PSSR doit être attribué.");
- if(role==="COMMERCIAL"&&!departments.length)throw new Error("Au moins un département doit être attribué.");
+ if(!departments.length)throw new Error("Au moins un département doit être attribué.");
  const salt=randomHex(16),hash=await pbkdf2(String(pin),salt);
- const user={username,email:username,salt,hash,role,scope:{pssr:role==="PSSR"?pssr:"",departments:role==="COMMERCIAL"?departments:[]},authVersion:1,createdAt:Date.now()};
+ const user={username,email:username,salt,hash,role,scope:{pssr:role==="PSSR"?pssr:"",departments},authVersion:1,createdAt:Date.now()};
  await env.LOGIN_RATE_LIMIT.put(userKey(username),JSON.stringify(user));
  return publicUser(user);
 }
