@@ -31,6 +31,18 @@ export async function onRequest(context){
  // CSV delivery is disabled for every role, including admin. Runtime data must use prepared JSON chunks.
  if(isCsv)return new Response("Accès CSV désactivé.",{status:403,headers:{"Cache-Control":"private, no-store","Content-Type":"text/plain; charset=utf-8"}});
 
+ if(url.pathname==="/data/prepared/manifest.json"&&session.role!=="admin"){
+  const assetResponse=await context.next();
+  if(!assetResponse.ok)return assetResponse;
+  try{
+   const manifest=await assetResponse.json();
+   const allowed=new Set((Array.isArray(session.scope?.departments)?session.scope.departments:[]).map(normalizeDept).filter(Boolean));
+   const departments={};
+   for(const [key,value] of Object.entries(manifest.departments||{}))if(allowed.has(normalizeDept(key)))departments[key]=value;
+   return Response.json({...manifest,departments},{headers:{"Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff"}});
+  }catch{return forbidden()}
+ }
+
  const dept=requestedDepartment(url.pathname);
  if(dept&&session.role!=="admin"){
   const allowed=new Set((Array.isArray(session.scope?.departments)?session.scope.departments:[]).map(normalizeDept).filter(Boolean));
