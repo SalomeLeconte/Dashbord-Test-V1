@@ -1763,6 +1763,11 @@
             `;
         }
 
+        function safeRowIndex(value) {
+            const n = Number(value);
+            return Number.isSafeInteger(n) && n >= 0 ? String(n) : "0";
+        }
+
         function renderGrid(data) {
             renderMobileGridCards(data);
             const tbody = document.getElementById("grid-tbody");
@@ -2501,7 +2506,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
                         <td class="p-4">
                             <div class="font-semibold text-gray-900 dark:text-white">${escapeHtml(item[COL.nom] || "Inconnu")}</div>
                             <div class="text-[10px] text-gray-400 mt-1 uppercase tracking-wide">${escapeHtml([item[COL.position], item[COL.groupe], item[COL.categorie]].filter(Boolean).join(" • "))}</div>
-                            <button onclick="openDetails(${item._rowIndex})" class="mt-2 inline-flex items-center rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-gray-600 dark:text-slate-200 hover:border-komatsu-500 hover:text-komatsu-700 transition">Détails</button>
+                            <button onclick="openDetails(${safeRowIndex(item._rowIndex)})" class="mt-2 inline-flex items-center rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-gray-600 dark:text-slate-200 hover:border-komatsu-500 hover:text-komatsu-700 transition">Détails</button>
                         </td>
                         <td class="p-4 text-xs">
                             <div>${escapeHtml(item[COL.ville] || "")} (${escapeHtml(item._deptNorm || "")})</div>
@@ -2576,7 +2581,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
                         <div>${escapeHtml(item[COL.ville] || "")} (${escapeHtml(item._deptNorm || "")})</div>
                         <div>${escapeHtml(item[COL.adresse] || "")}</div>
                         <div class="font-bold text-amber-600">${escapeHtml(formatMoney(getTableFinancialAmount(item)))} <span class="text-[10px] text-gray-400">CA 2025</span></div>
-                        <button onclick="openDetails(${item._rowIndex})" class="mt-1 bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button>
+                        <button onclick="openDetails(${safeRowIndex(item._rowIndex)})" class="mt-1 bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button>
                     </div>
                 `);
                 markersLayer.addLayer(marker);
@@ -3811,7 +3816,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
       const item = points[i];
       if (!item || item._isUserLocation || card.querySelector('.v18-route-trash')) return;
       const wrapper = card.querySelector('.flex.items-start.gap-2') || card;
-      wrapper.insertAdjacentHTML('beforeend', `<button class="v18-route-trash v18-mini-btn-warning text-[10px] font-black rounded-lg px-2 py-1" title="Retirer de l’itinéraire" onclick="excludeRoutePoint(${item._rowIndex})">🗑</button>`);
+      wrapper.insertAdjacentHTML('beforeend', `<button class="v18-route-trash v18-mini-btn-warning text-[10px] font-black rounded-lg px-2 py-1" title="Retirer de l’itinéraire" onclick="excludeRoutePoint(${safeRowIndex(item._rowIndex)})">🗑</button>`);
     });
   }
 
@@ -3864,7 +3869,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
             <div>${escapeHtml(item[COL.adresse] || "")}</div>
             <div class="font-bold text-amber-600">${escapeHtml(formatMoney(getTableFinancialAmount(item)))} <span class="text-[10px] text-gray-400">CA 2025</span></div>
             ${excluded ? '<div class="text-[10px] font-black text-red-600">Retiré de l’itinéraire</div>' : ''}
-            <div class="flex items-center gap-1 mt-1"><button onclick="openDetails(${item._rowIndex})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button><button onclick="excludeRoutePoint(${item._rowIndex})" class="v18-mini-btn-warning text-[10px] font-black rounded px-2 py-1" title="Retirer de l’itinéraire">🗑</button></div>
+            <div class="flex items-center gap-1 mt-1"><button onclick="openDetails(${safeRowIndex(item._rowIndex)})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button><button onclick="excludeRoutePoint(${safeRowIndex(item._rowIndex)})" class="v18-mini-btn-warning text-[10px] font-black rounded px-2 py-1" title="Retirer de l’itinéraire">🗑</button></div>
           </div>`);
         markersLayer.addLayer(marker); bounds.push([lat, lon]); markers++;
       });
@@ -4203,7 +4208,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
               <div class="v20-map-badges">${renderBadges(item)}</div>
               <div class="font-bold text-amber-600">${escapeHtml(formatMoney(getTableFinancialAmount(item)))} <span class="text-[10px] text-gray-400">CA 2025</span></div>
               ${excluded ? '<div class="text-[10px] font-black text-red-600">Retiré de l’itinéraire</div>' : ''}
-              <div class="flex items-center gap-1 mt-2"><button onclick="openDetails(${item._rowIndex})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button><button onclick="excludeRoutePoint(${item._rowIndex})" class="v20-route-toggle ${actionCls} text-[10px] font-black rounded px-2 py-1">${actionText}</button></div>
+              <div class="flex items-center gap-1 mt-2"><button onclick="openDetails(${safeRowIndex(item._rowIndex)})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button><button onclick="excludeRoutePoint(${safeRowIndex(item._rowIndex)})" class="v20-route-toggle ${actionCls} text-[10px] font-black rounded px-2 py-1">${actionText}</button></div>
             </div>`);
           markersLayer.addLayer(marker); bounds.push([lat,lon]); markers++;
         });
@@ -4223,7 +4228,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
       card.querySelectorAll('.v18-route-trash,.v20-route-toggle').forEach(b=>b.remove());
       const wrapper = card.querySelector('.flex.items-start.gap-2') || card;
       const excluded = set.has(item._rowIndex);
-      wrapper.insertAdjacentHTML('beforeend', `<button class="v20-route-toggle ${excluded ? 'is-add' : ''} text-[10px] font-black rounded-lg px-2 py-1" onclick="excludeRoutePoint(${item._rowIndex})">${excluded ? 'Rajouter à l’itinéraire' : 'Retirer de l’itinéraire'}</button>`);
+      wrapper.insertAdjacentHTML('beforeend', `<button class="v20-route-toggle ${excluded ? 'is-add' : ''} text-[10px] font-black rounded-lg px-2 py-1" onclick="excludeRoutePoint(${safeRowIndex(item._rowIndex)})">${excluded ? 'Rajouter à l’itinéraire' : 'Retirer de l’itinéraire'}</button>`);
     });
   }
 
@@ -4591,7 +4596,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
               <div class="v22-map-badges">${renderMapBadges(item)}</div>
               <div class="font-bold text-amber-600">${esc(formatMoney(getTableFinancialAmount(item)))} <span class="text-[10px] text-gray-400">CA 2025</span></div>
               ${excluded ? '<div class="text-[10px] font-black text-red-600">Retiré de l’itinéraire</div>' : ''}
-              <div class="flex items-center gap-1 mt-2"><button onclick="openDetails(${item._rowIndex})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button><button onclick="excludeRoutePoint(${item._rowIndex})" class="v20-route-toggle ${excluded ? 'is-add' : ''} text-[10px] font-black rounded px-2 py-1">${actionText}</button></div>
+              <div class="flex items-center gap-1 mt-2"><button onclick="openDetails(${safeRowIndex(item._rowIndex)})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button><button onclick="excludeRoutePoint(${safeRowIndex(item._rowIndex)})" class="v20-route-toggle ${excluded ? 'is-add' : ''} text-[10px] font-black rounded px-2 py-1">${actionText}</button></div>
             </div>`);
           markersLayer.addLayer(marker);
           bounds.push([lat, lon]);
@@ -4728,7 +4733,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
       <div class="v23-map-badges">${renderItemBadges(item)}</div>
       <div class="font-bold text-amber-600">${esc(formatMoney(getTableFinancialAmount(item)))} <span class="text-[10px] text-gray-400">CA 2025</span></div>
       ${excluded ? '<div class="text-[10px] font-black text-red-600">Retiré de l’itinéraire</div>' : ''}
-      <div class="flex items-center gap-1 mt-2"><button onclick="openDetails(${item._rowIndex})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button>${excluded ? `<button onclick="excludeRoutePoint(${item._rowIndex})" class="v23-route-add" title="Rajouter à l’itinéraire">+</button>` : ''}</div>
+      <div class="flex items-center gap-1 mt-2"><button onclick="openDetails(${safeRowIndex(item._rowIndex)})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button>${excluded ? `<button onclick="excludeRoutePoint(${safeRowIndex(item._rowIndex)})" class="v23-route-add" title="Rajouter à l’itinéraire">+</button>` : ''}</div>
     </div>`;
   }
   function installMapV23(){
@@ -4798,7 +4803,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
       if(!item || item._isUserLocation) return;
       card.querySelectorAll('.v18-route-trash,.v20-route-toggle,.v23-route-trash').forEach(b=>b.remove());
       const wrapper=card.querySelector('.flex.items-start.gap-2') || card;
-      wrapper.insertAdjacentHTML('beforeend', `<button class="v23-route-trash" onclick="excludeRoutePoint(${item._rowIndex})" title="Retirer de l’itinéraire">🗑</button>`);
+      wrapper.insertAdjacentHTML('beforeend', `<button class="v23-route-trash" onclick="excludeRoutePoint(${safeRowIndex(item._rowIndex)})" title="Retirer de l’itinéraire">🗑</button>`);
     });
   }
   function installRenderGridV23(){
@@ -5094,7 +5099,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
   }
   function popupHtml(item){
     const excluded=routeSet().has(item?._rowIndex);
-    return `<div class="text-xs space-y-1 min-w-[220px]"><div class="font-bold">${safeEsc(item?.[COL.nom] || 'Entreprise')}</div><div>${safeEsc(item?.[COL.ville] || '')} (${safeEsc(item?._deptNorm || '')})</div><div>${safeEsc(item?.[COL.adresse] || '')}</div><div class="v24-map-badges">${renderBadgesSafe(item)}</div><div class="font-bold text-amber-600">${safeEsc(formatMoney(getTableFinancialAmount(item)))} <span class="text-[10px] text-gray-400">CA 2025</span></div>${excluded ? '<div class="text-[10px] font-black text-red-600">Retiré de l’itinéraire</div>' : ''}<div class="flex items-center gap-1 mt-2"><button onclick="openDetails(${item._rowIndex})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button>${excluded ? `<button onclick="excludeRoutePoint(${item._rowIndex})" class="v24-route-add" title="Rajouter à l’itinéraire">+</button>` : ''}</div></div>`;
+    return `<div class="text-xs space-y-1 min-w-[220px]"><div class="font-bold">${safeEsc(item?.[COL.nom] || 'Entreprise')}</div><div>${safeEsc(item?.[COL.ville] || '')} (${safeEsc(item?._deptNorm || '')})</div><div>${safeEsc(item?.[COL.adresse] || '')}</div><div class="v24-map-badges">${renderBadgesSafe(item)}</div><div class="font-bold text-amber-600">${safeEsc(formatMoney(getTableFinancialAmount(item)))} <span class="text-[10px] text-gray-400">CA 2025</span></div>${excluded ? '<div class="text-[10px] font-black text-red-600">Retiré de l’itinéraire</div>' : ''}<div class="flex items-center gap-1 mt-2"><button onclick="openDetails(${safeRowIndex(item._rowIndex)})" class="bg-slate-900 text-white text-[10px] px-2 py-1 rounded font-bold">Détails</button>${excluded ? `<button onclick="excludeRoutePoint(${safeRowIndex(item._rowIndex)})" class="v24-route-add" title="Rajouter à l’itinéraire">+</button>` : ''}</div></div>`;
   }
   function installMapV24(){
     if(typeof renderKnownMarkers==='function'){
@@ -5127,7 +5132,7 @@ Adresse : ${item[COL.adresse] || "-"}`);
   function decorateRouteSteps(points){
     const panel=document.getElementById('route-steps'); if(!panel || !points?.length) return;
     const cards=[...panel.querySelectorAll('.rounded-xl.border')];
-    cards.forEach((card,i)=>{ const item=points[i]; if(!item || item._isUserLocation) return; card.querySelectorAll('.v18-route-trash,.v20-route-toggle,.v23-route-trash,.v24-route-trash').forEach(b=>b.remove()); const wrapper=card.querySelector('.flex.items-start.gap-2') || card; wrapper.insertAdjacentHTML('beforeend', `<button class="v24-route-trash" onclick="excludeRoutePoint(${item._rowIndex})" title="Retirer de l’itinéraire">🗑</button>`); });
+    cards.forEach((card,i)=>{ const item=points[i]; if(!item || item._isUserLocation) return; card.querySelectorAll('.v18-route-trash,.v20-route-toggle,.v23-route-trash,.v24-route-trash').forEach(b=>b.remove()); const wrapper=card.querySelector('.flex.items-start.gap-2') || card; wrapper.insertAdjacentHTML('beforeend', `<button class="v24-route-trash" onclick="excludeRoutePoint(${safeRowIndex(item._rowIndex)})" title="Retirer de l’itinéraire">🗑</button>`); });
   }
   function moveGmapsLeftOfGps(){
     document.querySelectorAll('.v20-google-control').forEach(el=>el.style.display='none');
@@ -5545,7 +5550,7 @@ installSectorTree(); wrapRunFilterForSector(); installGridV25(); installDetailsV
       card.querySelectorAll('.v18-route-trash,.v20-route-toggle,.v23-route-trash,.v24-route-trash,.v25-route-trash,.v26-route-trash,.v26c-route-trash').forEach(el => el.remove());
       if(!item || item._isUserLocation || item._rowIndex === undefined) return;
       const wrapper = card.querySelector('.flex.items-start.gap-2') || card;
-      wrapper.insertAdjacentHTML('beforeend', `<button class="v26c-route-trash" onclick="excludeRoutePoint(${item._rowIndex})" title="Retirer de l’itinéraire">🗑</button>`);
+      wrapper.insertAdjacentHTML('beforeend', `<button class="v26c-route-trash" onclick="excludeRoutePoint(${safeRowIndex(item._rowIndex)})" title="Retirer de l’itinéraire">🗑</button>`);
     });
   }
   function installRouteCleanup(){
