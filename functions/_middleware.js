@@ -27,6 +27,13 @@ export async function onRequest(context){
   return Response.redirect(new URL("/login",url),302);
  }
 
+ const isCsv=url.pathname==="/data11.csv"||/^\/data\/dept-[^/]+\.csv$/i.test(url.pathname);
+ // CSV files are application data, never downloadable documents. Dashboard fetch/worker requests use non-document destinations.
+ if(isCsv){
+  const dest=(context.request.headers.get("Sec-Fetch-Dest")||"").toLowerCase();
+  if(["document","iframe"].includes(dest))return new Response("Téléchargement CSV désactivé.",{status:403,headers:{"Cache-Control":"private, no-store","Content-Type":"text/plain; charset=utf-8"}});
+ }
+
  const dept=requestedDepartment(url.pathname);
  if(dept&&session.role!=="admin"){
   const allowed=new Set((Array.isArray(session.scope?.departments)?session.scope.departments:[]).map(normalizeDept).filter(Boolean));
