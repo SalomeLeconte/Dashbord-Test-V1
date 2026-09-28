@@ -1010,6 +1010,7 @@
         document.addEventListener("DOMContentLoaded", async () => {
             updateDataTabLabel();
             await loadAuthContext();
+            startActivityHeartbeat();
             renderCollaboratorGrid();
             loadCSVData();
             initMap();
@@ -1018,6 +1019,12 @@
         document.addEventListener("keydown", event => {
             if (event.key === "Escape") closeDetails();
         });
+
+        function startActivityHeartbeat() {
+            const send = () => { if (!document.hidden) fetch("/api/activity", { method: "POST", credentials: "same-origin", cache: "no-store" }).catch(() => {}); };
+            send();
+            window.setInterval(send, 5 * 60 * 1000);
+        }
 
         async function loadAuthContext() {
             if (authContextPromise) return authContextPromise;
