@@ -43,6 +43,15 @@ export async function listUsers(env){
  return out.sort((a,b)=>a.username.localeCompare(b.username));
 }
 export async function deleteUser(env,username){username=normalizeUsername(username);if(username==="admin")throw new Error("Le compte admin ne peut pas être supprimé.");await env.LOGIN_RATE_LIMIT.delete(userKey(username))}
+export async function updateUserAccess(env,username,role,scope={}){
+ username=normalizeUsername(username);if(username==="admin")throw new Error("Le compte admin ne peut pas être modifié ici.");
+ role=String(role||"").trim().toUpperCase();if(!["PSSR","COMMERCIAL"].includes(role))throw new Error("Profil invalide.");
+ const raw=await env.LOGIN_RATE_LIMIT.get(userKey(username));if(!raw)throw new Error("Utilisateur introuvable.");
+ const departments=[...new Set((Array.isArray(scope?.departments)?scope.departments:[]).map(x=>String(x).trim().toUpperCase()).filter(Boolean))];
+ if(!departments.length)throw new Error("Au moins un département doit être attribué.");
+ const u=JSON.parse(raw);u.role=role;u.scope={pssr:role==="PSSR"?String(scope?.pssr||u.scope?.pssr||"").trim():"",departments};u.authVersion=(u.authVersion||1)+1;u.accessChangedAt=Date.now();
+ await env.LOGIN_RATE_LIMIT.put(userKey(username),JSON.stringify(u));return publicUser(u);
+}
 export async function resetUserPin(env,username,pin){
  username=normalizeUsername(username);if(username==="admin")throw new Error("Modifiez DASHBOARD_PIN dans Cloudflare pour le compte admin.");
  const raw=await env.LOGIN_RATE_LIMIT.get(userKey(username));if(!raw)throw new Error("Utilisateur introuvable.");
