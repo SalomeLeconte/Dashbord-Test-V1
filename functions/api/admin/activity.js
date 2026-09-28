@@ -31,6 +31,14 @@ function summarize(logins,days){
  return [...byUser.values()].sort((a,b)=>b.lastLogin-a.lastLogin);
 }
 
+function dailyInsights(logins,days=30){
+ const keys=[];const now=Date.now();
+ for(let i=days-1;i>=0;i--)keys.push(parisDateKey(now-i*86400000));
+ const map=new Map(keys.map(key=>[key,{date:key,connections:0,users:new Map()}]));
+ for(const e of logins){const day=map.get(parisDateKey(Number(e.created_at)));if(!day)continue;day.connections++;const email=e.email||"—",u=day.users.get(email)||{email,role:e.role||"—",count:0,lastLogin:0};u.count++;u.lastLogin=Math.max(u.lastLogin,Number(e.created_at));day.users.set(email,u)}
+ return keys.map(key=>{const d=map.get(key),users=[...d.users.values()].sort((a,b)=>b.lastLogin-a.lastLogin);return{date:key,connections:d.connections,uniqueUsers:users.length,users}});
+}
+
 export async function onRequestGet({request,env}){
  const s=await getSession(request,env);
  if(s?.role!=="admin")return Response.json({error:"Accès administrateur requis."},{status:403,headers:{"Cache-Control":"no-store"}});
@@ -41,5 +49,5 @@ export async function onRequestGet({request,env}){
  const since=Date.now()-31*86400000;
  const lr=await env.DB.prepare("SELECT email,role,created_at FROM activity_log WHERE event = 'login_success' AND created_at >= ? ORDER BY created_at DESC").bind(since).all();
  const logins=lr.results||[];
- return Response.json({events,sessions:buildSessions(events),loginSummary:{today:summarize(logins,1),week:summarize(logins,7),month:summarize(logins,30)}},{headers:{"Cache-Control":"no-store"}});
+ return Response.json({events,sessions:buildSessions(events),loginSummary:{today:summarize(logins,1),week:summarize(logins,7),month:summarize(logins,30)},dailyInsights:dailyInsights(logins,30)},{headers:{"Cache-Control":"no-store"}});
 }
