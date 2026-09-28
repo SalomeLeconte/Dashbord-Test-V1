@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { transformSync } from 'esbuild';
@@ -46,6 +46,19 @@ function minifyCss(source) {
   return transformSync(source, { loader: 'css', minify: true, legalComments: 'none' }).code;
 }
 
+function copyMapVendor(context) {
+  const vendorDir = join(context.distDir, 'vendor');
+  const leafletDir = join(vendorDir, 'leaflet');
+  const routingDir = join(vendorDir, 'leaflet-routing-machine');
+  mkdirSync(leafletDir, { recursive: true });
+  mkdirSync(routingDir, { recursive: true });
+  copyFileSync(join(context.rootDir, 'node_modules', 'leaflet', 'dist', 'leaflet.js'), join(leafletDir, 'leaflet.js'));
+  copyFileSync(join(context.rootDir, 'node_modules', 'leaflet', 'dist', 'leaflet.css'), join(leafletDir, 'leaflet.css'));
+  cpSync(join(context.rootDir, 'node_modules', 'leaflet', 'dist', 'images'), join(leafletDir, 'images'), { recursive: true });
+  copyFileSync(join(context.rootDir, 'node_modules', 'leaflet-routing-machine', 'dist', 'leaflet-routing-machine.js'), join(routingDir, 'leaflet-routing-machine.js'));
+  copyFileSync(join(context.rootDir, 'node_modules', 'leaflet-routing-machine', 'dist', 'leaflet-routing-machine.css'), join(routingDir, 'leaflet-routing-machine.css'));
+}
+
 function buildTailwind(context, customCss) {
   const assetsDir = join(context.distDir, 'assets');
   mkdirSync(assetsDir, { recursive: true });
@@ -66,6 +79,7 @@ function buildTailwind(context, customCss) {
 
 export async function transform(context) {
   let dashboard = context.dashboardHtml;
+  copyMapVendor(context);
 
   dashboard = dashboard.replace(/\s*<link rel="preconnect" href="https:\/\/cdn\.tailwindcss\.com" crossorigin>\s*/i, '\n');
   dashboard = dashboard.replace(/\s*<link rel="preconnect" href="https:\/\/unpkg\.com" crossorigin>\s*/i, '\n');
@@ -80,7 +94,7 @@ export async function transform(context) {
     dashboard,
     'lazy map loader insertion',
     '        function initMap() {',
-    `        let mapLibrariesPromise = null;\n\n        function ensureStylesheet(id, href) {\n            if (document.getElementById(id)) return;\n            const link = document.createElement("link");\n            link.id = id;\n            link.rel = "stylesheet";\n            link.href = href;\n            document.head.appendChild(link);\n        }\n\n        function ensureScript(id, src) {\n            const existing = document.getElementById(id);\n            if (existing?.dataset.loaded === "true") return Promise.resolve();\n            return new Promise((resolve, reject) => {\n                const script = existing || document.createElement("script");\n                script.id = id;\n                script.src = src;\n                script.async = false;\n                script.addEventListener("load", () => { script.dataset.loaded = "true"; resolve(); }, { once: true });\n                script.addEventListener("error", () => reject(new Error("Chargement impossible: " + src)), { once: true });\n                if (!existing) document.head.appendChild(script);\n            });\n        }\n\n        async function ensureMapLibraries() {\n            if (typeof L !== "undefined" && L.Routing) return true;\n            if (!mapLibrariesPromise) {\n                mapLibrariesPromise = (async () => {\n                    ensureStylesheet("leaflet-css-lazy", "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");\n                    await ensureScript("leaflet-js-lazy", "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js");\n                    ensureStylesheet("leaflet-routing-css-lazy", "https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css");\n                    await ensureScript("leaflet-routing-js-lazy", "https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js");\n                    return true;\n                })().catch(error => { mapLibrariesPromise = null; throw error; });\n            }\n            return mapLibrariesPromise;\n        }\n\n        function initMap() {`
+    `        let mapLibrariesPromise = null;\n\n        function ensureStylesheet(id, href) {\n            if (document.getElementById(id)) return;\n            const link = document.createElement("link");\n            link.id = id;\n            link.rel = "stylesheet";\n            link.href = href;\n            document.head.appendChild(link);\n        }\n\n        function ensureScript(id, src) {\n            const existing = document.getElementById(id);\n            if (existing?.dataset.loaded === "true") return Promise.resolve();\n            return new Promise((resolve, reject) => {\n                const script = existing || document.createElement("script");\n                script.id = id;\n                script.src = src;\n                script.async = false;\n                script.addEventListener("load", () => { script.dataset.loaded = "true"; resolve(); }, { once: true });\n                script.addEventListener("error", () => reject(new Error("Chargement impossible: " + src)), { once: true });\n                if (!existing) document.head.appendChild(script);\n            });\n        }\n\n        async function ensureMapLibraries() {\n            if (typeof L !== "undefined" && L.Routing) return true;\n            if (!mapLibrariesPromise) {\n                mapLibrariesPromise = (async () => {\n                    ensureStylesheet("leaflet-css-lazy", "vendor/leaflet/leaflet.css");\n                    await ensureScript("leaflet-js-lazy", "vendor/leaflet/leaflet.js");\n                    ensureStylesheet("leaflet-routing-css-lazy", "vendor/leaflet-routing-machine/leaflet-routing-machine.css");\n                    await ensureScript("leaflet-routing-js-lazy", "vendor/leaflet-routing-machine/leaflet-routing-machine.js");\n                    return true;\n                })().catch(error => { mapLibrariesPromise = null; throw error; });\n            }\n            return mapLibrariesPromise;\n        }\n\n        function initMap() {`
   );
 
   dashboard = replaceRequired(
