@@ -1,6 +1,8 @@
+import {logActivity} from "../_lib/activity.js";
 import {clearCookie,destroySession} from "../_lib/auth.js";
 
 export async function onRequestPost({request,env}){
+ await logActivity(env,"logout",request);
  await destroySession(request,env);
  return new Response(JSON.stringify({ok:true}),{
   headers:{
