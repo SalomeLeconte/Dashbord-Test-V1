@@ -431,7 +431,7 @@
                 </style>
 
                 <div class="flex items-center gap-2 mb-2">
-                    <a href="/admin-users" target="_top" class="text-[10px] font-extrabold rounded-lg px-2.5 py-1.5 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-600 dark:text-slate-300 hover:border-komatsu-500 hover:text-komatsu-700 transition no-underline">Utilisateurs</a>
+                    <a id="admin-users-link" href="/admin-users" target="_top" class="text-[10px] font-extrabold rounded-lg px-2.5 py-1.5 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-600 dark:text-slate-300 hover:border-komatsu-500 hover:text-komatsu-700 transition no-underline">Utilisateurs</a>
                     <button type="button" onclick="window.top.postMessage({type:'dashboard-logout'}, window.location.origin)" class="text-[10px] font-extrabold rounded-lg px-2.5 py-1.5 border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-600 dark:text-slate-300 hover:border-komatsu-500 hover:text-komatsu-700 transition">Déconnexion</button>
                 </div>
                 <div class="p-3 bg-gray-50 dark:bg-slate-950 rounded-xl border border-gray-200/60 dark:border-slate-800">
@@ -1064,6 +1064,8 @@
             const scope = authContext?.scope || {};
             const changeButton = document.querySelector('[onclick="reopenNominativeSelection()"]');
             const overlay = document.getElementById("nominative-overlay");
+            const adminLink = document.getElementById("admin-users-link");
+            if (adminLink) adminLink.classList.toggle("hidden", role !== "ADMIN");
             if (role === "ADMIN") {
                 if (changeButton) changeButton.classList.remove("hidden");
                 return;
