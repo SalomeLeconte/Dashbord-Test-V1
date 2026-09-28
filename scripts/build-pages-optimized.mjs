@@ -55,7 +55,7 @@ await runModules('scripts/perf-prebuild', 'run');
 await runModules('scripts/perf-transforms', 'transform');
 
 const runtimeDir = join(rootDir, 'perf-runtime');
-const excluded = new Set(['.git', '.github', 'dist', 'node_modules', 'scripts', 'perf-runtime']);
+const excluded = new Set(['.git', '.github', 'dist', 'node_modules', 'scripts', 'perf-runtime', 'functions']);
 for (const name of readdirSync(rootDir)) {
   if (excluded.has(name) || name === 'index.html' || name === 'dashboard-wip.html' || name === 'wip-runtime.bundle.js') continue;
   const source = join(rootDir, name);
