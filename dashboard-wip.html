@@ -1046,20 +1046,14 @@
                 return;
             }
             if (changeButton) changeButton.classList.add("hidden");
-            if (role === "PSSR") {
-                const pssr = String(scope.pssr || "").trim();
-                const match = pssrData.find(p => normalizePssrName(`${p.prenom} ${p.nom}`) === normalizePssrName(pssr));
-                selectedPssrNorm = normalizePssrName(pssr);
-                selectedSectorDepts = match ? match.depts.map(normalizeDept) : [];
-                setText("sidebar-active-pssr", pssr || "PSSR");
-                const activeName = document.getElementById("active-user-name");
-                if (activeName) activeName.innerText = pssr || authContext.email;
-                const indicator = document.getElementById("active-user-indicator");
-                if (indicator) indicator.style.display = "flex";
-            } else if (role === "COMMERCIAL") {
+            if (role === "PSSR" || role === "COMMERCIAL") {
                 selectedPssrNorm = "";
                 selectedSectorDepts = (Array.isArray(scope.departments) ? scope.departments : []).map(normalizeDept).filter(Boolean);
-                setText("sidebar-active-pssr", "Périmètre commercial");
+                setText("sidebar-active-pssr", role === "PSSR" ? "Mon portefeuille" : "Périmètre commercial");
+                const activeName = document.getElementById("active-user-name");
+                if (activeName) activeName.innerText = authContext.email || role;
+                const indicator = document.getElementById("active-user-indicator");
+                if (indicator) indicator.style.display = "flex";
             }
             if (overlay) overlay.classList.add("hidden");
         }
