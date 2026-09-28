@@ -1012,8 +1012,13 @@
             await loadAuthContext();
             startActivityHeartbeat();
             renderCollaboratorGrid();
-            loadCSVData();
-            initMap();
+            if (String(authContext?.role || "").toUpperCase() !== "ADMIN") {
+                const loaded = await loadCSVData();
+                if (loaded) {
+                    populateFilterOptions();
+                    runFilter();
+                }
+            }
         });
 
         document.addEventListener("keydown", event => {
