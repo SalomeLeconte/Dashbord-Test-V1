@@ -56,7 +56,16 @@ export async function createSession(env,identity){
 }
 export async function getSession(request,env){
  if(!env.LOGIN_RATE_LIMIT)return null;const token=cookie(request);if(!/^[a-f0-9]{64}$/.test(token))return null;
- const raw=await env.LOGIN_RATE_LIMIT.get(sessionKey(token));if(!raw)return null;try{return JSON.parse(raw)}catch{return null}
+ const raw=await env.LOGIN_RATE_LIMIT.get(sessionKey(token));if(!raw)return null;
+ try{
+  const s=JSON.parse(raw);
+  if(s.role==="admin")return s;
+  const userRaw=await env.LOGIN_RATE_LIMIT.get(userKey(s.username));
+  if(!userRaw){await env.LOGIN_RATE_LIMIT.delete(sessionKey(token));return null}
+  const u=JSON.parse(userRaw);
+  if((u.authVersion||1)!==(s.authVersion||1)){await env.LOGIN_RATE_LIMIT.delete(sessionKey(token));return null}
+  return {...s,role:u.role||s.role,scope:u.scope||s.scope||{}};
+ }catch{return null}
 }
 export async function authenticated(request,env){return Boolean(await getSession(request,env))}
 export async function destroySession(request,env){const token=cookie(request);if(env.LOGIN_RATE_LIMIT&&/^[a-f0-9]{64}$/.test(token))await env.LOGIN_RATE_LIMIT.delete(sessionKey(token))}
