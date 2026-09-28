@@ -10,7 +10,7 @@ export function transform(context) {
     html,
     'initial data load',
     `        document.addEventListener("DOMContentLoaded", async () => {\n            updateDataTabLabel();\n            await loadAuthContext();\n            startActivityHeartbeat();\n            renderCollaboratorGrid();\n            loadCSVData();\n            initMap();\n        });`,
-    `        document.addEventListener("DOMContentLoaded", async () => {\n            updateDataTabLabel();\n            await loadAuthContext();\n            startActivityHeartbeat();\n            renderCollaboratorGrid();\n            if (String(authContext?.role || "").toUpperCase() !== "ADMIN") await loadCSVData();\n            initMap();\n        });`
+    `        document.addEventListener("DOMContentLoaded", async () => {\n            updateDataTabLabel();\n            await loadAuthContext();\n            startActivityHeartbeat();\n            renderCollaboratorGrid();\n            if (String(authContext?.role || "").toUpperCase() !== "ADMIN") {\n                const loaded = await loadCSVData();\n                if (loaded) {\n                    populateFilterOptions();\n                    runFilter();\n                }\n            }\n            initMap();\n        });`
   );
 
   html = replaceRequired(
