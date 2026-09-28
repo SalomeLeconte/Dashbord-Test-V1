@@ -6,19 +6,6 @@ function replaceRequired(html, label, search, replacement) {
 export function transform(context) {
   let html = context.dashboardHtml;
 
-  const initialLoadPattern = /([ \t]*)loadCSVData\(\);\n\1initMap\(\);/;
-  if (!initialLoadPattern.test(html)) throw new Error('P0-02 marker not found: initial data load');
-  html = html.replace(initialLoadPattern, (_match, indent) =>
-    indent + 'if (String(authContext?.role || "").toUpperCase() !== "ADMIN") {\\n' +
-    indent + '    const loaded = await loadCSVData();\\n' +
-    indent + '    if (loaded) {\\n' +
-    indent + '        populateFilterOptions();\\n' +
-    indent + '        runFilter();\\n' +
-    indent + '    }\\n' +
-    indent + '}\\n' +
-    indent + 'initMap();'
-  );
-
   html = replaceRequired(
     html,
     'selectSector signature',
