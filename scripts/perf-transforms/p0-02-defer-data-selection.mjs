@@ -9,8 +9,8 @@ export function transform(context) {
   html = replaceRequired(
     html,
     'initial data load',
-    `        document.addEventListener("DOMContentLoaded", () => {\n            updateDataTabLabel();\n            renderCollaboratorGrid();\n            loadCSVData();\n            initMap();\n        });`,
-    `        document.addEventListener("DOMContentLoaded", () => {\n            updateDataTabLabel();\n            renderCollaboratorGrid();\n            initMap();\n        });`
+    `        document.addEventListener("DOMContentLoaded", async () => {\n            updateDataTabLabel();\n            await loadAuthContext();\n            renderCollaboratorGrid();\n            loadCSVData();\n            initMap();\n        });`,
+    `        document.addEventListener("DOMContentLoaded", async () => {\n            updateDataTabLabel();\n            await loadAuthContext();\n            renderCollaboratorGrid();\n            if (String(authContext?.role || "").toUpperCase() !== "ADMIN") await loadCSVData();\n            initMap();\n        });`
   );
 
   html = replaceRequired(
