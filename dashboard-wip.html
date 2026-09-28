@@ -1021,9 +1021,25 @@
         });
 
         function startActivityHeartbeat() {
-            const send = () => { if (!document.hidden) fetch("/api/activity", { method: "POST", credentials: "same-origin", cache: "no-store" }).catch(() => {}); };
-            send();
-            window.setInterval(send, 5 * 60 * 1000);
+            const slots = [[7,0],[12,0],[16,30]];
+            const sent = new Set();
+            const check = () => {
+                if (document.hidden) return;
+                const parts = new Intl.DateTimeFormat("fr-FR", { timeZone: "Europe/Paris", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23" }).formatToParts(new Date());
+                const p = Object.fromEntries(parts.map(x => [x.type, x.value]));
+                const now = Number(p.hour) * 60 + Number(p.minute);
+                const dateKey = p.year+"-"+p.month+"-"+p.day;
+                for (const [h,m] of slots) {
+                    const slot = h*60+m, key=dateKey+"-"+h+"-"+m;
+                    if (now >= slot && now < slot + 30 && !sent.has(key)) {
+                        sent.add(key);
+                        fetch("/api/activity", { method:"POST", credentials:"same-origin", cache:"no-store" }).catch(() => sent.delete(key));
+                    }
+                }
+            };
+            check();
+            window.setInterval(check, 60 * 1000);
+            document.addEventListener("visibilitychange", check);
         }
 
         async function loadAuthContext() {
