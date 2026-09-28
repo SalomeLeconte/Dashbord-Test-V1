@@ -1016,6 +1016,7 @@
                 const loaded = await loadCSVData();
                 if (loaded) {
                     populateFilterOptions();
+                    closeAllAccordions();
                     runFilter();
                 }
             }
