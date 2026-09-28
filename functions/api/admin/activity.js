@@ -7,13 +7,15 @@ function buildSessions(events){
   if(e.event==="login_success"){
    const previous=open.get(key);
    if(previous)sessions.push({...previous,end:null,durationMs:null,status:"active_or_expired"});
-   open.set(key,{email:e.email,role:e.role,start:Number(e.created_at),user_agent:e.user_agent});
+   open.set(key,{email:e.email,role:e.role,start:Number(e.created_at),lastActivity:Number(e.created_at),user_agent:e.user_agent});
+  }else if(e.event==="heartbeat"&&open.has(key)){
+   open.get(key).lastActivity=Number(e.created_at);
   }else if(e.event==="logout"&&open.has(key)){
    const start=open.get(key);open.delete(key);
-   sessions.push({...start,end:Number(e.created_at),durationMs:Math.max(0,Number(e.created_at)-start.start),status:"closed"});
+   sessions.push({...start,end:Number(e.created_at),lastActivity:Number(e.created_at),durationMs:Math.max(0,Number(e.created_at)-start.start),status:"closed"});
   }
  }
- for(const start of open.values())sessions.push({...start,end:null,durationMs:null,status:"active_or_expired"});
+ for(const start of open.values()){const active=Date.now()-Number(start.lastActivity||start.start)<=10*60*1000;sessions.push({...start,end:null,durationMs:Math.max(0,Number(start.lastActivity||start.start)-start.start),status:active?"active":"expired"});}
  return sessions.sort((a,b)=>b.start-a.start);
 }
 
