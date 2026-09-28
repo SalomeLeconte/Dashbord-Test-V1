@@ -1,4 +1,4 @@
-import {sessionCookie} from "../_lib/auth.js";
+import {createSession} from "../_lib/auth.js";
 const MAX_ATTEMPTS=5, BLOCK_SECONDS=15*60;
 async function rateKey(request){
  const ip=request.headers.get("CF-Connecting-IP")||"unknown";
@@ -25,5 +25,5 @@ export async function onRequestPost({request,env}){
   return Response.json({error:remaining?"PIN incorrect. "+remaining+" tentative(s) restante(s).":"Trop de tentatives. Réessayez dans 15 minutes."},{status:remaining?401:429,headers:{"Cache-Control":"no-store"}});
  }
  await env.LOGIN_RATE_LIMIT.delete(key);
- return new Response(JSON.stringify({ok:true}),{headers:{"Content-Type":"application/json","Set-Cookie":await sessionCookie(env)}});
+ return new Response(JSON.stringify({ok:true}),{headers:{"Content-Type":"application/json","Cache-Control":"no-store","Set-Cookie":await createSession(env)}});
 }
