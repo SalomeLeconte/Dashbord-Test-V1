@@ -7,7 +7,7 @@ export async function onRequestPost({request,env}){
  const now=Date.now();
  try{
   const recent=await env.DB.prepare("SELECT created_at FROM activity_log WHERE event='heartbeat' AND email=? ORDER BY created_at DESC LIMIT 1").bind(s.username).first();
-  if(!recent||now-Number(recent.created_at)>=5*60*1000){
+  if(!recent||now-Number(recent.created_at)>=25*60*1000){
    const ua=(request.headers.get("User-Agent")||"").slice(0,500);
    await env.DB.prepare("INSERT INTO activity_log (event,email,role,path,ip_hash,user_agent,details,created_at) VALUES (?,?,?,?,?,?,?,?)")
     .bind("heartbeat",s.username,s.role,"/dashboard",null,ua,"{}",now).run();
