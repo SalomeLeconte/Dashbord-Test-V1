@@ -12,7 +12,7 @@ function hex(bytes){return [...new Uint8Array(bytes)].map(b=>b.toString(16).padS
 async function secretFingerprint(value){return hex(await crypto.subtle.digest("SHA-256",enc.encode(String(value||""))))}
 async function pbkdf2(pin,salt){
  const key=await crypto.subtle.importKey("raw",enc.encode(pin),"PBKDF2",false,["deriveBits"]);
- return hex(await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:enc.encode(salt),iterations:150000},key,256));
+ return hex(await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:enc.encode(salt),iterations:100000},key,256));
 }
 export async function createUser(env,username,pin,role="PSSR",scope={}){
  username=normalizeUsername(username);
