@@ -86,8 +86,8 @@ export async function transform(context) {
   dashboard = replaceRequired(
     dashboard,
     'remove eager map initialization',
-    `        document.addEventListener("DOMContentLoaded", async () => {\n            updateDataTabLabel();\n            await loadAuthContext();\n            renderCollaboratorGrid();\n            if (String(authContext?.role || "").toUpperCase() !== "ADMIN") await loadCSVData();\n            initMap();\n        });`,
-    `        document.addEventListener("DOMContentLoaded", async () => {\n            updateDataTabLabel();\n            await loadAuthContext();\n            renderCollaboratorGrid();\n            if (String(authContext?.role || "").toUpperCase() !== "ADMIN") await loadCSVData();\n        });`
+    `        document.addEventListener("DOMContentLoaded", async () => {\n            updateDataTabLabel();\n            await loadAuthContext();\n            startActivityHeartbeat();\n            renderCollaboratorGrid();\n            if (String(authContext?.role || "").toUpperCase() !== "ADMIN") await loadCSVData();\n            initMap();\n        });`,
+    `        document.addEventListener("DOMContentLoaded", async () => {\n            updateDataTabLabel();\n            await loadAuthContext();\n            startActivityHeartbeat();\n            renderCollaboratorGrid();\n            if (String(authContext?.role || "").toUpperCase() !== "ADMIN") await loadCSVData();\n        });`
   );
 
   dashboard = replaceRequired(dashboard, 'async setTab', '        function setTab(tab) {', '        async function setTab(tab) {');
