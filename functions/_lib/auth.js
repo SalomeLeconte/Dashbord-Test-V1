@@ -9,6 +9,7 @@ export function normalizeUsername(v){return String(v||"").trim().toLowerCase()}
 export function validUsername(v){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeUsername(v))}
 function userKey(v){return "user:"+normalizeUsername(v)}
 function hex(bytes){return [...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,"0")).join("")}
+async function secretFingerprint(value){return hex(await crypto.subtle.digest("SHA-256",enc.encode(String(value||""))))}
 async function pbkdf2(pin,salt){
  const key=await crypto.subtle.importKey("raw",enc.encode(pin),"PBKDF2",false,["deriveBits"]);
  return hex(await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt:enc.encode(salt),iterations:150000},key,256));
@@ -50,7 +51,7 @@ export async function resetUserPin(env,username,pin){
  await env.LOGIN_RATE_LIMIT.put(userKey(username),JSON.stringify(u));
 }
 export async function createSession(env,identity){
- const token=randomHex(32);await env.LOGIN_RATE_LIMIT.put(sessionKey(token),JSON.stringify({createdAt:Date.now(),username:identity.username,role:identity.role,scope:identity.scope||{},authVersion:identity.authVersion||1}),{expirationTtl:MAX_AGE});
+ const token=randomHex(32),adminSecretVersion=identity.role==="admin"?await secretFingerprint(env.DASHBOARD_PIN):null;await env.LOGIN_RATE_LIMIT.put(sessionKey(token),JSON.stringify({createdAt:Date.now(),username:identity.username,role:identity.role,scope:identity.scope||{},authVersion:identity.authVersion||1,adminSecretVersion}),{expirationTtl:MAX_AGE});
  return `${COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${MAX_AGE}`;
 }
 export async function getSession(request,env){
@@ -58,7 +59,10 @@ export async function getSession(request,env){
  const raw=await env.LOGIN_RATE_LIMIT.get(sessionKey(token));if(!raw)return null;
  try{
   const s=JSON.parse(raw);
-  if(s.role==="admin")return s;
+  if(s.role==="admin"){
+   if(!s.adminSecretVersion||s.adminSecretVersion!==await secretFingerprint(env.DASHBOARD_PIN)){await env.LOGIN_RATE_LIMIT.delete(sessionKey(token));return null}
+   return s;
+  }
   const userRaw=await env.LOGIN_RATE_LIMIT.get(userKey(s.username));
   if(!userRaw){await env.LOGIN_RATE_LIMIT.delete(sessionKey(token));return null}
   const u=JSON.parse(userRaw);
