@@ -1662,11 +1662,20 @@
 
         function itemBelongsToActivePssr(item) {
             if (!selectedPssrNorm && selectedSectorDepts.length === 0) return true;
-            if (selectedPssrNorm && Array.isArray(item?._pssrNorms) && item._pssrNorms.length) {
-                return item._pssrNorms.includes(selectedPssrNorm);
+
+            // Le portefeuille sélectionné est défini par les départements attribués au PSSR.
+            // La colonne .PSSR du CSV reste utile lorsqu'elle correspond, mais elle ne doit
+            // pas vider le portefeuille si son libellé est absent ou différent dans la source.
+            const pssrMatches = selectedPssrNorm
+                && Array.isArray(item?._pssrNorms)
+                && item._pssrNorms.includes(selectedPssrNorm);
+            if (pssrMatches) return true;
+
+            if (selectedSectorDepts.length > 0) {
+                return selectedSectorDepts.includes(normalizeDept(item?._deptNorm || item?.[COL.dept] || ""));
             }
-            if (selectedSectorDepts.length > 0) return selectedSectorDepts.includes(item._deptNorm);
-            return true;
+
+            return false;
         }
 
         function matchesRecentMachineAge(item, filter) {
