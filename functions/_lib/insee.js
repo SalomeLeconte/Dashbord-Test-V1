@@ -1,0 +1,21 @@
+const BASE='https://api.insee.fr/api-sirene/3.11/siret';
+export const PAGE_SIZE=100;
+export const NAF_LIST=['05.10Z','05.20Z','06.10Z','06.20Z','07.10Z','07.21Z','07.29Z','08.11Z','08.12Z','08.91Z','08.92Z','09.10Z','09.90Z','42.11Z','42.12Z','42.13A','42.13B','42.21Z','42.22Z','42.91Z','42.99Z','43.11Z','43.12A','43.12B','43.13Z','43.99E','37.00Z','38.11Z','38.12Z','38.21Z','38.22Z','38.30Z','39.00Z','49.20Z','49.30Z','49.41C','49.42Z','50.10Z','50.20Z','50.30Z','51.10Z','52.10A','52.10B','52.24Z','52.29A','77.31Z','77.32Z','77.34Z','77.35Z','41.10A','41.10B','41.10C','41.20A','41.20B','23.70Z','24.51Z','24.52Z','24.53Z','25.11Z','25.12Z','25.21Z','25.62Z','28.11Z','28.12Z','28.22Z','28.29Z','28.30Z','33.13Z','33.15Z','71.11Z','71.12Z','71.20A','71.20B','72.11Z','72.19Z','78.10Z','78.20Z','35.11Z','35.13Z','35.23Z','36.00Z','68.31Z','68.32Z','01.11Z','01.61Z','16.10A','23.61Z','23.63Z','23.69Z','46.73A','46.77Z','84.11Z'];
+
+export function buildSireneUrl(naf,department,offset=0,pageSize=PAGE_SIZE){
+ const url=new URL(BASE);url.searchParams.set('q',`activitePrincipaleUniteLegale:${naf} AND codePostalEtablissement:${department}*`);url.searchParams.set('nombre',String(pageSize));url.searchParams.set('debut',String(offset));return url.toString();
+}
+const txt=v=>v==null?'':String(v).trim();
+export function normalizeEstablishment(e){
+ const ul=e?.uniteLegale||{},a=e?.adresseEtablissement||{};const cp=txt(a.codePostalEtablissement);const active=txt(ul.etatAdministratifUniteLegale)==='A';
+ if(!active||!txt(e?.siret)||cp.length<2)return null;
+ const name=txt(ul.denominationUniteLegale)||[txt(ul.prenom1UniteLegale),txt(ul.nomUniteLegale)].filter(Boolean).join(' ')||txt(e.siret);
+ const address=[a.numeroVoieEtablissement,a.indiceRepetitionEtablissement,a.typeVoieEtablissement,a.libelleVoieEtablissement,cp,a.libelleCommuneEtablissement].map(txt).filter(Boolean).join(' ');
+ return{siret:txt(e.siret),siren:txt(e.siren),name,naf:txt(ul.activitePrincipaleUniteLegale),companyCategory:txt(ul.categorieEntreprise),department:cp.slice(0,2),postalCode:cp,city:txt(a.libelleCommuneEtablissement),address,workforceCode:txt(e.trancheEffectifsEtablissement||ul.trancheEffectifsUniteLegale),isHeadquarters:e.etablissementSiege?1:0,active:1,rawUpdatedAt:txt(e.dateDernierTraitementEtablissement)};
+}
+export async function fetchSirenePage(apiKey,naf,department,offset=0,fetchImpl=fetch){
+ if(!apiKey)throw new Error('INSEE_API_KEY manquante.');
+ const response=await fetchImpl(buildSireneUrl(naf,department,offset),{headers:{'X-INSEE-Api-Key-Integration':apiKey,'Accept':'application/json'}});
+ if(!response.ok)throw new Error(`INSEE ${response.status}: ${await response.text()}`);
+ const json=await response.json();return{total:Number(json?.header?.total||0),items:(json?.etablissements||[]).map(normalizeEstablishment).filter(Boolean)};
+}
