@@ -1,0 +1,10 @@
+name = "dashboard-insee-midnight"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[triggers]
+crons = ["0 * * * *"]
+
+[vars]
+# Set this to the production Pages endpoint, e.g. https://your-domain/api/cron/insee-sync
+SYNC_URL = "REPLACE_IN_CLOUDFLARE"
