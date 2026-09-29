@@ -5,12 +5,21 @@ export function buildSireneUrl(naf,department,offset=0,pageSize=PAGE_SIZE,dateFr
  const url=new URL(BASE);let q=`activitePrincipaleUniteLegale:${naf} AND codePostalEtablissement:${department}*`;if(dateFrom)q+=` AND dateDernierTraitementEtablissement:[${dateFrom}T00:00:00 TO *]`;url.searchParams.set('q',q);url.searchParams.set('nombre',String(pageSize));url.searchParams.set('debut',String(offset));return url.toString();
 }
 const txt=v=>v==null?'':String(v).trim();
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 export function normalizeEstablishment(e){
  const ul=e?.uniteLegale||{},a=e?.adresseEtablissement||{};const cp=txt(a.codePostalEtablissement);if(!txt(e?.siret)||cp.length<2)return null;
  const active=txt(ul.etatAdministratifUniteLegale)==='A'&&txt(e?.etatAdministratifEtablissement)!=='F';const name=txt(ul.denominationUniteLegale)||[txt(ul.prenom1UniteLegale),txt(ul.nomUniteLegale)].filter(Boolean).join(' ')||txt(e.siret);const address=[a.numeroVoieEtablissement,a.indiceRepetitionEtablissement,a.typeVoieEtablissement,a.libelleVoieEtablissement,cp,a.libelleCommuneEtablissement].map(txt).filter(Boolean).join(' ');
  return{siret:txt(e.siret),siren:txt(e.siren),name,naf:txt(ul.activitePrincipaleUniteLegale),companyCategory:txt(ul.categorieEntreprise),department:cp.slice(0,2),postalCode:cp,city:txt(a.libelleCommuneEtablissement),address,workforceCode:txt(e.trancheEffectifsEtablissement||ul.trancheEffectifsUniteLegale),isHeadquarters:e.etablissementSiege?1:0,active:active?1:0,rawUpdatedAt:txt(e.dateDernierTraitementEtablissement)};
 }
 function isEmptySirene404(status,body){if(status!==404)return false;try{const json=JSON.parse(body);return Number(json?.header?.statut)===404&&/Aucun/i.test(String(json?.header?.message||''));}catch{return false;}}
-export async function fetchSirenePage(apiKey,naf,department,offset=0,fetchImpl=fetch,dateFrom=''){
- if(!apiKey)throw new Error('INSEE_API_KEY manquante.');const response=await fetchImpl(buildSireneUrl(naf,department,offset,PAGE_SIZE,dateFrom),{headers:{'X-INSEE-Api-Key-Integration':apiKey,'Accept':'application/json'}});if(!response.ok){const body=await response.text();if(isEmptySirene404(response.status,body))return{total:0,items:[]};throw new Error(`INSEE ${response.status}: ${body}`);}const json=await response.json();return{total:Number(json?.header?.total||0),items:(json?.etablissements||[]).map(normalizeEstablishment).filter(Boolean)};
+function retryDelay(response,attempt){const raw=Number(response.headers.get('Retry-After'));if(Number.isFinite(raw)&&raw>=0)return raw*1000;return Math.min(60000,5000*Math.pow(2,attempt));}
+export async function fetchSirenePage(apiKey,naf,department,offset=0,fetchImpl=fetch,dateFrom='',sleepImpl=sleep){
+ if(!apiKey)throw new Error('INSEE_API_KEY manquante.');const url=buildSireneUrl(naf,department,offset,PAGE_SIZE,dateFrom);
+ for(let attempt=0;attempt<5;attempt++){
+  const response=await fetchImpl(url,{headers:{'X-INSEE-Api-Key-Integration':apiKey,'Accept':'application/json'}});
+  if(response.status===429&&attempt<4){await sleepImpl(retryDelay(response,attempt));continue;}
+  if(!response.ok){const body=await response.text();if(isEmptySirene404(response.status,body))return{total:0,items:[]};throw new Error(`INSEE ${response.status}: ${body}`);}
+  const json=await response.json();return{total:Number(json?.header?.total||0),items:(json?.etablissements||[]).map(normalizeEstablishment).filter(Boolean)};
+ }
+ throw new Error('INSEE 429: limite de requêtes persistante après plusieurs tentatives.');
 }
