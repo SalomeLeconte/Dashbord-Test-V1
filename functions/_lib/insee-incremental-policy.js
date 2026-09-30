@@ -1,0 +1,1 @@
+export function incrementalDateFrom(lastCompletedDate){if(!lastCompletedDate)return '';const d=new Date(`${lastCompletedDate}T00:00:00Z`);if(Number.isNaN(d.getTime()))return '';d.setUTCDate(d.getUTCDate()-1);return d.toISOString().slice(0,10);}
