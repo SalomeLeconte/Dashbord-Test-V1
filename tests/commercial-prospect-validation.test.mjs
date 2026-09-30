@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {validateCommercialProspect,prospectReference} from '../functions/_lib/commercial-prospect-validation.js';
+test('validates commercial fields and machine park',()=>{const r=validateCommercialProspect({siret:'12345678901234',contactName:'Jean Dupont',email:'jean@example.fr',phone:'0612345678',priority:'HAUTE',potential:10,machines:[{brand:'Komatsu',model:'PC210',quantity:2},{brand:'CAT',model:'320',quantity:3}],competitors:['CAT']});assert.equal(r.ok,true);assert.equal(r.data.totalMachines,5);assert.equal(r.data.komatsuShare,40)});
+test('rejects malformed quantities and email',()=>{const r=validateCommercialProspect({siret:'123',email:'x',machines:[{brand:'CAT',model:'320',quantity:-1}]});assert.equal(r.ok,false)});
+test('reference uses PRMMYYYY prefix',()=>assert.match(prospectReference(new Date('2026-09-30T10:00:00Z'),'0007'),/^PR0920260007$/));
