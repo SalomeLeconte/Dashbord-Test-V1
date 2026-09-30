@@ -1,2 +1,18 @@
 const clean=v=>String(v||'').trim();
-export function buildProspectQuery(departments,input={}){const depts=[...new Set((departments||[]).map(clean).filter(Boolean))];const limit=Math.min(100,Math.max(10,Number.parseInt(input.limit,10)||50));const page=Math.max(1,Number.parseInt(input.page,10)||1);const where=['active=1','excluded_known=0',`department IN (${depts.map(()=>'?').join(',')})`];const params=[...depts];const eq=[['department',input.department],['city',input.city],['naf',input.naf],['activity_group',input.activity],['company_category',input.category]];for(const [column,val] of eq)if(clean(val)){where.push(`${column}=?`);params.push(clean(val));}if(clean(input.search)){where.push('(name LIKE ? OR siren LIKE ? OR siret LIKE ? OR city LIKE ? OR postal_code LIKE ?)');const q=`%${clean(input.search)}%`;params.push(q,q,q,q,q);}const base=`FROM commercial_prospects WHERE ${where.join(' AND ')}`;return{sql:`SELECT siret,siren,name,naf,activity_group AS activityGroup,company_category AS companyCategory,department,postal_code AS postalCode,city,address,workforce_code AS workforceCode,workforce_label AS workforceLabel,first_seen_at AS firstSeenAt,is_headquarters AS isHeadquarters ${base} ORDER BY first_seen_at DESC,name ASC LIMIT ? OFFSET ?`,countSql:`SELECT COUNT(*) AS total ${base}`,params:[...params,limit,(page-1)*limit],countParams:params,limit,page};}
+export function buildProspectQuery(departments,input={}){
+ const depts=[...new Set((departments||[]).map(clean).filter(Boolean))];
+ const limit=Math.min(100,Math.max(10,Number.parseInt(input.limit,10)||50));
+ const page=Math.max(1,Number.parseInt(input.page,10)||1);
+ const where=['active=1','excluded_known=0',`department IN (${depts.map(()=>'?').join(',')})`];
+ const params=[...depts];
+ const eq=[['department',input.department],['city',input.city],['naf',input.naf],['activity_group',input.activity],['company_category',input.category]];
+ for(const [column,val] of eq)if(clean(val)){where.push(`${column}=?`);params.push(clean(val));}
+ if(clean(input.search)){where.push('(name LIKE ? OR siren LIKE ? OR siret LIKE ? OR city LIKE ? OR postal_code LIKE ?)');const q=`%${clean(input.search)}%`;params.push(q,q,q,q,q);}
+ const filtered=`FROM commercial_prospects WHERE ${where.join(' AND ')}`;
+ const ranked=`WITH filtered AS (SELECT * ${filtered}), ranked AS (SELECT filtered.*,COUNT(*) OVER (PARTITION BY siren) AS establishmentCount,ROW_NUMBER() OVER (PARTITION BY siren ORDER BY is_headquarters DESC, first_seen_at DESC, siret ASC) AS companyRank FROM filtered)`;
+ return{
+  sql:`${ranked} SELECT siret,siren,name,naf,activity_group AS activityGroup,company_category AS companyCategory,department,postal_code AS postalCode,city,address,workforce_code AS workforceCode,workforce_label AS workforceLabel,first_seen_at AS firstSeenAt,is_headquarters AS isHeadquarters,establishmentCount FROM ranked WHERE companyRank=1 ORDER BY first_seen_at DESC,name ASC LIMIT ? OFFSET ?`,
+  countSql:`SELECT COUNT(DISTINCT siren) AS total ${filtered}`,
+  params:[...params,limit,(page-1)*limit],countParams:params,limit,page
+ };
+}
