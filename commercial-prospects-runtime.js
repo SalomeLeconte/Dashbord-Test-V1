@@ -1,81 +1,13 @@
 (() => {
-  const state = { prospects: [], filtered: [], departments: [] };
-
-  const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const value = id => document.getElementById(id)?.value?.trim() || '';
-
-  function shell() {
-    return `
-      <div id="commercial-prospects" class="h-full overflow-auto bg-gray-50 dark:bg-slate-900 p-4 md:p-6">
-        <div class="max-w-[1600px] mx-auto space-y-4">
-          <div class="flex flex-wrap items-end justify-between gap-3">
-            <div><div class="text-[10px] uppercase tracking-[.18em] font-black text-yellow-600">Prospection commerciale</div><h2 class="text-xl font-black text-slate-900 dark:text-white">Nouveaux prospects</h2><p class="text-xs text-slate-500 mt-1">Établissements actifs INSEE, hors clients et prospects déjà connus.</p></div>
-            <div id="commercial-prospect-count" class="text-xs font-bold text-slate-500">Chargement…</div>
-          </div>
-          <div class="bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-2xl p-3 space-y-3">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
-              <select id="cp-dept" class="top200-select !max-w-none !w-full"><option value="">Tous les départements</option></select>
-              <select id="cp-activity" class="top200-select !max-w-none !w-full"><option value="">Toutes les activités</option></select>
-              <select id="cp-workforce" class="top200-select !max-w-none !w-full"><option value="">Tous les effectifs</option><option value="1-9">1–9</option><option value="10-49">10–49</option><option value="50-249">50–249</option><option value="250+">250+</option></select>
-              <input id="cp-search" class="top200-select !max-w-none !w-full normal-case" placeholder="Entreprise, SIREN, SIRET, commune…">
-            </div>
-            <details class="border-t border-gray-100 dark:border-slate-800 pt-2"><summary class="cursor-pointer text-xs font-black uppercase tracking-wide text-slate-500">Filtres avancés</summary>
-              <div class="grid grid-cols-2 md:grid-cols-6 gap-2 mt-3">
-                <select id="cp-city" class="top200-select !max-w-none"><option value="">Commune</option></select>
-                <select id="cp-naf" class="top200-select !max-w-none"><option value="">Code NAF</option></select>
-                <select id="cp-category" class="top200-select !max-w-none"><option value="">Catégorie</option></select>
-                <select id="cp-age" class="top200-select !max-w-none"><option value="">Ancienneté</option><option value="lt2">&lt; 2 ans</option><option value="2-5">2–5 ans</option><option value="5-10">5–10 ans</option><option value="10+">10 ans+</option></select>
-                <select id="cp-head" class="top200-select !max-w-none"><option value="">Tous établissements</option><option value="head">Siège uniquement</option><option value="secondary">Secondaire</option></select>
-                <select id="cp-new" class="top200-select !max-w-none"><option value="">Toute nouveauté</option><option value="1">Aujourd’hui</option><option value="7">7 jours</option><option value="30">30 jours</option></select>
-              </div>
-            </details>
-            <div class="flex justify-end"><select id="cp-sort" class="top200-select"><option value="recent">Plus récent</option><option value="workforce">Effectif décroissant</option><option value="name">Nom A–Z</option><option value="city">Commune</option></select></div>
-          </div>
-          <div class="bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-800 rounded-2xl overflow-hidden">
-            <div class="overflow-auto"><table class="w-full text-xs"><thead class="bg-gray-50 dark:bg-slate-900 text-slate-500 uppercase"><tr><th class="text-left p-3">Entreprise</th><th class="text-left p-3">Activité</th><th class="text-left p-3">Commune</th><th class="text-left p-3">Effectif</th><th class="text-left p-3">SIRET</th><th class="p-3"></th></tr></thead><tbody id="cp-body"></tbody></table></div>
-            <div id="cp-empty" class="hidden p-10 text-center text-sm text-slate-500"></div>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  function render() {
-    const body = document.getElementById('cp-body');
-    const empty = document.getElementById('cp-empty');
-    const count = document.getElementById('commercial-prospect-count');
-    if (!body) return;
-    const rows = state.filtered;
-    count.textContent = `${rows.length.toLocaleString('fr-FR')} prospect${rows.length > 1 ? 's' : ''}`;
-    body.innerHTML = rows.slice(0, 500).map(p => `<tr class="border-t border-gray-100 dark:border-slate-800"><td class="p-3"><b>${esc(p.name)}</b><div class="text-slate-400">${esc(p.siren || '')}</div></td><td class="p-3">${esc(p.activityLabel || p.naf || '—')}</td><td class="p-3">${esc(p.city || '—')}<div class="text-slate-400">${esc(p.department || '')}</div></td><td class="p-3">${esc(p.workforceLabel || '—')}</td><td class="p-3 font-mono">${esc(p.siret || '—')}</td><td class="p-3 text-right"><button data-siret="${esc(p.siret)}" class="cp-add px-3 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white font-black">Ajouter au portefeuille</button></td></tr>`).join('');
-    empty.classList.toggle('hidden', rows.length > 0);
-    empty.textContent = rows.length ? '' : 'Aucun nouveau prospect ne correspond aux filtres.';
-  }
-
-  function applyFilters() {
-    const q = value('cp-search').toLowerCase(), dept=value('cp-dept'), activity=value('cp-activity'), city=value('cp-city'), naf=value('cp-naf'), category=value('cp-category');
-    state.filtered = state.prospects.filter(p => (!dept || p.department===dept) && (!activity || p.activityGroup===activity) && (!city || p.city===city) && (!naf || p.naf===naf) && (!category || p.companyCategory===category) && (!q || [p.name,p.siren,p.siret,p.city].some(x=>String(x||'').toLowerCase().includes(q))));
-    const sort=value('cp-sort');
-    state.filtered.sort((a,b)=> sort==='name'?String(a.name||'').localeCompare(String(b.name||''),'fr'):sort==='city'?String(a.city||'').localeCompare(String(b.city||''),'fr'):Number(b.firstSeenAt||0)-Number(a.firstSeenAt||0));
-    render();
-  }
-
-  function fillSelect(id, values) { const el=document.getElementById(id); if(!el)return; const first=el.options[0]?.outerHTML||'<option value="">Tous</option>'; el.innerHTML=first+[...new Set(values.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),'fr')).map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join(''); }
-
-  async function loadProspects() {
-    const empty=document.getElementById('cp-empty');
-    try {
-      const r=await fetch('/api/commercial/prospects',{credentials:'same-origin',cache:'no-store'}); const j=await r.json(); if(!r.ok)throw new Error(j.error||'Chargement impossible');
-      state.prospects=Array.isArray(j.prospects)?j.prospects:[]; state.departments=Array.isArray(j.departments)?j.departments:[];
-      fillSelect('cp-dept',state.departments); fillSelect('cp-activity',state.prospects.map(x=>x.activityGroup)); fillSelect('cp-city',state.prospects.map(x=>x.city)); fillSelect('cp-naf',state.prospects.map(x=>x.naf)); fillSelect('cp-category',state.prospects.map(x=>x.companyCategory)); applyFilters();
-    } catch(e) { state.prospects=[];state.filtered=[];render();empty.classList.remove('hidden');empty.textContent=e.message; }
-  }
-
-  function activateCommercialTab(tab, view) {
-    tab.textContent='Nouveaux prospects'; tab.title='Recherche de nouveaux prospects INSEE';
-    tab.onclick=async()=>{ document.getElementById('view-table')?.classList.add('hidden');document.getElementById('view-map')?.classList.add('hidden');view.classList.remove('hidden');document.getElementById('top200-visit-controls')?.classList.add('hidden');document.getElementById('objectives-banner')?.classList.add('hidden'); if(!document.getElementById('commercial-prospects')){view.innerHTML=shell();['cp-dept','cp-activity','cp-workforce','cp-search','cp-city','cp-naf','cp-category','cp-age','cp-head','cp-new','cp-sort'].forEach(id=>document.getElementById(id)?.addEventListener(id==='cp-search'?'input':'change',applyFilters));await loadProspects();}};
-  }
-
-  document.addEventListener('DOMContentLoaded', async () => {
-    try { const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'}); if(!r.ok)return; const me=await r.json(); if(String(me.role||'').toUpperCase()!=='COMMERCIAL')return; const tab=document.getElementById('tab-top200'),view=document.getElementById('view-top200'); if(tab&&view)activateCommercialTab(tab,view); } catch(e) { console.error('Initialisation commerciale impossible.',e); }
-  });
+ const state={prospects:[],departments:[],page:1,pages:1,total:0,limit:50};const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const val=id=>document.getElementById(id)?.value?.trim()||'';
+ function shell(){return `<div id="commercial-prospects" class="h-full overflow-auto bg-gray-50 dark:bg-slate-900 p-4 md:p-6"><div class="max-w-[1600px] mx-auto space-y-4"><div class="flex justify-between gap-3"><div><div class="text-[10px] uppercase tracking-[.18em] font-black text-yellow-600">Prospection commerciale</div><h2 class="text-xl font-black dark:text-white">Nouveaux prospects</h2><p class="text-xs text-slate-500">Établissements actifs INSEE, hors clients et prospects déjà connus.</p></div><div id="cp-count" class="text-xs font-bold text-slate-500"></div></div><div class="bg-white dark:bg-slate-950 border rounded-2xl p-3 grid grid-cols-1 md:grid-cols-5 gap-2"><select id="cp-dept" class="top200-select !w-full"><option value="">Tous mes départements</option></select><input id="cp-search" class="top200-select !w-full normal-case" placeholder="Entreprise, SIREN, SIRET, commune…"><input id="cp-city" class="top200-select !w-full normal-case" placeholder="Commune"><input id="cp-naf" class="top200-select !w-full normal-case" placeholder="Code NAF"><input id="cp-activity" class="top200-select !w-full normal-case" placeholder="Activité"></div><div class="bg-white dark:bg-slate-950 border rounded-2xl overflow-hidden"><div class="overflow-auto"><table class="w-full text-xs"><thead class="bg-gray-50 dark:bg-slate-900 text-slate-500 uppercase"><tr><th class="text-left p-3">Entreprise</th><th class="text-left p-3">Activité</th><th class="text-left p-3">Commune</th><th class="text-left p-3">Effectif</th><th class="text-left p-3">SIRET</th><th></th></tr></thead><tbody id="cp-body"></tbody></table></div><div id="cp-empty" class="hidden p-10 text-center text-sm text-slate-500"></div><div class="p-3 border-t flex items-center justify-between"><button id="cp-prev" class="px-3 py-2 border rounded-lg">Précédent</button><span id="cp-page" class="text-xs font-bold text-slate-500"></span><button id="cp-next" class="px-3 py-2 border rounded-lg">Suivant</button></div></div></div></div>`;}
+ function params(){const p=new URLSearchParams({page:String(state.page),limit:String(state.limit)});[['department','cp-dept'],['search','cp-search'],['city','cp-city'],['naf','cp-naf'],['activity','cp-activity']].forEach(([k,id])=>{const v=val(id);if(v)p.set(k,v)});return p;}
+ function render(){const body=document.getElementById('cp-body'),empty=document.getElementById('cp-empty');if(!body)return;document.getElementById('cp-count').textContent=`${state.total.toLocaleString('fr-FR')} prospect${state.total>1?'s':''}`;document.getElementById('cp-page').textContent=`Page ${state.page} / ${state.pages}`;document.getElementById('cp-prev').disabled=state.page<=1;document.getElementById('cp-next').disabled=state.page>=state.pages;body.innerHTML=state.prospects.map(p=>`<tr class="border-t"><td class="p-3"><b>${esc(p.name)}</b><div class="text-slate-400">${esc(p.siren)}</div></td><td class="p-3">${esc(p.activityGroup||p.naf||'—')}</td><td class="p-3">${esc(p.city||'—')}<div class="text-slate-400">${esc(p.postalCode||p.department||'')}</div></td><td class="p-3">${esc(p.workforceLabel||'—')}</td><td class="p-3 font-mono">${esc(p.siret)}</td><td class="p-3 text-right"><button data-siret="${esc(p.siret)}" class="cp-add px-3 py-2 rounded-lg bg-yellow-500 text-white font-black">Ajouter</button></td></tr>`).join('');empty.classList.toggle('hidden',state.prospects.length>0);empty.textContent=state.prospects.length?'':'Aucun nouveau prospect ne correspond aux filtres.';body.querySelectorAll('.cp-add').forEach(b=>b.onclick=()=>openModal(state.prospects.find(p=>p.siret===b.dataset.siret)));}
+ async function load(){try{const r=await fetch('/api/commercial/prospects?'+params(),{credentials:'same-origin',cache:'no-store'}),j=await r.json();if(!r.ok)throw new Error(j.error||'Chargement impossible');state.prospects=j.prospects||[];state.departments=j.departments||[];state.total=j.total||0;state.page=j.page||1;state.pages=j.pages||1;const d=document.getElementById('cp-dept');if(d&&d.options.length===1)state.departments.forEach(x=>d.insertAdjacentHTML('beforeend',`<option value="${esc(x)}">${esc(x)}</option>`));render();}catch(e){state.prospects=[];state.total=0;render();const x=document.getElementById('cp-empty');x.classList.remove('hidden');x.textContent=e.message;}}
+ function machineRow(){return `<div class="cp-machine grid grid-cols-3 gap-2"><input class="cp-brand border rounded-lg p-2" placeholder="Marque"><input class="cp-model border rounded-lg p-2" placeholder="Modèle"><input class="cp-qty border rounded-lg p-2" type="number" min="1" value="1"></div>`;}
+ function openModal(p){const wrap=document.createElement('div');wrap.id='cp-modal';wrap.className='fixed inset-0 z-[9999] bg-black/50 flex items-center justify-center p-4';wrap.innerHTML=`<div class="bg-white dark:bg-slate-950 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-auto p-5 space-y-4"><div class="flex justify-between"><div><h3 class="font-black text-lg">Ajouter ${esc(p.name)}</h3><div class="text-xs text-slate-500">${esc(p.siret)} · ${esc(p.city||'')}</div></div><button id="cp-close">✕</button></div><div class="grid md:grid-cols-2 gap-2"><input id="cp-contact" class="border rounded-lg p-2" placeholder="Contact"><input id="cp-function" class="border rounded-lg p-2" placeholder="Fonction"><input id="cp-phone" class="border rounded-lg p-2" placeholder="Téléphone"><input id="cp-email" class="border rounded-lg p-2" type="email" placeholder="E-mail"><select id="cp-priority" class="border rounded-lg p-2"><option value="">Priorité</option><option>HAUTE</option><option>MOYENNE</option><option>BASSE</option></select><input id="cp-potential" class="border rounded-lg p-2" type="number" min="0" placeholder="Potentiel machines"><input id="cp-follow" class="border rounded-lg p-2" type="date"><input id="cp-competitors" class="border rounded-lg p-2" placeholder="Concurrents (séparés par virgules)"></div><div><div class="flex justify-between mb-2"><b class="text-sm">Parc machines</b><button id="cp-machine-add" class="text-xs font-bold">+ Ajouter une machine</button></div><div id="cp-machines" class="space-y-2">${machineRow()}</div></div><textarea id="cp-comment" class="border rounded-lg p-2 w-full" rows="3" placeholder="Commentaire"></textarea><div id="cp-form-error" class="text-sm text-red-600"></div><div class="flex justify-end gap-2"><button id="cp-cancel" class="px-4 py-2 border rounded-lg">Annuler</button><button id="cp-save" class="px-4 py-2 rounded-lg bg-yellow-500 text-white font-black">Ajouter au portefeuille</button></div></div>`;document.body.appendChild(wrap);document.getElementById('cp-close').onclick=document.getElementById('cp-cancel').onclick=()=>wrap.remove();document.getElementById('cp-machine-add').onclick=()=>document.getElementById('cp-machines').insertAdjacentHTML('beforeend',machineRow());document.getElementById('cp-save').onclick=()=>saveProspect(p,wrap);}
+ async function saveProspect(p,wrap){const machines=[...wrap.querySelectorAll('.cp-machine')].filter(x=>valIn(x,'.cp-brand')||valIn(x,'.cp-model')).map(x=>({brand:valIn(x,'.cp-brand'),model:valIn(x,'.cp-model'),quantity:Number(valIn(x,'.cp-qty'))}));const payload={siret:p.siret,contactName:val('cp-contact'),contactFunction:val('cp-function'),phone:val('cp-phone'),email:val('cp-email'),priority:val('cp-priority'),potential:Number(val('cp-potential')||0),followUpDate:val('cp-follow'),competitors:val('cp-competitors').split(',').map(x=>x.trim()).filter(Boolean),machines,comment:val('cp-comment')};const err=document.getElementById('cp-form-error');try{const r=await fetch('/api/commercial/prospects/add',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}),j=await r.json();if(!r.ok)throw new Error(j.details?.join(' ')||j.error);wrap.remove();await load();}catch(e){err.textContent=e.message||'Ajout impossible.';}}
+ const valIn=(root,sel)=>root.querySelector(sel)?.value?.trim()||'';
+ function activate(tab,view){tab.textContent='Nouveaux prospects';tab.title='Recherche de nouveaux prospects INSEE';tab.onclick=async()=>{document.getElementById('view-table')?.classList.add('hidden');document.getElementById('view-map')?.classList.add('hidden');view.classList.remove('hidden');document.getElementById('top200-visit-controls')?.classList.add('hidden');document.getElementById('objectives-banner')?.classList.add('hidden');if(!document.getElementById('commercial-prospects')){view.innerHTML=shell();['cp-dept','cp-city','cp-naf','cp-activity'].forEach(id=>document.getElementById(id).onchange=()=>{state.page=1;load()});let timer;document.getElementById('cp-search').oninput=()=>{clearTimeout(timer);timer=setTimeout(()=>{state.page=1;load()},300)};document.getElementById('cp-prev').onclick=()=>{if(state.page>1){state.page--;load()}};document.getElementById('cp-next').onclick=()=>{if(state.page<state.pages){state.page++;load()}};await load();}};}
+ document.addEventListener('DOMContentLoaded',async()=>{try{const r=await fetch('/api/me',{credentials:'same-origin',cache:'no-store'});if(!r.ok)return;const me=await r.json();if(String(me.role||'').toUpperCase()!=='COMMERCIAL')return;const tab=document.getElementById('tab-top200'),view=document.getElementById('view-top200');if(tab&&view)activate(tab,view);}catch(e){console.error('Initialisation commerciale impossible.',e);}});
 })();
