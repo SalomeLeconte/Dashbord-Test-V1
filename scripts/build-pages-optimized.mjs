@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { cpSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { spawnSync } from 'node:child_process';
 
 const rootDir = process.cwd();
 const distDir = join(rootDir, 'dist');
@@ -30,6 +31,38 @@ async function runModules(directoryName, exportName) {
     const result = await runner(context);
     if (result?.indexHtml !== undefined) context.indexHtml = result.indexHtml;
     if (result?.dashboardHtml !== undefined) context.dashboardHtml = result.dashboardHtml;
+  }
+}
+
+function buildPagesFunctionsArtifact() {
+  const wrangler = join(rootDir, 'node_modules', '.bin', 'wrangler');
+  if (!existsSync(wrangler)) {
+    throw new Error('Wrangler is required to compile Cloudflare Pages Functions.');
+  }
+
+  const workerPath = join(distDir, '_worker.js');
+  const routesPath = join(distDir, '_routes.json');
+  const result = spawnSync(
+    wrangler,
+    [
+      'pages', 'functions', 'build',
+      join(rootDir, 'functions'),
+      '--outfile', workerPath,
+      '--output-routes-path', routesPath,
+      '--fallback-service', 'ASSETS',
+      '--minify'
+    ],
+    { cwd: rootDir, encoding: 'utf8' }
+  );
+
+  if (result.status !== 0) {
+    throw new Error(`Pages Functions build failed: ${result.stderr || result.stdout || 'unknown error'}`);
+  }
+  if (!existsSync(workerPath)) {
+    throw new Error('Pages Functions build completed without dist/_worker.js.');
+  }
+  if (!existsSync(routesPath)) {
+    throw new Error('Pages Functions build completed without dist/_routes.json.');
   }
 }
 
@@ -73,8 +106,13 @@ writeFileSync(join(distDir, 'index.html'), context.indexHtml, 'utf8');
 writeFileSync(join(distDir, 'dashboard-wip.html'), context.dashboardHtml, 'utf8');
 writeFileSync(join(distDir, '.nojekyll'), '', 'utf8');
 
+// Compile Pages Functions into Advanced Mode so the deployed dist/ artifact
+// always carries the authentication middleware and API routes with it.
+buildPagesFunctionsArtifact();
+
 const sourceBytes = readFileSync(dashboardPath).byteLength;
 const outputBytes = readFileSync(join(distDir, 'dashboard-wip.html')).byteLength;
 console.log('Optimized unified build complete: dist/');
 console.log(`dashboard-wip.html: ${sourceBytes} -> ${outputBytes} bytes`);
 console.log(`runtime: assets/${runtimeAsset}`);
+console.log('pages functions: dist/_worker.js');
