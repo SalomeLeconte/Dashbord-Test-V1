@@ -37,4 +37,6 @@ jobs:
           grep -q 'login' dist/_worker.js
           grep -q 'Connexion requise' dist/_worker.js
           grep -q '"include"' dist/_routes.json
-          echo 'Cloudflare authentication worker is present in the production artifact.'
+          node --check dist/_worker.js
+          ! grep -q 'Content-Disposition: form-data' dist/_worker.js
+          echo 'Cloudflare authentication worker is valid JavaScript in the production artifact.'
