@@ -1,0 +1,3 @@
+cloudflare-secure deployment trigger
+branch: cloudflare-secure
+purpose: force Cloudflare Pages Git integration to process the latest secure build pipeline
