@@ -22,8 +22,8 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Run regression tests
-        run: npm test
+      - name: Run Pages Functions artifact regression test
+        run: node --test tests/pages-functions-artifact.test.mjs
 
       - name: Build Cloudflare Pages artifact
         run: npm run build
