@@ -1,0 +1,40 @@
+name: Cloudflare secure checks
+
+on:
+  push:
+    branches: [cloudflare-secure]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-secure-checks
+  cancel-in-progress: true
+
+jobs:
+  build-and-security-artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Run regression tests
+        run: npm test
+
+      - name: Build Cloudflare Pages artifact
+        run: npm run build
+
+      - name: Verify authentication worker is deployed with dist
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/_worker.js
+          test -s dist/_routes.json
+          grep -q 'login' dist/_worker.js
+          grep -q 'Connexion requise' dist/_worker.js
+          grep -q '"include"' dist/_routes.json
+          echo 'Cloudflare authentication worker is present in the production artifact.'
