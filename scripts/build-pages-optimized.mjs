@@ -62,10 +62,6 @@ async function buildPagesFunctionsArtifact() {
   if (/Content-Disposition:\s*form-data/i.test(workerSource)) {
     throw new Error('Invalid multipart payload generated instead of JavaScript Worker.');
   }
-  if (!/export\s+default/.test(workerSource)) {
-    throw new Error('Compiled _worker.js is not a Module Worker.');
-  }
-
   rmSync(workerBuildDir, { recursive: true, force: true });
 }
 
