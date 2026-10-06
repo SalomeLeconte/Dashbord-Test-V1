@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { cpSync, copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { spawnSync } from 'node:child_process';
+import { buildPagesFunctions } from '@cloudflare/pages-functions';
 
 const rootDir = process.cwd();
 const distDir = join(rootDir, 'dist');
@@ -34,36 +34,39 @@ async function runModules(directoryName, exportName) {
   }
 }
 
-function buildPagesFunctionsArtifact() {
-  const wrangler = join(rootDir, 'node_modules', '.bin', 'wrangler');
-  if (!existsSync(wrangler)) {
-    throw new Error('Wrangler is required to compile Cloudflare Pages Functions.');
-  }
-
+async function buildPagesFunctionsArtifact() {
+  const functionsDir = join(rootDir, 'functions');
+  const workerBuildDir = join(distDir, '.pages-functions-worker');
   const workerPath = join(distDir, '_worker.js');
   const routesPath = join(distDir, '_routes.json');
-  const result = spawnSync(
-    wrangler,
-    [
-      'pages', 'functions', 'build',
-      join(rootDir, 'functions'),
-      '--outfile', workerPath,
-      '--output-routes-path', routesPath,
-      '--fallback-service', 'ASSETS',
-      '--minify'
-    ],
-    { cwd: rootDir, encoding: 'utf8' }
-  );
 
-  if (result.status !== 0) {
-    throw new Error(`Pages Functions build failed: ${result.stderr || result.stdout || 'unknown error'}`);
+  rmSync(workerBuildDir, { recursive: true, force: true });
+  mkdirSync(workerBuildDir, { recursive: true });
+
+  const result = await buildPagesFunctions({
+    functionsDirectory: functionsDir,
+    outputDirectory: workerBuildDir,
+    assetsOutputDirectory: distDir,
+    fallbackService: 'ASSETS',
+    minify: true
+  });
+
+  if (!result?.entryPointPath || !existsSync(result.entryPointPath)) {
+    throw new Error('Pages Functions compiler did not produce a Worker entry point.');
   }
-  if (!existsSync(workerPath)) {
-    throw new Error('Pages Functions build completed without dist/_worker.js.');
+
+  copyFileSync(result.entryPointPath, workerPath);
+  writeFileSync(routesPath, JSON.stringify(result.routesJSON || { version: 1, include: ['/*'], exclude: [] }, null, 2), 'utf8');
+
+  const workerSource = readFileSync(workerPath, 'utf8');
+  if (/Content-Disposition:\s*form-data/i.test(workerSource)) {
+    throw new Error('Invalid multipart payload generated instead of JavaScript Worker.');
   }
-  if (!existsSync(routesPath)) {
-    throw new Error('Pages Functions build completed without dist/_routes.json.');
+  if (!/export\s+default/.test(workerSource)) {
+    throw new Error('Compiled _worker.js is not a Module Worker.');
   }
+
+  rmSync(workerBuildDir, { recursive: true, force: true });
 }
 
 function fingerprintRuntimeBundle() {
@@ -108,7 +111,7 @@ writeFileSync(join(distDir, '.nojekyll'), '', 'utf8');
 
 // Compile Pages Functions into Advanced Mode so the deployed dist/ artifact
 // always carries the authentication middleware and API routes with it.
-buildPagesFunctionsArtifact();
+await buildPagesFunctionsArtifact();
 
 const sourceBytes = readFileSync(dashboardPath).byteLength;
 const outputBytes = readFileSync(join(distDir, 'dashboard-wip.html')).byteLength;
