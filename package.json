@@ -1,14 +1,24 @@
 {
-  "name":"dashbord-test-v1","private":true,"version":"1.0.0","type":"module",
-  "scripts":{
-    "dev":"python -m http.server 4180 --bind 127.0.0.1",
-    "test":"node --test tests/*.test.mjs",
-    "check":"npm run test && npm run bundle && node --check src/main.js && node --check csv-data-worker.js && node --check wip-runtime.bundle.js && node scripts/check-top200-ranking-invariants.mjs",
-    "bundle":"node scripts/build-runtime-bundle.mjs",
-    "build":"npm run build:pages",
-    "build:pages":"npm run bundle && node scripts/build-pages-optimized.mjs",
-    "preview":"npm run build && python -m http.server 4180 --directory dist --bind 127.0.0.1"
+  "name": "dashbord-test-v1",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "python -m http.server 4180 --bind 127.0.0.1",
+    "test": "node --test tests/*.test.mjs",
+    "check": "npm run test && npm run bundle && node --check src/main.js && node --check csv-data-worker.js && node --check wip-runtime.bundle.js && node scripts/check-top200-ranking-invariants.mjs",
+    "bundle": "node scripts/build-runtime-bundle.mjs",
+    "build": "npm run build:pages",
+    "build:pages": "npm run bundle && node scripts/build-pages-optimized.mjs",
+    "preview": "npm run build && python -m http.server 4180 --directory dist --bind 127.0.0.1"
   },
-  "devDependencies":{"esbuild":"^0.25.0","tailwindcss":"^3.4.17"},
-  "dependencies":{"leaflet":"1.9.4","leaflet-routing-machine":"3.2.12"}
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "tailwindcss": "^3.4.17",
+    "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "leaflet": "1.9.4",
+    "leaflet-routing-machine": "3.2.12"
+  }
 }
